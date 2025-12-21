@@ -11,7 +11,6 @@ coverage/
 .turbo/
 
 # Package manager
-pnpm-lock.yaml
 .pnpm-store/
 
 # Environment files
@@ -21,6 +20,7 @@ pnpm-lock.yaml
 
 # OS files
 .DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
@@ -32,6 +32,3 @@ pnpm-lock.yaml
 *.log
 npm-debug.log*
 pnpm-debug.log*
-
-# Testing
-.vitest/
