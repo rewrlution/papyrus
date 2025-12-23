@@ -17,5 +17,9 @@
     "@rewrlution/papyrus-shared": "workspace:*",
     "ink": "^6.6.0",
     "react": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "tsx": "^4.21.0"
   }
 }
