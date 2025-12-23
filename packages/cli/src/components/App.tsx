@@ -1,5 +1,5 @@
-import { Text, Box } from "ink";
-import { formatMessage } from "@rewrlution/papyrus-shared";
+import { Text, Box } from 'ink';
+import { formatMessage } from '@rewrlution/papyrus-shared';
 
 export function App() {
   return (
@@ -10,7 +10,7 @@ export function App() {
       borderColor="green"
     >
       <Text bold color="green">
-        Papyrus CLI
+        {formatMessage('Papyrus CLI')}
       </Text>
     </Box>
   );
