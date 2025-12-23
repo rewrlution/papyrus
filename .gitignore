@@ -17,7 +17,7 @@ coverage/
 # Environment variables
 .env
 .env.local
-.env*.local
+.env.*.local
 
 # OS files
 .DS_Store
@@ -37,3 +37,6 @@ yarn-debug.log*
 
 # Testing
 .vitest/
+
+# Husky (commit only these files)
+.husky/_
