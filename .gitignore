@@ -1,1 +1,39 @@
+# Dependencies
 node_modules/
+
+# Typescript
+tsconfig.tsbuildinfo
+
+# Build outputs
+dist/
+coverage/
+
+# Turborepo cache
+.turbo/
+
+# pnpm
+.pnpm-store/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Testing
+.vitest/
