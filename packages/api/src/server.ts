@@ -1,5 +1,5 @@
 import express, { Express, Request, Response } from "express";
-import { formatMessage, type ApiResponse } from "@papyrus/shared";
+import { formatMessage, type ApiResponse } from "@rewrlution/papyrus-shared";
 
 export function createServer(): Express {
   const app = express();
