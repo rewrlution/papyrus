@@ -26,5 +26,8 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^4.2.1"
   }
 }
