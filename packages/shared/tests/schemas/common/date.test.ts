@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DateStringSchema } from '../src/schemas/common/date.js';
+import { DateStringSchema } from '../../../src/schemas/common/date.js';
 
 describe('DateStringSchema', () => {
   describe('valid dates', () => {

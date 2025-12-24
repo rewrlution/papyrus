@@ -7,7 +7,7 @@ import {
   type ApiErrorResponse,
   type ApiSuccessResponse,
   type ApiPaginatedResponse,
-} from '../src/schemas/common/response.js';
+} from '../../../src/schemas/common/response.js';
 
 describe('ApiErrorResponseSchema', () => {
   it('should validate a valid error response without details', () => {

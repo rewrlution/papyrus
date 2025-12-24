@@ -3,7 +3,7 @@ import {
   IdParamSchema,
   DateParamSchema,
   PaginationParamSchema,
-} from '../src/schemas/common/params.js';
+} from '../../../src/schemas/common/params.js';
 
 describe('IdParamSchema', () => {
   it('should accept valid id', () => {

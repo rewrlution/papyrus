@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatMessage, generateContentHash } from '../src/utils/index.js';
+import {
+  formatMessage,
+  generateContentHash,
+} from '../../../src/utils/index.js';
 
 describe('formatMessage', () => {
   it('should format message with prefix', () => {
