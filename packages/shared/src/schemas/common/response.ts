@@ -36,6 +36,10 @@ export const ApiPaginatedResponseSchema = <T extends ZodType>(itemSchema: T) =>
     message: z.string().optional(),
   });
 
+export const ApiResponseSchema = <T extends ZodType>(dataSchema: T) => {
+  z.union([ApiSuccessResponseSchema(dataSchema), ApiErrorResponseSchema]);
+};
+
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 
 export type ApiSuccessResponse<T> = {
