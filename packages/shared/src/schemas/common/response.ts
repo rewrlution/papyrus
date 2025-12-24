@@ -19,11 +19,19 @@ export const ApiErrorResponseSchema = z.object({
 export const ApiSuccessResponseSchema = <T extends ZodType>(dataSchema: T) =>
   z.object({
     success: z.literal(true),
-    data: dataSchema.optional(),
-    message: z.string().optional(),
+    // .nullish() = .nullable().optional()
+    // Accepts: value | null | undefined (field can be omitted)
+    // Use cases:
+    // 1. Actual data: { success: true, data: <value>, message: "Retrieved successfully" }
+    // 2. Empty result: { success: true, data: null, message: "No journal found" }
+    // 3. No content: { success: true, message: "Deleted successfully" } (DELETE/void operations)
+    data: dataSchema.nullish(),
+    message: z.string(),
   });
 
-export const ApiPaginatedResponseSchema = <T extends ZodType>(itemSchema: T) =>
+export const ApiPaginatedSuccessResponseSchema = <T extends ZodType>(
+  itemSchema: T
+) =>
   z.object({
     success: z.literal(true),
     data: z.array(itemSchema),
@@ -33,24 +41,29 @@ export const ApiPaginatedResponseSchema = <T extends ZodType>(itemSchema: T) =>
       total: z.number().int().nonnegative(),
       totalPages: z.number().int().nonnegative(),
     }),
-    message: z.string().optional(),
+    message: z.string(),
   });
 
-export const ApiResponseSchema = <T extends ZodType>(dataSchema: T) => {
+export const ApiResponseSchema = <T extends ZodType>(dataSchema: T) =>
   z.union([ApiSuccessResponseSchema(dataSchema), ApiErrorResponseSchema]);
-};
+
+export const ApiPaginatedResponseSchema = <T extends ZodType>(dataSchema: T) =>
+  z.union([
+    ApiPaginatedSuccessResponseSchema(dataSchema),
+    ApiErrorResponseSchema,
+  ]);
 
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 
 export type ApiSuccessResponse<T> = {
   success: true;
-  data?: T;
-  message?: string;
+  data?: T | null;
+  message: string;
 };
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
-export type ApiPaginatedResponse<T> = {
+export type ApiPaginatedSuccessResponse<T> = {
   success: true;
   data: T[];
   pagination: {
@@ -59,5 +72,9 @@ export type ApiPaginatedResponse<T> = {
     total: number;
     totalPages: number;
   };
-  message?: string;
+  message: string;
 };
+
+export type ApiPaginatedResponse<T> =
+  | ApiPaginatedSuccessResponse<T>
+  | ApiErrorResponse;

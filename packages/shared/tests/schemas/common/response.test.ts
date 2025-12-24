@@ -82,13 +82,14 @@ describe('ApiSuccessResponseSchema', () => {
         id: '123',
         name: 'John Doe',
       },
+      message: 'User retrieved successfully',
     };
 
     const result = schema.safeParse(response);
     expect(result.success).toBe(true);
   });
 
-  it('should validate a success response with optional message', () => {
+  it('should validate a success response with message', () => {
     const StringSchema = z.string();
     const schema = ApiSuccessResponseSchema(StringSchema);
 
@@ -100,7 +101,7 @@ describe('ApiSuccessResponseSchema', () => {
 
     const result = schema.safeParse(response);
     expect(result.success).toBe(true);
-    if (result.success) {
+    if (result.success && result.data.success) {
       expect(result.data.message).toBe('Operation successful');
     }
   });
@@ -148,7 +149,7 @@ describe('ApiSuccessResponseSchema', () => {
     }
   });
 
-  it('should allow response with only success flag', () => {
+  it('should reject response without message', () => {
     const NumberSchema = z.number();
     const schema = ApiSuccessResponseSchema(NumberSchema);
 
@@ -157,11 +158,7 @@ describe('ApiSuccessResponseSchema', () => {
     };
 
     const result = schema.safeParse(response);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.data).toBeUndefined();
-      expect(result.data.message).toBeUndefined();
-    }
+    expect(result.success).toBe(false);
   });
 });
 
@@ -186,11 +183,12 @@ describe('ApiPaginatedResponseSchema', () => {
         total: 25,
         totalPages: 3,
       },
+      message: 'Items retrieved successfully',
     };
 
     const result = schema.safeParse(response);
     expect(result.success).toBe(true);
-    if (result.success) {
+    if (result.success && result.data.success) {
       expect(result.data.data).toHaveLength(2);
       expect(result.data.pagination.page).toBe(1);
     }
@@ -209,6 +207,7 @@ describe('ApiPaginatedResponseSchema', () => {
         total: 0,
         totalPages: 0,
       },
+      message: 'No items found',
     };
 
     const result = schema.safeParse(response);
@@ -233,7 +232,7 @@ describe('ApiPaginatedResponseSchema', () => {
 
     const result = schema.safeParse(response);
     expect(result.success).toBe(true);
-    if (result.success) {
+    if (result.success && result.data.success) {
       expect(result.data.message).toBe('Data retrieved successfully');
     }
   });
@@ -330,6 +329,7 @@ describe('Type inference', () => {
         id: '1',
         name: 'Test User',
       },
+      message: 'User retrieved successfully',
     };
 
     expect(successResponse.success).toBe(true);
@@ -358,9 +358,12 @@ describe('Type inference', () => {
         total: 2,
         totalPages: 1,
       },
+      message: 'Items retrieved successfully',
     };
 
     expect(paginatedResponse.success).toBe(true);
-    expect(paginatedResponse.data).toHaveLength(2);
+    if (paginatedResponse.success) {
+      expect(paginatedResponse.data).toHaveLength(2);
+    }
   });
 });

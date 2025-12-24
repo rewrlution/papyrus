@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import { UserResponseSchema } from '../common/user.js';
+import { UserDataSchema } from '../common/user.js';
 import { ApiResponseSchema } from '../common/response.js';
 
 // signup response data (no jwt - user needs to verify email)
-export const SignupDataSchema = UserResponseSchema;
+export const SignupDataSchema = UserDataSchema;
 
 // signin response data (includes jwt)
-export const SigninDataSchema = UserResponseSchema.extend({
+export const SigninDataSchema = UserDataSchema.extend({
   token: z.string(),
 });
 
