@@ -28,6 +28,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.2.0",
     "zod": "^4.2.1"
   }
 }

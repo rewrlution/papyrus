@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '../zod.js';
 
 import { UserDataSchema } from '../common/user.js';
 import { ApiResponseSchema } from '../common/response.js';
