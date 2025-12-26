@@ -1,5 +1,7 @@
 import express, { Express, Request, Response } from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { formatMessage, type ApiResponse } from '@rewrlution/papyrus-shared';
+import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 
 export function createServer(): Express {
   const app = express();
@@ -7,6 +9,10 @@ export function createServer(): Express {
   // middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Generate OpenAPI document
+  app.use('/api-docs', swaggerUi.serve);
+  app.get('/api-docs', swaggerUi.setup(swaggerDocument, swaggerOptions));
 
   // health check endpoint
   app.get('/health', (_req: Request, res: Response) => {

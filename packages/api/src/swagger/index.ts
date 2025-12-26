@@ -12,6 +12,10 @@ import './routes/auth/index.js';
 import './routes/journal/index.js';
 
 // Generate and export the OpenAPI document
-import { generateDocument } from './registry.js';
+import { generateDocument } from './generator.js';
 
-export const openApiDocument = generateDocument();
+export const swaggerDocument = generateDocument();
+export const swaggerOptions = {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Papyrus API Documentation',
+};
