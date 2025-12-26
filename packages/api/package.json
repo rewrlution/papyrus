@@ -15,7 +15,8 @@
     "@asteasolutions/zod-to-openapi": "^8.2.0",
     "@rewrlution/papyrus-shared": "workspace:*",
     "express": "^5.2.1",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
