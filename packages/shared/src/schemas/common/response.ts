@@ -1,20 +1,32 @@
-import { z, ZodType } from 'zod';
+import { z, ZodType } from '../zod.js';
 
-export const ApiErrorResponseSchema = z.object({
-  success: z.literal(false),
-  message: z.string(),
-  error: z.object({
-    code: z.string(),
-    details: z
-      .array(
-        z.object({
-          field: z.string(),
-          message: z.string(),
-        })
-      )
-      .optional(),
-  }),
-});
+export const ApiErrorResponseSchema = z
+  .object({
+    success: z.literal(false),
+    message: z.string(),
+    error: z.object({
+      code: z.string(),
+      details: z
+        .array(
+          z.object({
+            field: z.string(),
+            message: z.string(),
+          })
+        )
+        .optional(),
+    }),
+  })
+  .openapi('ApiErrorResponse', {
+    description: 'API error response',
+    example: {
+      success: false,
+      message: 'An error occurred',
+      error: {
+        code: 'VALIDATION_ERROR',
+        details: [{ field: 'email', message: 'Invalid email address' }],
+      },
+    },
+  });
 
 export const ApiSuccessResponseSchema = <T extends ZodType>(dataSchema: T) =>
   z.object({

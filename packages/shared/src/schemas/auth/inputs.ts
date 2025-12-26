@@ -2,26 +2,15 @@ import { z } from '../zod.js';
 
 export const SignupSchema = z
   .object({
-    email: z.email('Invalid email address').openapi({
-      description: 'User email address',
-      example: 'user@example.com',
-    }),
+    email: z.email('Invalid email address'),
     password: z
       .string()
       .min(8, 'Must be at least 8 characters long')
       .refine((val) => /[A-Z]/.test(val), 'Need uppercase')
       .refine((val) => /[a-z]/.test(val), 'Need lowercase')
       .refine((val) => /\d/.test(val), 'Need number')
-      .refine((val) => /[@$!%*?&]/.test(val), 'Need special char')
-      .openapi({
-        description:
-          'Password with at least 8 characters, including uppercase, lowercase, number, and special character',
-        example: 'SecurePass123!',
-      }),
-    confirmPassword: z.string().openapi({
-      description: 'Password confirmation (must match password)',
-      example: 'SecurePass123!',
-    }),
+      .refine((val) => /[@$!%*?&]/.test(val), 'Need special char'),
+    confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -29,43 +18,46 @@ export const SignupSchema = z
   })
   .openapi('SignupInput', {
     description: 'User signup request body',
+    example: {
+      email: 'user@example.com',
+      password: 'SecurePass123!',
+      confirmPassword: 'SecurePass123!',
+    },
   });
 
 export const SigninSchema = z
   .object({
-    email: z.email('Invalid email addresss').openapi({
-      description: 'User email address',
-      example: 'user@example.com',
-    }),
-    password: z.string().min(1, 'Password is required').openapi({
-      description: 'User password',
-      example: 'SecurePass123!',
-    }),
+    email: z.email('Invalid email addresss'),
+    password: z.string().min(1, 'Password is required'),
   })
   .openapi('SigninInput', {
     description: 'User signin request body',
+    example: {
+      email: 'user@example.com',
+      password: 'SecurePass123!',
+    },
   });
 
 export const VerifyEmailSchema = z
   .object({
-    token: z.string().min(1, 'Verification token is required').openapi({
-      description: 'Email verification token',
-      example: 'abc123def456',
-    }),
+    token: z.string().min(1, 'Verification token is required'),
   })
   .openapi('VerifyEmailInput', {
     description: 'Email verification request body',
+    example: {
+      token: 'abc123def456',
+    },
   });
 
 export const ResendVerificationSchema = z
   .object({
-    email: z.email('Invalid email address').openapi({
-      description: 'User email address',
-      example: 'user@example.com',
-    }),
+    email: z.email('Invalid email address'),
   })
   .openapi('ResendVerificationInput', {
     description: 'Resend verification email request body',
+    example: {
+      email: 'user@example.com',
+    },
   });
 
 export type SignupInput = z.infer<typeof SignupSchema>;
