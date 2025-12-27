@@ -12,3 +12,47 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id            String @id @default(cuid())
+  email         String @unique
+  passwordHash  String // bycrypt hash, which includes SALT
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  /**
+   * Email verification token is unique
+   * It is an industry practice to just use token to verify emails
+   * In this way, hackers won't be able to probe registered users
+   */
+  verified            Boolean @default(false)
+  verificationToken   String? @unique
+  verificationExpiry  DateTime?
+
+  // Relations
+  journals  Journal[]
+
+  @@index([email])
+  @@index([verificationToken])
+}
+
+model Journal {
+  id          String @id @default(cuid())
+  date        String // YYYYMMDD
+  hash        String // sha256 hash of plaintext content
+  ciphertext  String // encrypted content
+  iv          String // init vector
+  authTag     String // auth tag for integrity check
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relations
+  userId      String
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])      // one journal per day per user
+  @@index([userId, date])       // for efficient sort (date is more accurate than createdAt)
+  @@index([userId, updatedAt])  // for efficient sync queries
+  @@index([deletedAt])          // for filtering soft deleted records
+}
