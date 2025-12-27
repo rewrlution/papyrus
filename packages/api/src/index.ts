@@ -3,28 +3,29 @@ import './setup.js';
 import { createApp } from './app.js';
 import { env } from './env/config.js';
 import { prisma } from './lib/prisma.js';
+import { logger } from './lib/logger.js';
 
 async function main() {
   try {
     await prisma.$connect();
-    console.info('📀 Database connected');
+    logger.info('📀 Database connected');
   } catch (err) {
-    console.error('❌ Database connection failed', err);
+    logger.error('❌ Database connection failed', err);
     process.exit(1);
   }
 
   const app = createApp();
 
   const server = app.listen(env.PORT, () => {
-    console.info(`🚀 API server listening to port: ${env.PORT}`);
+    logger.info(`🚀 API server listening to port: ${env.PORT}`);
   });
 
   const shutdown = async () => {
-    console.info('🛑 Shutting down server...');
+    logger.info('🛑 Shutting down server...');
 
     server.close(async () => {
       await prisma.$disconnect();
-      console.info('👋 Server closed');
+      logger.info('👋 Server closed');
       process.exit(0);
     });
   };
@@ -34,6 +35,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('❌ Failed to start server', err);
+  logger.error('❌ Failed to start server', err);
   process.exit(1);
 });
