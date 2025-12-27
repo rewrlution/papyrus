@@ -4,7 +4,8 @@ import { prisma } from '../lib/prisma.js';
 
 const router: Router = express.Router();
 
-router.get('/health', async (_req: Request, res: Response) => {
+router.get('/health', async (req: Request, res: Response) => {
+  const logger = req.logger;
   let dbStatus = 'connected';
   let isHealthy = true;
 
@@ -12,7 +13,7 @@ router.get('/health', async (_req: Request, res: Response) => {
     // Test database connection with a simple query
     await prisma.$queryRaw`SELECT 1`;
   } catch (error) {
-    console.error('Database health check failed:', error);
+    logger.error('Database health check failed:', error);
     dbStatus = 'disconnected';
     isHealthy = false;
   }

@@ -25,15 +25,3 @@ export const logger = winston.createLogger({
     }),
   ],
 });
-
-/**
- * Helper function to create child loggers with context.
- * For example, we can add a `requestId` to all log entries
- *
- * @param context - additional context to be added to the logger
- * @returns logger with additional metadata
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const createContextLogger = (context: Record<string, any>) => {
-  return logger.child(context);
-};

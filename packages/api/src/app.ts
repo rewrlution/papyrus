@@ -5,12 +5,14 @@ import { type ApiResponse } from '@rewrlution/papyrus-shared';
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 import { env } from './env/config.js';
 import { healthRoutes } from './routes/index.js';
+import { requestLogger } from './middleware/index.js';
 
 export function createApp(): Express {
   const app = express();
 
   // middleware
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  app.use(requestLogger);
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
