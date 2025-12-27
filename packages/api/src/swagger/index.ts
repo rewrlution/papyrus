@@ -10,6 +10,7 @@
 // Import route files - this executes registration
 import './routes/auth/index.js';
 import './routes/journal/index.js';
+import './routes/health.js';
 
 // Generate and export the OpenAPI document
 import { generateDocument } from './generator.js';

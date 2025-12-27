@@ -10,6 +10,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // https://github.com/prisma/prisma/issues/28573
+  // safely ignore the error on the next line
+  url      = env("DATABASE_URL")
 }
 
 model User {
