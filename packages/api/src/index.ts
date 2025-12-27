@@ -1,9 +1,29 @@
-import { createServer } from './server.js';
+import './setup.js';
+
+import { createApp } from './app.js';
 import { env } from './env/config.js';
 
-const port = env.PORT;
-const server = createServer();
+async function main() {
+  const app = createApp();
 
-server.listen(port, () => {
-  console.log(`API server running on http://localhost:${port}`);
+  const server = app.listen(env.PORT, () => {
+    console.info(`🚀 API server listening to port: ${env.PORT}`);
+  });
+
+  const shutdown = async () => {
+    console.info('🛑 Shutting down server...');
+
+    server.close(async () => {
+      console.info('👋 Server closed');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+main().catch((err) => {
+  console.error('❌ Failed to start server', err);
+  process.exit(1);
 });

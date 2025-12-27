@@ -5,7 +5,7 @@ import { formatMessage, type ApiResponse } from '@rewrlution/papyrus-shared';
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 import { env } from './env/config.js';
 
-export function createServer(): Express {
+export function createApp(): Express {
   const app = express();
 
   // middleware

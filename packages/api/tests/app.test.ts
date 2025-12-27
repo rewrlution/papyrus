@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import { createServer } from '../src/server.js';
+import { createApp } from '../src/app.js';
 
 describe('Server', () => {
   it('should have health endpoint', async () => {
-    const server = createServer();
-    const response = await request(server).get('/health');
+    const app = createApp();
+    const response = await request(app).get('/health');
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);

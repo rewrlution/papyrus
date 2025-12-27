@@ -2,26 +2,34 @@ import { z } from 'zod';
 
 export const envSchema = z
   .object({
-    // Server
+    // Server Configuration
     NODE_ENV: z.enum(['development', 'production']).default('development'),
     PORT: z.string().default('3000').transform(Number),
+
+    // CORS Origins (comma-separated list of allowed origins)
     CORS_ORIGIN: z
       .string()
       .default('http://localhost:3000,http://localhost:5173'),
+
+    // Database connection
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
-    // Security: JWT secret and encryption key
+    // Security: JWT secret
     JWT_SECRET: z
       .string()
       .min(32, 'JWT_SECRET must be at least 32 characters long'),
+
+    // Security: Encryption key
     ENCRYPTION_KEY: z
       .string()
       .length(64, 'ENCRYPTION_KEY must be 64 hex characters')
       .regex(/^[a-f0-9]+$/i, 'ENCRYPTION_KEY must be valid hex'),
 
-    // Email: Resend API and SMTP
+    // Email: Resend API (for transactional emails)
     RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
     RESEND_FROM: z.email('RESEND_FROM must be a valid email'),
+
+    // Email: SMTP Configuration (alternative email provider)
     SMTP_HOST: z.string().min(1, 'SMTP_HOST is required'),
     SMTP_PORT: z.string().default('587').transform(Number),
     SMTP_USER: z.string().min(1, 'SMTP_USER is required'),
