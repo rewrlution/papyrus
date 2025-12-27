@@ -5,7 +5,7 @@ describe('Environment Configuration', () => {
   const validEnv = {
     NODE_ENV: 'development' as const,
     PORT: '3000',
-    CORS_ORIGIN: '*',
+    CORS_ORIGIN: 'http://localhost:3000',
     DATABASE_URL: 'postgresql://localhost:5432/papyrus',
     JWT_SECRET: 'a'.repeat(32),
     ENCRYPTION_KEY: 'a'.repeat(64),
@@ -46,13 +46,20 @@ describe('Environment Configuration', () => {
       if (result.success) {
         expect(result.data.NODE_ENV).toBe('development');
         expect(result.data.PORT).toBe(3000);
-        expect(result.data.CORS_ORIGIN).toBe('*');
+        expect(result.data.CORS_ORIGIN).toEqual([
+          'http://localhost:3000',
+          'http://localhost:5173',
+        ]);
         expect(result.data.SMTP_PORT).toBe(587);
       }
     });
 
     it('should accept production NODE_ENV', () => {
-      const env = { ...validEnv, NODE_ENV: 'production' as const };
+      const env = {
+        ...validEnv,
+        NODE_ENV: 'production' as const,
+        CORS_ORIGIN: 'https://myapp.com',
+      };
       const result = envSchema.safeParse(env);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -124,6 +131,112 @@ describe('Environment Configuration', () => {
       if (result.success) {
         expect(result.data.SMTP_PORT).toBe(465);
         expect(typeof result.data.SMTP_PORT).toBe('number');
+      }
+    });
+  });
+
+  describe('CORS_ORIGIN validation', () => {
+    it('should transform single CORS_ORIGIN to array', () => {
+      const env = { ...validEnv, CORS_ORIGIN: 'https://myapp.com' };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.CORS_ORIGIN).toEqual(['https://myapp.com']);
+      }
+    });
+
+    it('should transform multiple CORS_ORIGIN to array', () => {
+      const env = {
+        ...validEnv,
+        CORS_ORIGIN:
+          'https://app.com,https://www.app.com,https://admin.app.com',
+      };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.CORS_ORIGIN).toEqual([
+          'https://app.com',
+          'https://www.app.com',
+          'https://admin.app.com',
+        ]);
+      }
+    });
+
+    it('should trim whitespace in comma-separated origins', () => {
+      const env = {
+        ...validEnv,
+        CORS_ORIGIN:
+          'https://app.com , https://www.app.com , https://admin.app.com',
+      };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.CORS_ORIGIN).toEqual([
+          'https://app.com',
+          'https://www.app.com',
+          'https://admin.app.com',
+        ]);
+      }
+    });
+
+    it('should allow wildcard in development', () => {
+      const env = {
+        ...validEnv,
+        NODE_ENV: 'development' as const,
+        CORS_ORIGIN: '*',
+      };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.CORS_ORIGIN).toEqual(['*']);
+      }
+    });
+
+    it('should reject wildcard in production', () => {
+      const env = {
+        ...validEnv,
+        NODE_ENV: 'production' as const,
+        CORS_ORIGIN: '*',
+      };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain(
+          'cannot contain "*" in production'
+        );
+      }
+    });
+
+    it('should reject wildcard mixed with other origins in production', () => {
+      const env = {
+        ...validEnv,
+        NODE_ENV: 'production' as const,
+        CORS_ORIGIN: 'https://myapp.com,*',
+      };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(false);
+    });
+
+    it('should use default origins when not provided', () => {
+      const minimal = {
+        DATABASE_URL: 'postgresql://localhost:5432/papyrus',
+        JWT_SECRET: 'a'.repeat(32),
+        ENCRYPTION_KEY: 'a'.repeat(64),
+        RESEND_API_KEY: 're_test_key',
+        RESEND_FROM: 'test@example.com',
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_USER: 'user@example.com',
+        SMTP_PASSWORD: 'password',
+        SMTP_FROM: 'noreply@example.com',
+      };
+
+      const result = envSchema.safeParse(minimal);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.CORS_ORIGIN).toEqual([
+          'http://localhost:3000',
+          'http://localhost:5173',
+        ]);
       }
     });
   });

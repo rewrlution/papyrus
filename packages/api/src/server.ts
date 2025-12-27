@@ -1,12 +1,15 @@
+import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { formatMessage, type ApiResponse } from '@rewrlution/papyrus-shared';
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
+import { env } from './env/config.js';
 
 export function createServer(): Express {
   const app = express();
 
   // middleware
+  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
