@@ -2,10 +2,12 @@ import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { type ApiResponse } from '@rewrlution/papyrus-shared';
+
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 import { env } from './env/config.js';
 import { healthRoutes } from './routes/index.js';
-import { requestLogger } from './middleware/index.js';
+import { requestLogger, errorHandler } from './middleware/index.js';
+import { NotFoundError } from './lib/errors.js';
 
 export function createApp(): Express {
   const app = express();
@@ -45,6 +47,15 @@ export function createApp(): Express {
 
   // Routes
   app.use(healthRoutes);
+
+  // 404 Handler
+  app.use((_req, res) => {
+    const notFoundError = new NotFoundError('Endpoint not found');
+    res.status(notFoundError.statusCode).json(notFoundError.toJSON());
+  });
+
+  // Global error handler
+  app.use(errorHandler);
 
   return app;
 }

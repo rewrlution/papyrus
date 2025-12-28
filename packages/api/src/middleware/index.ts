@@ -6,3 +6,4 @@ export {
   validateParams,
   validateQuery,
 } from './validate.js';
+export { asyncHandler, errorHandler } from './handlers.js';
