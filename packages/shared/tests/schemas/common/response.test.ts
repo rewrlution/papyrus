@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import {
   ApiErrorResponseSchema,
-  ApiSuccessResponseSchema,
+  ApiDataResponseSchema,
   ApiPaginatedResponseSchema,
   type ApiErrorResponse,
-  type ApiSuccessResponse,
+  type ApiDataResponse,
   type ApiPaginatedResponse,
 } from '../../../src/schemas/common/response.js';
 
@@ -67,14 +67,14 @@ describe('ApiErrorResponseSchema', () => {
   });
 });
 
-describe('ApiSuccessResponseSchema', () => {
+describe('ApiDataResponseSchema', () => {
   it('should validate a success response with simple data', () => {
     const UserSchema = z.object({
       id: z.string(),
       name: z.string(),
     });
 
-    const schema = ApiSuccessResponseSchema(UserSchema);
+    const schema = ApiDataResponseSchema(UserSchema);
 
     const response = {
       success: true,
@@ -91,7 +91,7 @@ describe('ApiSuccessResponseSchema', () => {
 
   it('should validate a success response with message', () => {
     const StringSchema = z.string();
-    const schema = ApiSuccessResponseSchema(StringSchema);
+    const schema = ApiDataResponseSchema(StringSchema);
 
     const response = {
       success: true,
@@ -108,7 +108,7 @@ describe('ApiSuccessResponseSchema', () => {
 
   it('should reject response with success: false', () => {
     const StringSchema = z.string();
-    const schema = ApiSuccessResponseSchema(StringSchema);
+    const schema = ApiDataResponseSchema(StringSchema);
 
     const response = {
       success: false,
@@ -121,7 +121,7 @@ describe('ApiSuccessResponseSchema', () => {
 
   it('should reject response with invalid data type', () => {
     const NumberSchema = z.number();
-    const schema = ApiSuccessResponseSchema(NumberSchema);
+    const schema = ApiDataResponseSchema(NumberSchema);
 
     const response = {
       success: true,
@@ -132,9 +132,27 @@ describe('ApiSuccessResponseSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should allow response without data field (DELETE scenario)', () => {
+  it('should allow response with null data field (DELETE scenario)', () => {
     const StringSchema = z.string();
-    const schema = ApiSuccessResponseSchema(StringSchema);
+    const schema = ApiDataResponseSchema(StringSchema);
+
+    const response = {
+      success: true,
+      data: null,
+      message: 'Resource deleted successfully',
+    };
+
+    const result = schema.safeParse(response);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.data).toBeNull();
+      expect(result.data.message).toBe('Resource deleted successfully');
+    }
+  });
+
+  it('should reject response without data field', () => {
+    const StringSchema = z.string();
+    const schema = ApiDataResponseSchema(StringSchema);
 
     const response = {
       success: true,
@@ -142,16 +160,12 @@ describe('ApiSuccessResponseSchema', () => {
     };
 
     const result = schema.safeParse(response);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.data).toBeUndefined();
-      expect(result.data.message).toBe('Resource deleted successfully');
-    }
+    expect(result.success).toBe(false);
   });
 
   it('should reject response without message', () => {
     const NumberSchema = z.number();
-    const schema = ApiSuccessResponseSchema(NumberSchema);
+    const schema = ApiDataResponseSchema(NumberSchema);
 
     const response = {
       success: true,
@@ -321,9 +335,9 @@ describe('Type inference', () => {
     expect(errorResponse.success).toBe(false);
   });
 
-  it('should properly infer ApiSuccessResponse type', () => {
+  it('should properly infer ApiDataResponse type', () => {
     type User = { id: string; name: string };
-    const successResponse: ApiSuccessResponse<User> = {
+    const successResponse: ApiDataResponse<User> = {
       success: true,
       data: {
         id: '1',
@@ -334,17 +348,6 @@ describe('Type inference', () => {
 
     expect(successResponse.success).toBe(true);
     expect(successResponse.data?.name).toBe('Test User');
-  });
-
-  it('should properly infer ApiSuccessResponse without data', () => {
-    type User = { id: string };
-    const deleteResponse: ApiSuccessResponse<User> = {
-      success: true,
-      message: 'User deleted',
-    };
-
-    expect(deleteResponse.success).toBe(true);
-    expect(deleteResponse.data).toBeUndefined();
   });
 
   it('should properly infer ApiPaginatedResponse type', () => {

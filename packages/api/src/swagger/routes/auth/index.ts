@@ -5,3 +5,4 @@
 import './schemas.js';
 import './signup.js';
 import './signin.js';
+import './verify-email.js';

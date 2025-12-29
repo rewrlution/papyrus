@@ -9,7 +9,7 @@ import type {
   SigninInput,
   SigninResponse,
   VerifyEmailInput,
-  ApiSuccessResponse,
+  ApiMessageResponse,
 } from '@rewrlution/papyrus-shared';
 
 export const AuthController = {
@@ -38,7 +38,7 @@ export const AuthController = {
   verifyEmail: asyncHandler(
     async (
       req: ValidatedRequest<VerifyEmailInput>,
-      res: Response<ApiSuccessResponse>
+      res: Response<ApiMessageResponse>
     ) => {
       const { token } = req.validated;
       const result = await AuthService.verifyEmail(token);

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import {
   ApiPaginatedResponseSchema,
-  ApiResponseSchema,
+  ApiDataResponseSchema,
 } from '../common/response.js';
 import { JournalDataSchema, JournalMetadataSchema } from '../common/journal.js';
 
-export const JournalResponseSchema = ApiResponseSchema(
+export const JournalResponseSchema = ApiDataResponseSchema(
   JournalDataSchema
 ).openapi('JournalResponse', {
   description: 'Single journal entry response',

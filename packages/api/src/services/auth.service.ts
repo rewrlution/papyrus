@@ -15,7 +15,7 @@ import { logger } from '../lib/logger.js';
 import { comparePassword, hashPassword } from '../lib/password.js';
 import { generateJwtToken } from '../lib/jwt.js';
 import {
-  ApiSuccessResponse,
+  ApiMessageResponse,
   SigninResponse,
   SignupResponse,
 } from '@rewrlution/papyrus-shared';
@@ -120,7 +120,7 @@ export const AuthService = {
     };
   },
 
-  async verifyEmail(token: string): Promise<ApiSuccessResponse> {
+  async verifyEmail(token: string): Promise<ApiMessageResponse> {
     logger.info('Starting email verification', { tokenLen: token.length });
 
     logger.debug('Looking up user by verification token');

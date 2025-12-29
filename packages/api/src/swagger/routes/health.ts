@@ -1,7 +1,7 @@
 import { registry } from '../registry.js';
 import { z } from 'zod';
 import {
-  ApiSuccessResponseSchema,
+  ApiDataResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
 
@@ -11,7 +11,7 @@ const HealthDataSchema = z.object({
   timestamp: z.string(),
 });
 
-const HealthSuccessResponseSchema = ApiSuccessResponseSchema(HealthDataSchema);
+const HealthSuccessResponseSchema = ApiDataResponseSchema(HealthDataSchema);
 
 /**
  * GET /health

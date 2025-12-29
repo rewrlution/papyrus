@@ -72,24 +72,6 @@ describe('JournalResponseSchema', () => {
       }
     });
   });
-
-  describe('Error Response', () => {
-    it('should validate an error response', () => {
-      const errorResponse = {
-        success: false,
-        message: 'Failed to retrieve journal',
-        error: {
-          code: 'DATABASE_ERROR',
-        },
-      };
-
-      const result = JournalResponseSchema.safeParse(errorResponse);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.success).toBe(false);
-      }
-    });
-  });
 });
 
 describe('JournalMetadataListResponseSchema', () => {
@@ -161,25 +143,6 @@ describe('JournalMetadataListResponseSchema', () => {
         expect(result.data.pagination.total).toBe(3);
         expect(result.data.data[0].date).toBe('2025-12-24');
         expect(result.data.data[2].deletedAt).toBeInstanceOf(Date);
-      }
-    });
-  });
-
-  describe('Error Response', () => {
-    it('should validate an error response for metadata list', () => {
-      const errorResponse = {
-        success: false,
-        message: 'Failed to retrieve journal metadata',
-        error: {
-          code: 'FETCH_ERROR',
-          details: [{ field: 'userId', message: 'User not found' }],
-        },
-      };
-
-      const result = JournalMetadataListResponseSchema.safeParse(errorResponse);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.success).toBe(false);
       }
     });
   });
@@ -285,24 +248,6 @@ describe('JournalListResponseSchema', () => {
       if (result.success && result.data.success) {
         expect(result.data.data[0].deletedAt).toBeNull();
         expect(result.data.data[1].deletedAt).toBeInstanceOf(Date);
-      }
-    });
-  });
-
-  describe('Error Response', () => {
-    it('should validate an error response for journal list', () => {
-      const errorResponse = {
-        success: false,
-        message: 'Failed to retrieve journals',
-        error: {
-          code: 'AUTHORIZATION_ERROR',
-        },
-      };
-
-      const result = JournalListResponseSchema.safeParse(errorResponse);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.success).toBe(false);
       }
     });
   });

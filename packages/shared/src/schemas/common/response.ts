@@ -1,5 +1,27 @@
 import { z, ZodType } from '../zod.js';
 
+/**
+ * API Response Base Schemas
+ * ==========================
+ *
+ * This file defines 4 independent base schemas for all API responses:
+ *
+ * 1. ApiErrorResponseSchema - Error responses with error code and optional details
+ * 2. ApiMessageResponseSchema - Success responses with only a message (no data field)
+ * 3. ApiDataResponseSchema<T> - Success responses with data (nullable) and message
+ * 4. ApiPaginatedResponseSchema<T> - Success responses with paginated array data
+ *
+ * Usage Guidelines:
+ * -----------------
+ * - ApiErrorResponseSchema: All error responses (4xx, 5xx)
+ * - ApiMessageResponseSchema: Message-only (verify-email, logout)
+ * - ApiDataResponseSchema<T>: Data responses (GET, POST, PUT, DELETE)
+ * - ApiPaginatedResponseSchema<T>: List endpoints with pagination
+ *
+ * For comprehensive documentation on the design rationale, migration guide,
+ * and detailed examples, see: @packages/shared/docs/api-response-design.md
+ */
+
 export const ApiErrorResponseSchema = z
   .object({
     success: z.literal(false),
@@ -28,22 +50,19 @@ export const ApiErrorResponseSchema = z
     },
   });
 
-export const ApiSuccessResponseSchema = <T extends ZodType>(dataSchema: T) =>
+export const ApiMessageResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+});
+
+export const ApiDataResponseSchema = <T extends ZodType>(dataSchema: T) =>
   z.object({
     success: z.literal(true),
-    // .nullish() = .nullable().optional()
-    // Accepts: value | null | undefined (field can be omitted)
-    // Use cases:
-    // 1. Actual data: { success: true, data: <value>, message: "Retrieved successfully" }
-    // 2. Empty result: { success: true, data: null, message: "No journal found" }
-    // 3. No content: { success: true, message: "Deleted successfully" } (DELETE/void operations)
-    data: dataSchema.nullish(),
+    data: dataSchema.nullable(),
     message: z.string(),
   });
 
-export const ApiPaginatedSuccessResponseSchema = <T extends ZodType>(
-  itemSchema: T
-) =>
+export const ApiPaginatedResponseSchema = <T extends ZodType>(itemSchema: T) =>
   z.object({
     success: z.literal(true),
     data: z.array(itemSchema),
@@ -56,24 +75,17 @@ export const ApiPaginatedSuccessResponseSchema = <T extends ZodType>(
     message: z.string(),
   });
 
-export const ApiResponseSchema = <T extends ZodType>(dataSchema: T) =>
-  z.union([ApiSuccessResponseSchema(dataSchema), ApiErrorResponseSchema]);
-
-export const ApiPaginatedResponseSchema = <T extends ZodType>(dataSchema: T) =>
-  z.union([
-    ApiPaginatedSuccessResponseSchema(dataSchema),
-    ApiErrorResponseSchema,
-  ]);
-
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 
-export type ApiSuccessResponse<T = void> = T extends void
-  ? { success: true; message: string }
-  : { success: true; data: T; message: string };
+export type ApiMessageResponse = z.infer<typeof ApiMessageResponseSchema>;
 
-export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+export type ApiDataResponse<T> = {
+  success: true;
+  data: T | null;
+  message: string;
+};
 
-export type ApiPaginatedSuccessResponse<T> = {
+export type ApiPaginatedResponse<T> = {
   success: true;
   data: T[];
   pagination: {
@@ -84,7 +96,3 @@ export type ApiPaginatedSuccessResponse<T> = {
   };
   message: string;
 };
-
-export type ApiPaginatedResponse<T> =
-  | ApiPaginatedSuccessResponse<T>
-  | ApiErrorResponse;

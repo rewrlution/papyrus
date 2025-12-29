@@ -1,5 +1,8 @@
 import express, { Router, Request, Response } from 'express';
-import { type ApiResponse } from '@rewrlution/papyrus-shared';
+import {
+  type ApiDataResponse,
+  type ApiErrorResponse,
+} from '@rewrlution/papyrus-shared';
 import { prisma } from '../lib/prisma.js';
 
 const router: Router = express.Router();
@@ -19,7 +22,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 
   if (isHealthy) {
-    const response: ApiResponse<{
+    const response: ApiDataResponse<{
       status: string;
       database: string;
       timestamp: string;
@@ -34,11 +37,7 @@ router.get('/', async (req: Request, res: Response) => {
     };
     res.status(200).json(response);
   } else {
-    const response: ApiResponse<{
-      status: string;
-      database: string;
-      timestamp: string;
-    }> = {
+    const response: ApiErrorResponse = {
       success: false,
       message: 'Service unavailable',
       error: {

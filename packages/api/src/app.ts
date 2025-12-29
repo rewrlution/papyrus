@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { type ApiResponse } from '@rewrlution/papyrus-shared';
+import { type ApiDataResponse } from '@rewrlution/papyrus-shared';
 
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 import { env } from './env/config.js';
@@ -20,7 +20,7 @@ export function createApp(): Express {
 
   // root endpoint - API info
   app.get('/', (_req: Request, res: Response) => {
-    const response: ApiResponse<{
+    const response: ApiDataResponse<{
       name: string;
       version: string;
       documentation: string;
