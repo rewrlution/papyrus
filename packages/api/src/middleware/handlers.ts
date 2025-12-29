@@ -32,11 +32,11 @@ import { env } from '../env/config.js';
  * @param fn - Async route handler function
  * @returns Wrapped handler that catches errors
  */
-export function asyncHandler<T>(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<T>
+export function asyncHandler<TReq = Request, TRes = Response, T = void>(
+  fn: (req: TReq, res: TRes, next: NextFunction) => Promise<T>
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+    Promise.resolve(fn(req as TReq, res as TRes, next)).catch(next);
   };
 }
 

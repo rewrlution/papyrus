@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 
 const router: Router = express.Router();
 
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   const logger = req.logger;
   let dbStatus = 'connected';
   let isHealthy = true;
