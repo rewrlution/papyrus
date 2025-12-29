@@ -1,6 +1,10 @@
 import { UserMapper } from '../domain/mappers/user.mapper.js';
 import { userRepository } from '../domain/repositories/user.repository.js';
-import { ConflictError, UnauthorizedError } from '../lib/errors.js';
+import {
+  BadRequestError,
+  ConflictError,
+  UnauthorizedError,
+} from '../lib/errors.js';
 import {
   createEmailProvider,
   generateVerificationToken,
@@ -10,6 +14,11 @@ import {
 import { logger } from '../lib/logger.js';
 import { comparePassword, hashPassword } from '../lib/password.js';
 import { generateJwtToken } from '../lib/jwt.js';
+import {
+  ApiSuccessResponse,
+  SigninResponse,
+  SignupResponse,
+} from '@rewrlution/papyrus-shared';
 
 export const AuthService = {
   /**
@@ -19,7 +28,7 @@ export const AuthService = {
    * @param email - unique email
    * @param password - password
    */
-  async signup(email: string, password: string) {
+  async signup(email: string, password: string): Promise<SignupResponse> {
     logger.info('Start user signup', { email });
 
     // business rule: email must be unique
@@ -53,12 +62,17 @@ export const AuthService = {
     logger.info('Signup completed successfully', { userId: user.id, email });
 
     return {
+      success: true,
       message: `Signup successfully! Please check ${email} to verify your account.`,
       data: user,
     };
   },
 
-  async signin(email: string, password: string) {
+  /**
+   * User signin
+   * Business logic: check if user exists and verified.
+   */
+  async signin(email: string, password: string): Promise<SigninResponse> {
     logger.info('Start user signin', { email });
 
     logger.debug('Looking up user', { email });
@@ -100,8 +114,64 @@ export const AuthService = {
     const user = UserMapper.toUserData(userEntity);
 
     return {
+      success: true,
       message: `Signin successfully!`,
       data: { ...user, token },
+    };
+  },
+
+  async verifyEmail(token: string): Promise<ApiSuccessResponse> {
+    logger.info('Starting email verification', { tokenLen: token.length });
+
+    logger.debug('Looking up user by verification token');
+    const userEntity = await userRepository.findByVerificationToken(token);
+    if (!userEntity) {
+      logger.warn('Verification failed: Invalid token', {
+        tokenPrefix: token.substring(0, 8) + '...',
+      });
+      throw new BadRequestError('Invalid verification token');
+    }
+
+    logger.debug('User found', { userId: userEntity.id });
+
+    if (
+      !userEntity.verificationExpiry ||
+      userEntity.verificationExpiry < new Date()
+    ) {
+      logger.warn('Verification failed: token expired', {
+        userId: userEntity.id,
+        email: userEntity.email,
+        expirty: userEntity.verificationExpiry,
+      });
+      throw new BadRequestError('Verification token has expired.');
+    }
+
+    if (userEntity.verified) {
+      logger.warn('Verification failed: Already verified', {
+        userId: userEntity.id,
+        email: userEntity.email,
+      });
+      throw new BadRequestError('Email already verified');
+    }
+
+    logger.debug('Updating user verification status', {
+      userId: userEntity.id,
+    });
+    await userRepository.update(userEntity.id, {
+      verified: true,
+      verificationToken: null,
+      verificationExpiry: null,
+    });
+
+    logger.info('Email verified successfully', {
+      userId: userEntity.id,
+      email: userEntity.email,
+    });
+
+    return {
+      success: true,
+      message:
+        'Email verified successfully! You may now login with your email and password.',
     };
   },
 };

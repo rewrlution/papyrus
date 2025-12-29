@@ -67,11 +67,9 @@ export const ApiPaginatedResponseSchema = <T extends ZodType>(dataSchema: T) =>
 
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 
-export type ApiSuccessResponse<T> = {
-  success: true;
-  data?: T | null;
-  message: string;
-};
+export type ApiSuccessResponse<T = void> = T extends void
+  ? { success: true; message: string }
+  : { success: true; data: T; message: string };
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
