@@ -3,6 +3,7 @@ import express, { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 import {
+  ResendVerificationSchema,
   SigninSchema,
   SignupSchema,
   VerifyEmailSchema,
@@ -16,6 +17,11 @@ router.get(
   '/verify-email',
   validateQuery(VerifyEmailSchema),
   AuthController.verifyEmail
+);
+router.post(
+  '/resend-verification',
+  validateBody(ResendVerificationSchema),
+  AuthController.resendVerification
 );
 
 export { router as authRoutes };

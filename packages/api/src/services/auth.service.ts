@@ -8,6 +8,7 @@ import {
 } from '../lib/errors.js';
 import {
   createEmailProvider,
+  EmailProviderType,
   generateVerificationToken,
   getVerificationTokenExpiry,
   sendVerificationEmail,
@@ -173,6 +174,52 @@ export const AuthService = {
       success: true,
       message:
         'Email verified successfully! You may now login with your email and password.',
+    };
+  },
+
+  async resendVerificationEmail(
+    email: string,
+    providerType: EmailProviderType = 'resend'
+  ): Promise<ApiMessageResponse> {
+    logger.info('Starting resend verification email', { email });
+
+    const userEntity = await userRepository.findByEmail(email);
+
+    if (!userEntity) {
+      logger.warn('Resend failed: User not found', { email });
+      throw new BadRequestError('User not found');
+    }
+
+    if (userEntity.verified) {
+      logger.warn('Resend failed: Email already verified', {
+        userId: userEntity.id,
+        email,
+      });
+      throw new BadRequestError('Email already verified');
+    }
+
+    logger.debug('Generating new verification token', {
+      userId: userEntity.id,
+    });
+    const verificationToken = generateVerificationToken();
+    const verificationExpiry = getVerificationTokenExpiry();
+
+    logger.debug('Updating user with new token', { userId: userEntity.id });
+    await userRepository.update(userEntity.id, {
+      verificationToken,
+      verificationExpiry,
+    });
+    const provider = createEmailProvider(providerType);
+    await sendVerificationEmail(provider, email, verificationToken);
+
+    logger.info('Resend verification email successfully', {
+      userId: userEntity.id,
+      email: userEntity.email,
+    });
+
+    return {
+      success: true,
+      message: 'Verification email has been re-sent successfully!',
     };
   },
 };
