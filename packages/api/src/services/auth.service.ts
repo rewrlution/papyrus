@@ -1,7 +1,15 @@
 import { UserMapper } from '../domain/mappers/user.mapper.js';
 import { userRepository } from '../domain/repositories/user.repository.js';
-import { ConflictError } from '../lib/errors.js';
-import { createEmailProvider, sendVerificationEmail } from '../email/index.js';
+import { ConflictError, UnauthorizedError } from '../lib/errors.js';
+import {
+  createEmailProvider,
+  generateVerificationToken,
+  getVerificationTokenExpiry,
+  sendVerificationEmail,
+} from '../email/index.js';
+import { logger } from '../lib/logger.js';
+import { comparePassword, hashPassword } from '../lib/password.js';
+import { generateJwtToken } from '../lib/jwt.js';
 
 export const AuthService = {
   /**
@@ -12,16 +20,20 @@ export const AuthService = {
    * @param password - password
    */
   async signup(email: string, password: string) {
+    logger.info('Start user signup', { email });
+
     // business rule: email must be unique
     const existing = await userRepository.findByEmail(email);
     if (existing) {
-      throw new ConflictError('Email already registered');
+      logger.warn('Signup failed: email already registered', { email });
+      throw new ConflictError('Email already registered registered');
     }
 
     // business logic: hash password, generate token
-    const passwordHash = 'hashed_' + password; // TODO: use bcyrpt
-    const verificationToken = 'token_' + Math.random(); // TODO: use crypto
-    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+    logger.info('Creating user', { email });
+    const passwordHash = await hashPassword(password);
+    const verificationToken = generateVerificationToken();
+    const verificationExpiry = getVerificationTokenExpiry();
 
     // create usr via repository
     const userEntity = await userRepository.create({
@@ -33,14 +45,63 @@ export const AuthService = {
     });
 
     // business logic: send verification email
+    logger.info('Sending verification email', { email });
     const provider = createEmailProvider('resend');
     await sendVerificationEmail(provider, email, verificationToken);
 
     const user = UserMapper.toUserData(userEntity);
+    logger.info('Signup completed successfully', { userId: user.id, email });
 
     return {
       message: `Signup successfully! Please check ${email} to verify your account.`,
-      user,
+      data: user,
+    };
+  },
+
+  async signin(email: string, password: string) {
+    logger.info('Start user signin', { email });
+
+    logger.debug('Looking up user', { email });
+    const userEntity = await userRepository.findByEmail(email);
+    if (!userEntity) {
+      logger.warn('Signin failed: User not found', { email });
+      throw new UnauthorizedError('Invalid email address or password');
+    }
+
+    logger.debug('Validating password', { userId: userEntity.id });
+    const isValidPassword = await comparePassword(
+      password,
+      userEntity.passwordHash
+    );
+    if (!isValidPassword) {
+      logger.warn('Signin failed: Invalid password', {
+        userId: userEntity.id,
+        email,
+      });
+      throw new UnauthorizedError('Invalid email address or password');
+    }
+
+    if (!userEntity.verified) {
+      logger.warn('Signin failed: Email not verified', {
+        userId: userEntity.id,
+        email,
+      });
+      throw new UnauthorizedError('Please verify your email before signing in');
+    }
+
+    logger.debug('Generating JWT token', { userId: userEntity.id });
+    const token = generateJwtToken({ userId: userEntity.id, email });
+
+    logger.info('Signin completed successfully', {
+      userId: userEntity.id,
+      email,
+    });
+
+    const user = UserMapper.toUserData(userEntity);
+
+    return {
+      message: `Signin successfully!`,
+      data: { ...user, token },
     };
   },
 };
