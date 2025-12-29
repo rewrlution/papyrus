@@ -6,6 +6,12 @@ export const envSchema = z
     NODE_ENV: z.enum(['development', 'production']).default('development'),
     PORT: z.string().default('3000').transform(Number),
 
+    // Frontend URL (for email links, redirects, etc.)
+    APP_URL: z
+      .url('APP_URL must be a valid URL')
+      .default('http://localhost:5173')
+      .transform((url) => url.replace(/\/$/, '')),
+
     // CORS Origins (comma-separated list of allowed origins)
     CORS_ORIGIN: z
       .string()

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 
 import { env } from '../env/config.js';
 import type { EmailProvider } from './types.js';
+import { renderTemplate } from './template.js';
 
 export function generateVerificationToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -17,17 +18,18 @@ export async function sendVerificationEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const verificationUrl = `${env.CORS_ORIGIN}/auth/verify-email?token=${token}`;
+  const subject = 'Verify your papyrus account';
+  const verificationUrl = `${env.APP_URL}/auth/verify-email?token=${token}`;
+
+  const html = renderTemplate('verify-email', {
+    verificationUrl,
+    year: new Date().getFullYear(),
+  });
 
   await provider.sendEmail({
     to: email,
-    subject: 'Verify your Papyrus account',
-    html: `
-      <h1>Welcome to Papyrus!</h1>
-      <p>Please verify your email address by clicking the link below:</p>
-      <a href="${verificationUrl}">${verificationUrl}</a>
-      <p>This link expires in 24 hours.</p>
-    `,
+    subject,
+    html,
     text: `
       Welcome to Papyrus!
 

@@ -1,6 +1,7 @@
 import { UserMapper } from '../domain/mappers/user.mapper.js';
 import { userRepository } from '../domain/repositories/user.repository.js';
 import { ConflictError } from '../lib/errors.js';
+import { createEmailProvider, sendVerificationEmail } from '../email/index.js';
 
 export const AuthService = {
   /**
@@ -31,7 +32,9 @@ export const AuthService = {
       verificationExpiry,
     });
 
-    // business logic: TODO: send verification email
+    // business logic: send verification email
+    const provider = createEmailProvider('resend');
+    await sendVerificationEmail(provider, email, verificationToken);
 
     const user = UserMapper.toUserData(userEntity);
 

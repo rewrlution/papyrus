@@ -5,6 +5,7 @@ describe('Environment Configuration', () => {
   const validEnv = {
     NODE_ENV: 'development' as const,
     PORT: '3000',
+    APP_URL: 'http://localhost:5173',
     CORS_ORIGIN: 'http://localhost:3000',
     DATABASE_URL: 'postgresql://localhost:5432/papyrus',
     JWT_SECRET: 'a'.repeat(32),
