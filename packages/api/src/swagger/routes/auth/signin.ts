@@ -128,23 +128,6 @@ No authentication required to call this endpoint.`,
       },
     },
 
-    429: {
-      description: 'Too many signin attempts',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema,
-          example: {
-            success: false,
-            message:
-              'Too many signin attempts. Please try again in 15 minutes.',
-            error: {
-              code: 'RATE_LIMIT_EXCEEDED',
-            },
-          },
-        },
-      },
-    },
-
     500: {
       description: 'Internal server error',
       content: {

@@ -3,6 +3,7 @@ import { userRepository } from '../domain/repositories/user.repository.js';
 import {
   BadRequestError,
   ConflictError,
+  ForbiddenError,
   UnauthorizedError,
 } from '../lib/errors.js';
 import {
@@ -100,7 +101,7 @@ export const AuthService = {
         userId: userEntity.id,
         email,
       });
-      throw new UnauthorizedError('Please verify your email before signing in');
+      throw new ForbiddenError('Please verify your email before signing in');
     }
 
     logger.debug('Generating JWT token', { userId: userEntity.id });
