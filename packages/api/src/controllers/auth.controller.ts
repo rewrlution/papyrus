@@ -1,8 +1,5 @@
 import type { Response } from 'express';
 
-import { asyncHandler } from '../middleware/handlers.js';
-import { AuthService } from '../services/auth.service.js';
-import type { ValidatedRequest } from '../middleware/validate.js';
 import type {
   SignupInput,
   SignupResponse,
@@ -12,6 +9,10 @@ import type {
   ApiMessageResponse,
   ResendVerificationInput,
 } from '@rewrlution/papyrus-shared';
+
+import { asyncHandler } from '../middleware/handlers.js';
+import type { ValidatedRequest } from '../middleware/validate.js';
+import { AuthService } from '../services/auth.service.js';
 
 export const AuthController = {
   signup: asyncHandler(
