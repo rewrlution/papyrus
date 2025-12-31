@@ -25,10 +25,16 @@ export const journalRespository = {
   /**
    * Find all journals for a user (excluding soft-deleted) in desc order
    */
-  async findByUserId(userId: string): Promise<Journal[]> {
+  async findByUserId(
+    userId: string,
+    skip: number,
+    take: number
+  ): Promise<Journal[]> {
     return prisma.journal.findMany({
       where: { userId, deletedAt: null },
       orderBy: { date: 'desc' },
+      skip,
+      take,
     });
   },
 
