@@ -2,7 +2,7 @@ import type { Journal, Prisma } from '@prisma/client';
 
 import { prisma } from '../../lib/prisma.js';
 
-export const journalRespository = {
+export const journalRepository = {
   /**
    * Find journal by ID (excluding soft-deleted)
    */
