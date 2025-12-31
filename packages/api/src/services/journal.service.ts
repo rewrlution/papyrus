@@ -2,6 +2,7 @@ import {
   generateContentHash,
   JournalData,
   JournalListResponse,
+  JournalMetadataListResponse,
   JournalResponse,
 } from '@rewrlution/papyrus-shared';
 import { encrypt, decrypt } from '../lib/encryption.js';
@@ -211,6 +212,29 @@ export const JournalService = {
       success: true,
       message: 'Journal entry deleted successfully',
       data: null,
+    };
+  },
+
+  async findAllMetadataByUser(
+    userId: string
+  ): Promise<JournalMetadataListResponse> {
+    logger.info('Finding all journal metadata by user', { userId });
+
+    const entities = await journalRepository.findAllMetadata(userId);
+    const journals = entities.map((entity) =>
+      JournalMapper.toJournalMetadata(entity)
+    );
+
+    return {
+      success: true,
+      message: 'All metadata retrieved successfully.',
+      data: journals,
+      pagination: {
+        page: 1,
+        limit: journals.length,
+        total: journals.length,
+        totalPages: 1,
+      },
     };
   },
 };

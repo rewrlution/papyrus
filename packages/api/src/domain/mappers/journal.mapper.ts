@@ -20,7 +20,12 @@ export class JournalMapper {
     };
   }
 
-  static toJournalMetadata(journal: Journal): JournalMetaData {
+  static toJournalMetadata(
+    journal: Pick<
+      Journal,
+      'date' | 'hash' | 'createdAt' | 'updatedAt' | 'deletedAt'
+    >
+  ): JournalMetaData {
     return {
       date: journal.date,
       hash: journal.hash,

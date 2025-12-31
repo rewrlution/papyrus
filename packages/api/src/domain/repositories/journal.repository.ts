@@ -75,4 +75,22 @@ export const journalRepository = {
   async countByUserId(userId: string): Promise<number> {
     return prisma.journal.count({ where: { userId, deletedAt: null } });
   },
+
+  async findAllMetadata(
+    userId: string
+  ): Promise<
+    Pick<Journal, 'date' | 'hash' | 'createdAt' | 'updatedAt' | 'deletedAt'>[]
+  > {
+    return prisma.journal.findMany({
+      where: { userId },
+      select: {
+        date: true,
+        hash: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
+      orderBy: { date: 'desc' },
+    });
+  },
 };
