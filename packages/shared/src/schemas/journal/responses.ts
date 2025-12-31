@@ -1,9 +1,10 @@
 import { z } from 'zod';
+
+import { JournalDataSchema, JournalMetadataSchema } from '../common/journal.js';
 import {
   ApiPaginatedResponseSchema,
   ApiDataResponseSchema,
 } from '../common/response.js';
-import { JournalDataSchema, JournalMetadataSchema } from '../common/journal.js';
 
 export const JournalResponseSchema = ApiDataResponseSchema(
   JournalDataSchema

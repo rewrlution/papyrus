@@ -1,11 +1,11 @@
+import {
+  ApiMessageResponse,
+  SigninResponse,
+  SignupResponse,
+} from '@rewrlution/papyrus-shared';
+
 import { UserMapper } from '../domain/mappers/user.mapper.js';
 import { userRepository } from '../domain/repositories/user.repository.js';
-import {
-  BadRequestError,
-  ConflictError,
-  ForbiddenError,
-  UnauthorizedError,
-} from '../lib/errors.js';
 import {
   createEmailProvider,
   EmailProviderType,
@@ -13,14 +13,15 @@ import {
   getVerificationTokenExpiry,
   sendVerificationEmail,
 } from '../email/index.js';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  UnauthorizedError,
+} from '../lib/errors.js';
+import { generateJwtToken } from '../lib/jwt.js';
 import { logger } from '../lib/logger.js';
 import { comparePassword, hashPassword } from '../lib/password.js';
-import { generateJwtToken } from '../lib/jwt.js';
-import {
-  ApiMessageResponse,
-  SigninResponse,
-  SignupResponse,
-} from '@rewrlution/papyrus-shared';
 
 export const AuthService = {
   /**

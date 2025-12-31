@@ -1,3 +1,5 @@
+import type { Journal } from '@prisma/client';
+
 import {
   ApiMessageResponse,
   generateContentHash,
@@ -5,12 +7,12 @@ import {
   JournalMetadataListResponse,
   JournalResponse,
 } from '@rewrlution/papyrus-shared';
-import { encrypt, decrypt } from '../lib/encryption.js';
-import { journalRepository } from '../domain/repositories/journal.repository.js';
-import { logger } from '../lib/logger.js';
+
 import { JournalMapper } from '../domain/mappers/journal.mapper.js';
+import { journalRepository } from '../domain/repositories/journal.repository.js';
+import { encrypt, decrypt } from '../lib/encryption.js';
 import { NotFoundError } from '../lib/errors.js';
-import type { Journal } from '@prisma/client';
+import { logger } from '../lib/logger.js';
 
 export const JournalService = {
   /**

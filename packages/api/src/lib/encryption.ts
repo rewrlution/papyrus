@@ -3,6 +3,7 @@
  * Server-side encryption using AES-256-GCM.
  */
 import crypto from 'crypto';
+
 import { env } from '../env/config.js';
 
 const ALGORITHM = 'aes-256-gcm' as const;

@@ -1,9 +1,10 @@
-import { registry } from '../../registry.js';
 import {
   VerifyEmailSchema,
   ApiMessageResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../../registry.js';
 
 /**
  * GET /auth/verify-email

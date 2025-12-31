@@ -1,8 +1,9 @@
-import type { NextFunction, Request, Response } from 'express';
 import type { User } from '@prisma/client';
-import { logger } from '../lib/logger.js';
+import type { NextFunction, Request, Response } from 'express';
+
 import { UnauthorizedError } from '../lib/errors.js';
 import { verifyJwtToken } from '../lib/jwt.js';
+import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 
 // Extend the Express Request type with user information

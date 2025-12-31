@@ -1,4 +1,12 @@
 import express, { Router } from 'express';
+
+import {
+  CreateJournalSchema,
+  DateParamSchema,
+  PaginationParamSchema,
+  UpdateJournalSchema,
+} from '@rewrlution/papyrus-shared';
+
 import { JournalController } from '../controllers/journal.controller.js';
 import {
   requireAuthentication,
@@ -6,12 +14,6 @@ import {
   validateParams,
   validateQuery,
 } from '../middleware/index.js';
-import {
-  CreateJournalSchema,
-  DateParamSchema,
-  PaginationParamSchema,
-  UpdateJournalSchema,
-} from '@rewrlution/papyrus-shared';
 
 const router: Router = express.Router();
 

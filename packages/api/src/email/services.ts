@@ -1,8 +1,9 @@
 import crypto from 'crypto';
 
 import { env } from '../env/config.js';
-import type { EmailProvider } from './types.js';
+
 import { renderTemplate } from './template.js';
+import type { EmailProvider } from './types.js';
 
 export function generateVerificationToken(): string {
   return crypto.randomBytes(32).toString('hex');

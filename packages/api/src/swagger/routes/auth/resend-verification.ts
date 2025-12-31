@@ -1,9 +1,10 @@
-import { registry } from '../../registry.js';
 import {
   ResendVerificationSchema,
   ApiMessageResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../../registry.js';
 
 /**
  * POST /auth/resend-verification

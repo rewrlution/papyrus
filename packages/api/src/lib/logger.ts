@@ -1,4 +1,5 @@
 import winston from 'winston';
+
 import { env } from '../env/config.js';
 
 // Define log format

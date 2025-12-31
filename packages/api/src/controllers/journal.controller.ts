@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+
 import type {
   CreateJournalInput,
   JournalResponse,
@@ -9,8 +10,9 @@ import type {
   DateParam,
   ApiMessageResponse,
 } from '@rewrlution/papyrus-shared';
-import { asyncHandler } from '../middleware/handlers.js';
+
 import { RequestWithUser } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/handlers.js';
 import { ValidatedRequest } from '../middleware/validate.js';
 import { JournalService } from '../services/journal.service.js';
 

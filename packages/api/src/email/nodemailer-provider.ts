@@ -1,8 +1,10 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
-import { EmailProvider, SendEmailOptions } from './types.js';
-import { logger } from '../lib/logger.js';
+
 import { InternalServerError } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
+
+import { EmailProvider, SendEmailOptions } from './types.js';
 
 export interface NodemailerProviderConfig {
   transport: SMTPTransport.Options;

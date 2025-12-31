@@ -1,13 +1,14 @@
 import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
+
 import { type ApiDataResponse } from '@rewrlution/papyrus-shared';
 
-import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 import { env } from './env/config.js';
-import { authRoutes, healthRoutes, journalRoutes } from './routes/index.js';
-import { requestLogger, errorHandler } from './middleware/index.js';
 import { NotFoundError } from './lib/errors.js';
+import { requestLogger, errorHandler } from './middleware/index.js';
+import { authRoutes, healthRoutes, journalRoutes } from './routes/index.js';
+import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 
 export function createApp(): Express {
   const app = express();

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { DateStringSchema } from '../common/date.js';
 import { JournalContentSchema } from '../common/journal.js';
 

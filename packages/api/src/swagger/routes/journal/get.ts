@@ -1,9 +1,10 @@
-import { registry } from '../../registry.js';
 import {
   DateParamSchema,
   JournalResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../../registry.js';
 
 /**
  * GET /journals/{date}

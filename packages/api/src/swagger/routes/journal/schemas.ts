@@ -1,4 +1,3 @@
-import { registry } from '../../registry.js';
 import {
   CreateJournalSchema,
   UpdateJournalSchema,
@@ -7,6 +6,8 @@ import {
   JournalResponseSchema,
   JournalListResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../../registry.js';
 
 /**
  * Register all journal-related schemas with OpenAPI registry

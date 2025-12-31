@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
+import { describe, it, expect, vi } from 'vitest';
 import { z } from 'zod';
+
+import { ValidationError } from '../../src/lib/errors.js';
 import {
   validate,
   validateBody,
@@ -8,7 +10,6 @@ import {
   validateParams,
   type ValidatedRequest,
 } from '../../src/middleware/validate.js';
-import { ValidationError } from '../../src/lib/errors.js';
 
 describe('validate middleware', () => {
   const mockRequest = (data: unknown, target: 'body' | 'query' | 'params') => {

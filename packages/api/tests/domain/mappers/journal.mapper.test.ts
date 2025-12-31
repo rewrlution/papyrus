@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import type { Journal } from '@prisma/client';
+import { describe, it, expect } from 'vitest';
+
 import { JournalMapper } from '../../../src/domain/mappers/journal.mapper.js';
 
 describe('JournalMapper', () => {

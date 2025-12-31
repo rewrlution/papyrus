@@ -1,7 +1,6 @@
-import { z } from '../zod.js';
-
-import { UserDataSchema } from '../common/user.js';
 import { ApiDataResponseSchema } from '../common/response.js';
+import { UserDataSchema } from '../common/user.js';
+import { z } from '../zod.js';
 
 // signup response data (no jwt - user needs to verify email)
 export const SignupDataSchema = UserDataSchema;

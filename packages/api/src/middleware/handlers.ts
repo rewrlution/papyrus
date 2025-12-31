@@ -1,13 +1,13 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 
-import { logger } from '../lib/logger.js';
+import { env } from '../env/config.js';
 import {
   ApiError,
   InternalServerError,
   ValidationError,
 } from '../lib/errors.js';
-import { env } from '../env/config.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * Wraps async route handlers to automatically catch promise rejections.

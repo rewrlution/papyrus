@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { envSchema } from '../../src/env/config';
 
 describe('Environment Configuration', () => {

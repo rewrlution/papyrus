@@ -1,4 +1,5 @@
 import type { Journal } from '@prisma/client';
+
 import type { JournalMetaData, JournalData } from '@rewrlution/papyrus-shared';
 
 export class JournalMapper {

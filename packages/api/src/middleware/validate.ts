@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError, type ZodType } from 'zod';
+
 import { ValidationError } from '../lib/errors.js';
 
 export interface ValidatedRequest<T> extends Request {

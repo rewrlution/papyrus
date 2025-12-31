@@ -1,4 +1,3 @@
-import { registry } from '../../registry.js';
 import {
   SignupSchema,
   SigninSchema,
@@ -6,6 +5,8 @@ import {
   SigninResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../../registry.js';
 
 /**
  * Register all auth-related schemas with OpenAPI registry

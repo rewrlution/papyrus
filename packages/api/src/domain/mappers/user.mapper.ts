@@ -1,4 +1,5 @@
 import type { User } from '@prisma/client';
+
 import type { UserData } from '@rewrlution/papyrus-shared';
 
 /**

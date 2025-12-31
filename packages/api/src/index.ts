@@ -2,8 +2,8 @@ import './setup.js';
 
 import { createApp } from './app.js';
 import { env } from './env/config.js';
-import { prisma } from './lib/prisma.js';
 import { logger } from './lib/logger.js';
+import { prisma } from './lib/prisma.js';
 
 async function main() {
   try {

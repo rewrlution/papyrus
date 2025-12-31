@@ -1,9 +1,11 @@
-import { registry } from '../registry.js';
 import { z } from 'zod';
+
 import {
   ApiDataResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../registry.js';
 
 const HealthDataSchema = z.object({
   status: z.string(),

@@ -1,4 +1,5 @@
 import { Text, Box } from 'ink';
+
 import { formatMessage } from '@rewrlution/papyrus-shared';
 
 export function App() {

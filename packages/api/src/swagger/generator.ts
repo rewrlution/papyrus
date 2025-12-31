@@ -1,5 +1,6 @@
 import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import type { OpenAPIObject } from 'openapi3-ts/oas30';
+
 import { registry } from './registry.js';
 
 /**

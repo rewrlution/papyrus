@@ -1,13 +1,14 @@
 import express, { Router } from 'express';
 
-import { AuthController } from '../controllers/auth.controller.js';
-import { validateBody, validateQuery } from '../middleware/validate.js';
 import {
   ResendVerificationSchema,
   SigninSchema,
   SignupSchema,
   VerifyEmailSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { AuthController } from '../controllers/auth.controller.js';
+import { validateBody, validateQuery } from '../middleware/validate.js';
 
 const router: Router = express.Router();
 

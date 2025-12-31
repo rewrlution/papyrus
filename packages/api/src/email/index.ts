@@ -1,6 +1,7 @@
 import { env } from '../env/config.js';
-import { ResendProvider } from './resend-provider.js';
+
 import { NodemailerProvider } from './nodemailer-provider.js';
+import { ResendProvider } from './resend-provider.js';
 import type { EmailProvider } from './types.js';
 
 export type EmailProviderType = 'resend' | 'smtp';

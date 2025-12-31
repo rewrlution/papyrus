@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
-import { logger } from '../lib/logger.js';
-import type { EmailProvider, SendEmailOptions } from './types.js';
+
 import { InternalServerError } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
+
+import type { EmailProvider, SendEmailOptions } from './types.js';
 
 export interface ResendProviderConfig {
   apiKey: string;

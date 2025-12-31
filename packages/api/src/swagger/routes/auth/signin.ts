@@ -1,9 +1,10 @@
-import { registry } from '../../registry.js';
 import {
   SigninSchema,
   SigninResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
+
+import { registry } from '../../registry.js';
 
 /**
  * POST /auth/signin
