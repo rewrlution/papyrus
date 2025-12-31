@@ -1,6 +1,6 @@
 import {
+  ApiMessageResponse,
   generateContentHash,
-  JournalData,
   JournalListResponse,
   JournalMetadataListResponse,
   JournalResponse,
@@ -64,16 +64,21 @@ export const JournalService = {
    * Create a new journal entry
    *
    * @param userId - User ID creating the journal
-   * @param journal - Journal data with plaintext content
+   * @param date - Journal date (YYYYMMDD format)
+   * @param content - Journal content
    * @returns Success response with created journal
    */
-  async create(userId: string, journal: JournalData): Promise<JournalResponse> {
-    logger.info('Creating journal', { userId, date: journal.date });
+  async create(
+    userId: string,
+    date: string,
+    content: string
+  ): Promise<JournalResponse> {
+    logger.info('Creating journal', { userId, date });
 
-    const { encrypted, hash } = this.encryptJournalContent(journal.content);
+    const { encrypted, hash } = this.encryptJournalContent(content);
 
     const entity = await journalRepository.create({
-      date: journal.date,
+      date,
       hash,
       ciphertext: encrypted.ciphertext,
       iv: encrypted.iv,
@@ -88,7 +93,7 @@ export const JournalService = {
     return {
       success: true,
       message: 'Journal entry created successfully',
-      data: JournalMapper.toJournalData(entity, journal.content),
+      data: JournalMapper.toJournalData(entity, content),
     };
   },
 
@@ -198,7 +203,7 @@ export const JournalService = {
    * @param date - Journal date (YYYYMMDD format)
    * @returns Success response
    */
-  async delete(userId: string, date: string): Promise<JournalResponse> {
+  async delete(userId: string, date: string): Promise<ApiMessageResponse> {
     logger.info('Deleting journal', { userId, date });
 
     const entity = await journalRepository.findByUserAndDate(userId, date);
@@ -211,7 +216,6 @@ export const JournalService = {
     return {
       success: true,
       message: 'Journal entry deleted successfully',
-      data: null,
     };
   },
 
