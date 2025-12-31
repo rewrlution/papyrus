@@ -5,7 +5,7 @@ import { type ApiDataResponse } from '@rewrlution/papyrus-shared';
 
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 import { env } from './env/config.js';
-import { authRoutes, healthRoutes } from './routes/index.js';
+import { authRoutes, healthRoutes, journalRoutes } from './routes/index.js';
 import { requestLogger, errorHandler } from './middleware/index.js';
 import { NotFoundError } from './lib/errors.js';
 
@@ -48,6 +48,7 @@ export function createApp(): Express {
   // Routes
   app.use('/health', healthRoutes);
   app.use('/auth', authRoutes);
+  app.use('/journal', journalRoutes);
 
   // 404 Handler
   app.use((_req, res) => {
