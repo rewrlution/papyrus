@@ -91,14 +91,14 @@ Requires authentication.`,
     },
 
     404: {
-      description: 'Journal entry not found',
+      description: 'Journal entry not found or deleted',
       content: {
         'application/json': {
           schema: ApiErrorResponseSchema,
           example: {
             success: false,
-            message: 'Journal entry not found',
-            error: { code: 'JOURNAL_NOT_FOUND' },
+            message: 'Journal not found',
+            error: { code: 'NOT_FOUND' },
           },
         },
       },

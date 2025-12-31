@@ -82,5 +82,19 @@ Requires authentication.`,
         },
       },
     },
+
+    404: {
+      description: 'Journal entry not found or deleted',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema,
+          example: {
+            success: false,
+            message: 'Journal not found',
+            error: { code: 'NOT_FOUND' },
+          },
+        },
+      },
+    },
   },
 });

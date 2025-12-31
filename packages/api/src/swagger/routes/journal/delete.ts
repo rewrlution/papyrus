@@ -1,6 +1,6 @@
 import {
   DateParamSchema,
-  JournalResponseSchema,
+  ApiMessageResponseSchema,
   ApiErrorResponseSchema,
 } from '@rewrlution/papyrus-shared';
 
@@ -34,11 +34,10 @@ Requires authentication.`,
       description: 'Journal entry deleted successfully',
       content: {
         'application/json': {
-          schema: JournalResponseSchema,
+          schema: ApiMessageResponseSchema,
           example: {
             success: true,
             message: 'Journal entry deleted successfully',
-            data: null,
           },
         },
       },
@@ -79,8 +78,8 @@ Requires authentication.`,
           schema: ApiErrorResponseSchema,
           example: {
             success: false,
-            message: 'Journal entry not found',
-            error: { code: 'JOURNAL_NOT_FOUND' },
+            message: 'Journal not found',
+            error: { code: 'NOT_FOUND' },
           },
         },
       },

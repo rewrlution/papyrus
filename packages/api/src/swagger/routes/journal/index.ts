@@ -5,6 +5,7 @@
 import './schemas.js';
 import './create.js';
 import './list.js';
+import './metadata.js';
 import './get.js';
 import './update.js';
 import './delete.js';

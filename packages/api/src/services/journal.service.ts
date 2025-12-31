@@ -11,7 +11,7 @@ import {
 import { JournalMapper } from '../domain/mappers/journal.mapper.js';
 import { journalRepository } from '../domain/repositories/journal.repository.js';
 import { encrypt, decrypt } from '../lib/encryption.js';
-import { NotFoundError } from '../lib/errors.js';
+import { ConflictError, NotFoundError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 
 export const JournalService = {
@@ -76,6 +76,12 @@ export const JournalService = {
     content: string
   ): Promise<JournalResponse> {
     logger.info('Creating journal', { userId, date });
+
+    // Check if journal already exists for this date
+    const existing = await journalRepository.findByUserAndDate(userId, date);
+    if (existing && !existing.deletedAt) {
+      throw new ConflictError('Journal entry already exists for this date');
+    }
 
     const { encrypted, hash } = this.encryptJournalContent(content);
 
