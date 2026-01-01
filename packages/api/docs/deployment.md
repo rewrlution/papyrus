@@ -41,27 +41,31 @@ Configure the following settings:
 - **Build Command**:
 
   ```bash
-  corepack enable && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api build
+  corepack enable && rm -rf node_modules && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api build
   ```
 
   **Understanding the Build Command:**
 
-  This command consists of four parts chained together with `&&`:
+  This command consists of five parts chained together with `&&`:
   1. **`corepack enable`**
      - Enables Corepack, Node.js's built-in package manager manager
      - Allows Render to use pnpm (specified in `package.json` as `"packageManager": "pnpm@10.0.0"`)
      - Without this, Render would default to npm, which doesn't understand pnpm workspaces
-  2. **`pnpm install --frozen-lockfile`**
+  2. **`rm -rf node_modules`**
+     - Removes any cached node_modules from previous builds
+     - Prevents cache corruption issues that can cause "command not found" errors for binaries like `prisma`
+     - Ensures a clean install on every deployment
+  3. **`pnpm install --frozen-lockfile`**
      - Installs all dependencies for the entire monorepo based on `pnpm-lock.yaml`
      - `--frozen-lockfile` ensures dependencies match exactly what's in the lockfile (no updates)
      - This is critical for reproducible builds and prevents unexpected version changes in production
      - Installs dependencies for all workspace packages (`@rewrlution/papyrus-shared` and `@rewrlution/papyrus-api`)
-  3. **`pnpm --filter @rewrlution/papyrus-shared build`**
+  4. **`pnpm --filter @rewrlution/papyrus-shared build`**
      - Builds the shared package first
      - Runs `tsc` to compile TypeScript and generate type declarations in `packages/shared/dist/`
      - **This must run before building the API** because the API imports types from this package
      - Creates `index.d.ts` and other type definition files that the API needs
-  4. **`pnpm --filter @rewrlution/papyrus-api build`**
+  5. **`pnpm --filter @rewrlution/papyrus-api build`**
      - Runs the `build` script specifically for the API package
      - `--filter` tells pnpm to run the command only for the specified package
      - The API's build script does:
@@ -194,6 +198,24 @@ If you see this error, verify:
 
 - The build command includes both `--filter @rewrlution/papyrus-shared build` AND `--filter @rewrlution/papyrus-api build`
 - The shared package builds successfully (check logs for TypeScript errors in the shared package)
+
+#### "prisma: command not found" or Binary Not Found Errors (with cache)
+
+**Cause**: Render's build cache can sometimes corrupt pnpm symlinks or binary links in monorepo setups, causing commands like `prisma` to not be found even though they're installed.
+
+**Solution**: Already implemented in the build command
+
+- The build command includes `rm -rf node_modules` before install, which ensures a clean installation on every deployment
+- This prevents cache corruption while still using `--frozen-lockfile` for reproducible builds
+- If you're still seeing this error, verify your build command matches:
+  ```bash
+  corepack enable && rm -rf node_modules && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api build
+  ```
+
+**Alternative (if issue persists)**: Manually clear build cache
+
+- In Render dashboard, go to your web service
+- Click **"Manual Deploy"** → **"Clear build cache & deploy"**
 
 #### Prisma Migration Errors
 

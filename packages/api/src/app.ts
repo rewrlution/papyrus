@@ -51,7 +51,7 @@ export function createApp(): Express {
   // Routes
   app.use('/health', healthRoutes);
   app.use('/api/auth', authRoutes);
-  app.use('/api/journal', journalRoutes);
+  app.use('/api/journals', journalRoutes);
 
   // 404 Handler
   app.use((_req, res) => {
