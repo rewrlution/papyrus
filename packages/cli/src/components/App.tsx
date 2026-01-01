@@ -1,6 +1,4 @@
-import { Text, Box } from 'ink';
-
-import { formatMessage } from '@rewrlution/papyrus-shared';
+import { Box } from 'ink';
 
 import { Logo } from './Logo.js';
 
@@ -13,9 +11,6 @@ export function App() {
       borderColor="green"
     >
       <Logo />
-      <Text bold color="green">
-        {formatMessage('Papyrus CLI')}
-      </Text>
     </Box>
   );
 }
