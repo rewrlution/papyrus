@@ -25,7 +25,12 @@ coverage/
 Thumbs.db
 
 # IDE
-.vscode/
+# Commit shared VS Code settings but ignore personal preferences
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 .idea/
 *.swp
 *.swo
