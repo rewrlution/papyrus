@@ -2,7 +2,10 @@
 import { Command } from 'commander';
 import { render } from 'ink';
 
-import { registerJournalCommands } from './commands/journal/index.js';
+import {
+  registerJournalCommands,
+  registerAuthCommands,
+} from './commands/index.js';
 import { App } from './components/App.js';
 
 render(<App />);
@@ -14,6 +17,7 @@ program
   .description('AI-powered developer journaling')
   .version('1.0.0');
 
+registerAuthCommands(program);
 registerJournalCommands(program);
 
 program.parse(process.argv);
