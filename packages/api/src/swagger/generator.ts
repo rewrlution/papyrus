@@ -23,12 +23,8 @@ export function generateDocument(): OpenAPIObject {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Development server',
-      },
-      {
-        url: 'https://api.papyrus.rewrlution.com',
-        description: 'Production server',
+        url: '/api',
+        description: 'API server base',
       },
     ],
     tags: [

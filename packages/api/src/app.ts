@@ -36,6 +36,8 @@ export function createApp(): Express {
         endpoints: {
           health: '/health',
           docs: '/api-docs',
+          auth: '/api/auth',
+          journal: '/api/journal',
         },
       },
     };
@@ -48,8 +50,8 @@ export function createApp(): Express {
 
   // Routes
   app.use('/health', healthRoutes);
-  app.use('/auth', authRoutes);
-  app.use('/journal', journalRoutes);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/journal', journalRoutes);
 
   // 404 Handler
   app.use((_req, res) => {
