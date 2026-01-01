@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "prisma migrate deploy && rimraf dist && tsc",
+    "build": "prisma migrate deploy && rimraf dist && tsc && copyfiles -u 1 src/email/templates/**/* dist/",
     "dev": "tsx watch src/index.ts",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
@@ -42,6 +42,7 @@
     "@types/supertest": "^6.0.3",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/winston": "^2.4.4",
+    "copyfiles": "^2.4.1",
     "prisma": "^6.19.1",
     "supertest": "^7.1.4",
     "tsx": "^4.21.0"
