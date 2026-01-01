@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^7.0.12",
     "openapi3-ts": "^4.5.0",
+    "prisma": "^6.19.1",
     "resend": "^6.6.0",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^13.0.0",
@@ -44,7 +45,6 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/winston": "^2.4.4",
     "copyfiles": "^2.4.1",
-    "prisma": "^6.19.1",
     "supertest": "^7.1.4",
     "tsx": "^4.21.0"
   }
