@@ -55,11 +55,23 @@ export function Logo() {
   const tagline = chalk.magenta('Write like the ancients, think with AI');
 
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      {logo.map((line, index) => (
-        <Text key={index}>{line}</Text>
-      ))}
-      <Text>{tagline}</Text>
+    <Box
+      flexDirection="column"
+      padding={1}
+      borderStyle="round"
+      borderColor="green"
+    >
+      <Box
+        flexDirection="column"
+        justifyContent="center"
+        alignItems="center"
+        marginBottom={1}
+      >
+        {logo.map((line, index) => (
+          <Text key={index}>{line}</Text>
+        ))}
+        <Text>{tagline}</Text>
+      </Box>
     </Box>
   );
 }

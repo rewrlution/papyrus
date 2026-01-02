@@ -1,5 +1,11 @@
 {
   "permissions": {
-    "allow": ["Bash(claude init:*)", "Bash(cat:*)", "Bash(grep:*)"]
+    "allow": [
+      "Bash(claude init:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm setup)",
+      "Bash(pnpm link:*)"
+    ]
   }
 }

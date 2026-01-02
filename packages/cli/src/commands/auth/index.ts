@@ -8,9 +8,7 @@ export function registerAuthCommands(program: Command) {
   program
     .command('login')
     .description('Login to your Papyrus account')
-    .option('-e, --email <email>', 'email address')
-    .option('-p, --password <password>', 'password')
-    .action(async (options) => await login(options.email, options.password));
+    .action(async () => await login());
 
   program
     .command('logout')

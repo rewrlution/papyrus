@@ -6,9 +6,9 @@ import {
   registerJournalCommands,
   registerAuthCommands,
 } from './commands/index.js';
-import { App } from './components/App.js';
+import { Logo } from './components/Logo.js';
 
-render(<App />);
+render(<Logo />);
 
 const program = new Command();
 
