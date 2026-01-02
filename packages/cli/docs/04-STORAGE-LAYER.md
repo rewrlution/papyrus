@@ -34,18 +34,18 @@ A storage layer that:
 ```
 Linux:
   Config: ~/.config/papyrus/config.json
+  Token:  ~/.config/papyrus/token
   Data:   ~/.local/share/papyrus/journals/
-  State:  ~/.local/state/papyrus/token
 
 Windows:
   Config: %APPDATA%\papyrus\Config\config.json
+  Token:  %APPDATA%\papyrus\Config\token
   Data:   %LOCALAPPDATA%\papyrus\Data\journals\
-  State:  %LOCALAPPDATA%\papyrus\Data\token
 
 macOS:
   Config: ~/Library/Preferences/papyrus/config.json
+  Token:  ~/Library/Preferences/papyrus/token
   Data:   ~/Library/Application Support/papyrus/journals/
-  State:  ~/Library/Application Support/papyrus/token
 ```
 
 ## Architecture
@@ -70,8 +70,8 @@ macOS:
 
 **Storage types:**
 
-- **Config**: User settings, API URLs → config directory
-- **State/Data**: Auth tokens, journal entries → data directory
+- **Config**: User settings, API URLs, auth tokens → config directory
+- **Data**: Journal entries, persistent content → data directory
 
 ## Prerequisites
 
@@ -392,7 +392,7 @@ export class ConfigStore extends BaseStorage {
 
 ### Step 3: Token Store
 
-Store authentication token in data directory.
+Store authentication token in config directory.
 
 ```typescript
 // src/lib/storage/token-store.ts
@@ -400,16 +400,16 @@ import * as path from 'path';
 import { BaseStorage } from './base-storage.js';
 
 /**
- * Manages authentication token stored in the data directory
- * Example: ~/.local/share/papyrus/token (Linux)
+ * Manages authentication token stored in the config directory
+ * Example: ~/.config/papyrus/token (Linux)
  */
 export class TokenStore extends BaseStorage {
   private tokenPath: string;
 
   constructor() {
     super();
-    const dataDir = this.getDataDir();
-    this.tokenPath = path.join(dataDir, 'token');
+    const configDir = this.getConfigDir();
+    this.tokenPath = path.join(configDir, 'token');
   }
 
   /**
@@ -442,6 +442,13 @@ export class TokenStore extends BaseStorage {
   }
 }
 ```
+
+**Why config directory for tokens?**
+
+- **Industry standard**: GitHub CLI, npm, Docker, kubectl all store auth in config
+- **User expectations**: Developers expect credentials in config directories
+- **Backup/sync friendly**: Config directories are typically backed up together
+- **Simpler mental model**: All application settings in one place
 
 **Why plain text for token?**
 
@@ -1000,6 +1007,30 @@ export const api = new ApiClient(API_BASE_URL);
 **Cause:** Package not installed
 **Solution:** Run `pnpm add env-paths` in packages/cli directory.
 
+## Design Decisions
+
+### Why Config Directory for Tokens?
+
+According to the XDG Base Directory Specification, auth tokens should technically go in `XDG_STATE_HOME` (runtime state data). However, `env-paths` doesn't provide a separate state directory.
+
+**We chose config directory because:**
+
+1. **Industry standard**: Most popular CLI tools store auth in config
+   - GitHub CLI: `~/.config/gh/hosts.yml`
+   - npm: `~/.npmrc`
+   - Docker: `~/.docker/config.json`
+   - kubectl: `~/.kube/config`
+
+2. **User expectations**: Developers expect credentials alongside other settings
+
+3. **Practical benefits**: Easier to backup, sync, and manage all settings together
+
+4. **XDG fallback**: When there's no state directory, config is the recommended fallback
+
+**Alternative considered:**
+
+- Data directory (`~/.local/share`): More technically accurate (tokens are data, not user-editable config), but goes against industry conventions
+
 ## Why env-paths vs xdg-basedir?
 
 **xdg-basedir limitations:**
@@ -1040,6 +1071,7 @@ export const api = new ApiClient(API_BASE_URL);
 - ✅ Follows XDG standards where applicable
 - ✅ Type-safe APIs
 - ✅ Comprehensive tests
+- ✅ Industry-standard token storage (config directory, like GitHub CLI, npm, Docker)
 
 **Key principles applied:**
 
@@ -1048,6 +1080,7 @@ export const api = new ApiClient(API_BASE_URL);
 - **Proper componentization**: BaseStorage + specialized stores
 - **No unnecessary complexity**: Simple file-based storage
 - **Complete working code**: All code is runnable
+- **Industry conventions**: Followed best practices from popular CLI tools
 
 **File structure:**
 

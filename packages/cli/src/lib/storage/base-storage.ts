@@ -25,7 +25,7 @@ export class BaseStorage {
    * Windows: %APPDATA%\papyrus\Config
    * macOS: ~/Library/Preferences/papyrus
    */
-  public getConfigDir(): string {
+  protected getConfigDir(): string {
     return this.paths.config;
   }
 
@@ -35,14 +35,14 @@ export class BaseStorage {
    * Windows: %LOCALAPPDATA%\papyrus\Data
    * macOS: ~/Library/Application Support/papyrus
    */
-  public getDataDir(): string {
+  protected getDataDir(): string {
     return this.paths.data;
   }
 
   /**
    * Ensure directory exists, create if it doesn't
    */
-  public ensureDir(dir: string): void {
+  protected ensureDir(dir: string): void {
     if (!fs.existsSync(dir)) {
       /**
        * The mode 0o700 grants the owner of the file or directory full read, write, and execute permissions,
@@ -60,7 +60,7 @@ export class BaseStorage {
   /**
    * Read file contents, return null if doesn't exist
    */
-  public readFile(filePath: string): string | null {
+  protected readFile(filePath: string): string | null {
     try {
       if (fs.existsSync(filePath)) {
         return fs.readFileSync(filePath, 'utf-8');
@@ -74,7 +74,7 @@ export class BaseStorage {
   /**
    * Write file contents, create parent directories if needed
    */
-  public writeFile(filePath: string, content: string): void {
+  protected writeFile(filePath: string, content: string): void {
     const dir = path.dirname(filePath);
     this.ensureDir(dir);
     fs.writeFileSync(filePath, content, 'utf-8');
@@ -83,7 +83,7 @@ export class BaseStorage {
   /**
    * Delete file if it exists
    */
-  public deleteFile(filePath: string): void {
+  protected deleteFile(filePath: string): void {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -92,7 +92,7 @@ export class BaseStorage {
   /**
    * Check if file exists
    */
-  public fileExists(filePath: string): boolean {
+  protected fileExists(filePath: string): boolean {
     return fs.existsSync(filePath);
   }
 }

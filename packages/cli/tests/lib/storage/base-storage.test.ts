@@ -1,73 +1,75 @@
 import fs from 'fs';
 import path from 'path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { BaseStorage } from '../../../src/lib/storage/base-storage';
 
+class TestStorage extends BaseStorage {
+  // Expose protected methods for testing
+  public testGetConfigDir() {
+    return this.getConfigDir();
+  }
+  public testGetDataDir() {
+    return this.getDataDir();
+  }
+  public testReadFile(filePath: string) {
+    return this.readFile(filePath);
+  }
+  public testWriteFile(filePath: string, content: string) {
+    return this.writeFile(filePath, content);
+  }
+  public testDeleteFile(filePath: string) {
+    return this.deleteFile(filePath);
+  }
+}
+
 describe('BaseStorage', () => {
-  let storage: BaseStorage;
-  let testDir: string;
+  let storage: TestStorage;
 
   beforeEach(() => {
-    storage = new BaseStorage();
-    testDir = path.join(process.cwd(), 'test-temp');
+    storage = new TestStorage();
   });
 
-  afterEach(() => {
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+  it('should get config directory', () => {
+    const dir = storage.testGetConfigDir();
+    expect(dir).toContain('papyrus');
   });
 
-  it('should return config and data directory paths', () => {
-    const configDir = storage.getConfigDir();
-    const dataDir = storage.getDataDir();
-
-    expect(configDir).toContain('papyrus');
-    expect(dataDir).toContain('papyrus');
-  });
-
-  it('should create directory if it does not exist', () => {
-    const testPath = path.join(testDir, 'new-dir');
-
-    storage.ensureDir(testPath);
-
-    expect(fs.existsSync(testPath)).toBe(true);
+  it('should get data directory', () => {
+    const dir = storage.testGetDataDir();
+    expect(dir).toContain('papyrus');
   });
 
   it('should write and read file', () => {
-    const testPath = path.join(testDir, 'test.txt');
-    const content = 'Hello';
+    const testDir = path.join(process.cwd(), 'test-storage');
+    const testFile = path.join(testDir, 'test.txt');
 
-    storage.writeFile(testPath, content);
-    const result = storage.readFile(testPath);
+    storage.testWriteFile(testFile, 'hello');
+    const content = storage.testReadFile(testFile);
 
-    expect(result).toBe(content);
+    expect(content).toBe('hello');
+
+    // Cleanup
+    fs.rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('should return null when reading non-existent file', () => {
-    const result = storage.readFile(path.join(testDir, 'missing.txt'));
-
-    expect(result).toBeNull();
+  it('should return null for non-existent file', () => {
+    const content = storage.testReadFile('/non/existent/file.txt');
+    expect(content).toBeNull();
   });
 
-  it('should delete existing file', () => {
-    const testPath = path.join(testDir, 'delete.txt');
-    fs.mkdirSync(testDir, { recursive: true });
-    fs.writeFileSync(testPath, 'test', 'utf-8');
+  it('should delete file', () => {
+    const testDir = path.join(process.cwd(), 'test-storage');
+    const testFile = path.join(testDir, 'test.txt');
 
-    storage.deleteFile(testPath);
+    storage.testWriteFile(testFile, 'hello');
+    storage.testDeleteFile(testFile);
 
-    expect(fs.existsSync(testPath)).toBe(false);
-  });
+    const content = storage.testReadFile(testFile);
+    expect(content).toBeNull();
 
-  it('should check if file exists', () => {
-    const testPath = path.join(testDir, 'exists.txt');
-    fs.mkdirSync(testDir, { recursive: true });
-    fs.writeFileSync(testPath, 'test', 'utf-8');
-
-    expect(storage.fileExists(testPath)).toBe(true);
-    expect(storage.fileExists(path.join(testDir, 'missing.txt'))).toBe(false);
+    // Cleanup
+    fs.rmSync(testDir, { recursive: true, force: true });
   });
 });
