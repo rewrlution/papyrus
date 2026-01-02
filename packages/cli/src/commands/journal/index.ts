@@ -4,6 +4,7 @@ import { addEntry } from './add.js';
 import { amendEntry } from './amend.js';
 import { listEntries } from './list.js';
 import { showEntry } from './show.js';
+import { syncEntries } from './sync.js';
 
 export function registerJournalCommands(program: Command) {
   program
@@ -36,4 +37,9 @@ export function registerJournalCommands(program: Command) {
     .alias('ls')
     .description('List all journal entries')
     .action(async () => await listEntries());
+
+  program
+    .command('sync')
+    .description('Sync journals with server (requires authentication)')
+    .action(async () => await syncEntries());
 }
