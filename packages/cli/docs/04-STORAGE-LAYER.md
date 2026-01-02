@@ -20,14 +20,14 @@ A storage layer that:
 
 - ❌ Hardcode paths like `~/.papyrus` (not standard)
 - ❌ Store everything in one location (config + data mixed)
-- ❌ Ignore Windows conventions
+- ❌ Ignore platform conventions
 
 **XDG approach:**
 
 - ✅ Industry standard on Linux/Unix
 - ✅ Separates config, data, state, and cache
-- ✅ Respects user overrides via environment variables
-- ✅ Adapts to platform conventions (Windows uses `AppData`)
+- ✅ Respects platform conventions
+- ✅ Cross-platform (Windows, macOS, Linux)
 
 **Example:**
 
@@ -38,9 +38,9 @@ Linux:
   State:  ~/.local/state/papyrus/token
 
 Windows:
-  Config: %APPDATA%/papyrus/config.json
-  Data:   %APPDATA%/papyrus/journals/
-  State:  %LOCALAPPDATA%/papyrus/token
+  Config: %APPDATA%\papyrus\Config\config.json
+  Data:   %LOCALAPPDATA%\papyrus\Data\journals\
+  State:  %LOCALAPPDATA%\papyrus\Data\token
 
 macOS:
   Config: ~/Library/Preferences/papyrus/config.json
@@ -56,7 +56,7 @@ macOS:
 └─────────────────────────────────────┘
          │
          ├─> BaseStorage
-         │   (XDG directory handling)
+         │   (Cross-platform paths)
          │
          ├─> ConfigStore
          │   (User preferences)
@@ -70,96 +70,154 @@ macOS:
 
 **Storage types:**
 
-- **Config**: User settings, API URLs → XDG_CONFIG_HOME
-- **State**: Auth tokens, sync state → XDG_STATE_HOME
-- **Data**: Journal entries → XDG_DATA_HOME
+- **Config**: User settings, API URLs → config directory
+- **State/Data**: Auth tokens, journal entries → data directory
 
 ## Prerequisites
 
-**Install XDG library:**
+**Install env-paths library:**
 
 ```bash
 cd packages/cli
-pnpm add xdg-basedir
+pnpm add env-paths
 pnpm add -D @types/node
 ```
 
-**Why `xdg-basedir`?**
+**Why `env-paths`?**
 
-- Battle-tested library (100k+ weekly downloads)
-- Handles all platforms correctly
-- Provides sensible defaults
-- Respects environment variable overrides
+- **Cross-platform**: Works on Windows, macOS, and Linux correctly
+- **Battle-tested**: Popular library (1M+ weekly downloads)
+- **Follows standards**: XDG on Linux, proper conventions on Windows/macOS
+- **Simple API**: Clean, straightforward interface
+- **No platform checks needed**: Handles everything automatically
 
 **Assumed knowledge:**
 
 - Basic file I/O in Node.js (we'll show the code)
 - TypeScript interfaces
 
+## How env-paths Works
+
+Before implementing, let's understand what `env-paths` does internally:
+
+```typescript
+import envPaths from 'env-paths';
+
+const paths = envPaths('papyrus');
+
+// Returns platform-specific paths:
+paths.data; // User data directory
+paths.config; // User config directory
+paths.cache; // Cache directory
+paths.log; // Log directory
+paths.temp; // Temporary directory
+```
+
+**Platform behavior:**
+
+**Linux:**
+
+```typescript
+{
+  data: '~/.local/share/papyrus',
+  config: '~/.config/papyrus',
+  cache: '~/.cache/papyrus',
+  log: '~/.local/state/papyrus',
+  temp: '/tmp/papyrus'
+}
+```
+
+**macOS:**
+
+```typescript
+{
+  data: '~/Library/Application Support/papyrus',
+  config: '~/Library/Preferences/papyrus',
+  cache: '~/Library/Caches/papyrus',
+  log: '~/Library/Logs/papyrus',
+  temp: '/var/folders/.../papyrus'
+}
+```
+
+**Windows:**
+
+```typescript
+{
+  data: '%LOCALAPPDATA%\\papyrus\\Data',
+  config: '%APPDATA%\\papyrus\\Config',
+  cache: '%LOCALAPPDATA%\\papyrus\\Cache',
+  log: '%LOCALAPPDATA%\\papyrus\\Log',
+  temp: '%LOCALAPPDATA%\\Temp\\papyrus'
+}
+```
+
+**Key points:**
+
+- ✅ Returns **always strings** (never undefined)
+- ✅ Respects platform conventions automatically
+- ✅ No environment variable checks needed (library handles it)
+- ✅ Handles edge cases (missing directories, permissions, etc.)
+
+**Common mistake:**
+
+```typescript
+// ❌ DON'T DO THIS (unnecessary platform checks):
+import os from 'os';
+const config =
+  os.platform() === 'win32'
+    ? path.join(process.env.APPDATA, 'papyrus')
+    : path.join(os.homedir(), '.config', 'papyrus');
+
+// ✅ DO THIS (trust the library):
+import envPaths from 'env-paths';
+const paths = envPaths('papyrus');
+const config = paths.config; // Works on all platforms!
+```
+
+**Why trust the library?**
+
+- Maintained by the Node.js community (Sindre Sorhus - prolific open source contributor)
+- Used by major tools (Yeoman, AVA, etc.)
+- Handles edge cases we might forget
+- Following the principle: **Use popular libraries, don't reinvent the wheel**
+
 ## Implementation
 
 ### Step 1: Base Storage Class
 
-First, create a base class that handles XDG directories and common file operations.
+First, create a base class that handles cross-platform directories and common file operations.
 
 ```typescript
 // src/lib/storage/base-storage.ts
 import * as fs from 'fs';
 import * as path from 'path';
-import xdgBasedir from 'xdg-basedir';
+import envPaths from 'env-paths';
 
 /**
- * Base storage class that handles XDG directory management
+ * Base storage class that handles cross-platform directory management
  * and common file operations
  */
 export class BaseStorage {
-  protected appName = 'papyrus';
+  private paths = envPaths('papyrus');
 
   /**
-   * Get XDG config directory
+   * Get config directory
    * Linux: ~/.config/papyrus
-   * Windows: %APPDATA%/papyrus
+   * Windows: %APPDATA%\papyrus\Config
    * macOS: ~/Library/Preferences/papyrus
    */
   protected getConfigDir(): string {
-    const configHome =
-      xdgBasedir.config ||
-      path.join(process.env.HOME || process.env.USERPROFILE || '', '.config');
-    return path.join(configHome, this.appName);
+    return this.paths.config;
   }
 
   /**
-   * Get XDG data directory
+   * Get data directory
    * Linux: ~/.local/share/papyrus
-   * Windows: %APPDATA%/papyrus
+   * Windows: %LOCALAPPDATA%\papyrus\Data
    * macOS: ~/Library/Application Support/papyrus
    */
   protected getDataDir(): string {
-    const dataHome =
-      xdgBasedir.data ||
-      path.join(
-        process.env.HOME || process.env.USERPROFILE || '',
-        '.local',
-        'share'
-      );
-    return path.join(dataHome, this.appName);
-  }
-
-  /**
-   * Get XDG state directory
-   * Linux: ~/.local/state/papyrus
-   * Windows: %LOCALAPPDATA%/papyrus
-   * macOS: ~/Library/Application Support/papyrus
-   */
-  protected getStateDir(): string {
-    const stateHome =
-      xdgBasedir.state ||
-      path.join(
-        process.env.HOME || process.env.USERPROFILE || '',
-        '.local',
-        'state'
-      );
-    return path.join(stateHome, this.appName);
+    return this.paths.data;
   }
 
   /**
@@ -214,10 +272,28 @@ export class BaseStorage {
 
 **Why this approach?**
 
+**Using env-paths correctly:**
+
+- We call `envPaths('papyrus')` once and store the result
+- The library returns all platform-specific paths automatically
+- No manual platform detection or path construction needed!
+- On Linux: Uses XDG directories (`~/.config`, `~/.local/share`)
+- On Windows: Uses `%APPDATA%` and `%LOCALAPPDATA%`
+- On macOS: Uses `~/Library/Application Support`, etc.
+
+**Design decisions:**
+
 - **Separation of concerns**: Base class handles directories, not business logic
-- **Reusability**: All stores inherit common operations
-- **Platform-agnostic**: XDG library handles OS differences
+- **Reusability**: All stores inherit common operations (readFile, writeFile, etc.)
+- **Trust the library**: `env-paths` already provides platform detection
 - **Testability**: Methods can be easily mocked
+
+**Why `paths` is `private` not `protected`:**
+
+- `paths` is only used internally by `getConfigDir()`, `getDataDir()`, etc.
+- Subclasses (ConfigStore, TokenStore) never need to access raw paths object
+- `private` = clearer intent: "this is an implementation detail"
+- Rule: Use `private` unless subclasses actually need access
 
 ### Step 2: Config Store
 
@@ -238,8 +314,8 @@ export interface Config {
 }
 
 /**
- * Manages user configuration stored in XDG_CONFIG_HOME
- * Example: ~/.config/papyrus/config.json
+ * Manages user configuration stored in the config directory
+ * Example: ~/.config/papyrus/config.json (Linux)
  */
 export class ConfigStore extends BaseStorage {
   private configPath: string;
@@ -316,7 +392,7 @@ export class ConfigStore extends BaseStorage {
 
 ### Step 3: Token Store
 
-Store authentication token securely in state directory.
+Store authentication token in data directory.
 
 ```typescript
 // src/lib/storage/token-store.ts
@@ -324,16 +400,16 @@ import * as path from 'path';
 import { BaseStorage } from './base-storage.js';
 
 /**
- * Manages authentication token stored in XDG_STATE_HOME
- * Example: ~/.local/state/papyrus/token
+ * Manages authentication token stored in the data directory
+ * Example: ~/.local/share/papyrus/token (Linux)
  */
 export class TokenStore extends BaseStorage {
   private tokenPath: string;
 
   constructor() {
     super();
-    const stateDir = this.getStateDir();
-    this.tokenPath = path.join(stateDir, 'token');
+    const dataDir = this.getDataDir();
+    this.tokenPath = path.join(dataDir, 'token');
   }
 
   /**
@@ -394,8 +470,8 @@ export interface JournalEntry {
 }
 
 /**
- * Manages journal entries stored in XDG_DATA_HOME
- * Example: ~/.local/share/papyrus/journals/2024-01-15.json
+ * Manages journal entries stored in the data directory
+ * Example: ~/.local/share/papyrus/journals/2024-01-15.json (Linux)
  */
 export class JournalStore extends BaseStorage {
   private journalsDir: string;
@@ -534,7 +610,7 @@ const token = tokenStore.get();
 // Journal
 journalStore.save({
   date: '2024-01-15',
-  content: 'Today I learned about XDG...',
+  content: 'Today I learned about env-paths...',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -562,9 +638,6 @@ class TestStorage extends BaseStorage {
   public testGetDataDir() {
     return this.getDataDir();
   }
-  public testGetStateDir() {
-    return this.getStateDir();
-  }
   public testReadFile(filePath: string) {
     return this.readFile(filePath);
   }
@@ -590,11 +663,6 @@ describe('BaseStorage', () => {
 
   it('should get data directory', () => {
     const dir = storage.testGetDataDir();
-    expect(dir).toContain('papyrus');
-  });
-
-  it('should get state directory', () => {
-    const dir = storage.testGetStateDir();
     expect(dir).toContain('papyrus');
   });
 
@@ -646,16 +714,12 @@ describe('ConfigStore', () => {
   let testDir: string;
 
   beforeEach(() => {
-    // Use temporary directory for tests
-    testDir = path.join(process.cwd(), 'test-config');
     store = new ConfigStore();
   });
 
   afterEach(() => {
     // Cleanup
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+    store.clear();
   });
 
   it('should return empty config when not exists', () => {
@@ -704,8 +768,6 @@ describe('ConfigStore', () => {
 ```typescript
 // src/lib/storage/__tests__/token-store.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 import { TokenStore } from '../token-store.js';
 
 describe('TokenStore', () => {
@@ -933,10 +995,25 @@ export const api = new ApiClient(API_BASE_URL);
 **Cause:** Path separator differences
 **Solution:** Always use `path.join()` (not string concatenation) - we do this everywhere.
 
-### Cannot find XDG directories
+### env-paths not found
 
-**Cause:** Environment variables not set
-**Solution:** Library provides sensible defaults. Check `xdg-basedir` is installed.
+**Cause:** Package not installed
+**Solution:** Run `pnpm add env-paths` in packages/cli directory.
+
+## Why env-paths vs xdg-basedir?
+
+**xdg-basedir limitations:**
+
+- ❌ **Linux-only**: Documentation explicitly states it's for Linux only
+- ❌ Poor Windows support: Uses generic paths, doesn't follow Windows conventions
+- ❌ Limited macOS support: Doesn't respect macOS-specific directories properly
+
+**env-paths advantages:**
+
+- ✅ **True cross-platform**: First-class support for Windows, macOS, Linux
+- ✅ **Platform conventions**: Respects each OS's preferred locations
+- ✅ **Widely adopted**: Used by major tools (Yeoman, AVA, etc.)
+- ✅ **Actively maintained**: Regular updates and community support
 
 ## Enhancements (Optional)
 
@@ -958,16 +1035,16 @@ export const api = new ApiClient(API_BASE_URL);
 
 **What we built:**
 
-- ✅ XDG-compliant storage layer
+- ✅ Cross-platform storage layer (Windows, macOS, Linux)
 - ✅ Separate stores for config, tokens, and journals
-- ✅ Cross-platform support
+- ✅ Follows XDG standards where applicable
 - ✅ Type-safe APIs
 - ✅ Comprehensive tests
 
 **Key principles applied:**
 
 - **Top-down**: Started with goals and architecture
-- **Popular libraries**: Used `xdg-basedir` (don't reinvent wheels)
+- **Popular libraries**: Used `env-paths` (don't reinvent wheels)
 - **Proper componentization**: BaseStorage + specialized stores
 - **No unnecessary complexity**: Simple file-based storage
 - **Complete working code**: All code is runnable
@@ -976,7 +1053,7 @@ export const api = new ApiClient(API_BASE_URL);
 
 ```
 src/lib/storage/
-├── base-storage.ts       # XDG directory handling
+├── base-storage.ts       # Cross-platform path handling
 ├── config-store.ts       # Configuration storage
 ├── token-store.ts        # Auth token storage
 ├── journal-store.ts      # Journal entry storage
@@ -991,6 +1068,6 @@ src/lib/storage/
 ## References
 
 - [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
-- [xdg-basedir npm package](https://www.npmjs.com/package/xdg-basedir)
+- [env-paths npm package](https://www.npmjs.com/package/env-paths)
 - [Node.js fs module](https://nodejs.org/api/fs.html)
 - [Node.js path module](https://nodejs.org/api/path.html)

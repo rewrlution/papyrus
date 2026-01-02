@@ -200,3 +200,10 @@ Found an issue with the documentation? Have suggestions for improvement?
 ---
 
 **Happy coding! 🚀**
+
+### Working with storage
+
+1. Import from `src/lib/storage/`
+2. Use `configStore`, `tokenStore`, or `journalStore`
+3. Call methods like `save()`, `get()`, `list()`
+4. See [04-STORAGE-LAYER.md](./04-STORAGE-LAYER.md)
