@@ -8,7 +8,7 @@ import {
 
 describe('JournalResponseSchema', () => {
   describe('Empty Journal (Non-existing date)', () => {
-    it('should validate a success response with null data and message', () => {
+    it('should reject a response with null data', () => {
       const emptyJournalResponse = {
         success: true,
         data: null,
@@ -16,13 +16,7 @@ describe('JournalResponseSchema', () => {
       };
 
       const result = JournalResponseSchema.safeParse(emptyJournalResponse);
-      expect(result.success).toBe(true);
-      if (result.success && result.data.success) {
-        expect(result.data.data).toBeNull();
-        expect(result.data.message).toBe(
-          'No journal entry found for this date'
-        );
-      }
+      expect(result.success).toBe(false);
     });
   });
 

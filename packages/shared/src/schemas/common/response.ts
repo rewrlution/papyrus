@@ -58,7 +58,7 @@ export const ApiMessageResponseSchema = z.object({
 export const ApiDataResponseSchema = <T extends ZodType>(dataSchema: T) =>
   z.object({
     success: z.literal(true),
-    data: dataSchema.nullable(),
+    data: dataSchema,
     message: z.string(),
   });
 
@@ -81,7 +81,7 @@ export type ApiMessageResponse = z.infer<typeof ApiMessageResponseSchema>;
 
 export type ApiDataResponse<T> = {
   success: true;
-  data: T | null;
+  data: T;
   message: string;
 };
 

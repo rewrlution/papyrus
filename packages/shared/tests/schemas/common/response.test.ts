@@ -133,24 +133,6 @@ describe('ApiDataResponseSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should allow response with null data field (DELETE scenario)', () => {
-    const StringSchema = z.string();
-    const schema = ApiDataResponseSchema(StringSchema);
-
-    const response = {
-      success: true,
-      data: null,
-      message: 'Resource deleted successfully',
-    };
-
-    const result = schema.safeParse(response);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.data).toBeNull();
-      expect(result.data.message).toBe('Resource deleted successfully');
-    }
-  });
-
   it('should reject response without data field', () => {
     const StringSchema = z.string();
     const schema = ApiDataResponseSchema(StringSchema);
