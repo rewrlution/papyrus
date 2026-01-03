@@ -5,7 +5,7 @@ import {
   formatDate,
   isValidDate,
   parseDate,
-} from '../../src/lib/date.js';
+} from '../../src/utils/date.js';
 
 describe('date utilities', () => {
   describe('getTodayDate', () => {
