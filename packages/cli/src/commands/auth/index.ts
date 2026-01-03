@@ -18,11 +18,5 @@ export function registerAuthCommands(program: Command) {
   program
     .command('register')
     .description('Create a new Papyrus account')
-    .option('-e, --email <email>', 'email address')
-    .option('-p, --password <password>', 'password')
-    .option('-c, --confirmPassword <password>', 'confirm password')
-    .action(
-      async (options) =>
-        await register(options.email, options.password, options.confirmPassword)
-    );
+    .action(async () => await register());
 }

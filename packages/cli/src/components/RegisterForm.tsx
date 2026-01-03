@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Box, Text, Newline, useApp, useInput } from 'ink';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
-import { SigninSchema } from '@rewrlution/papyrus-shared';
+import { SignupSchema } from '@rewrlution/papyrus-shared';
 
 import { api } from '../lib/api/index.js';
 
@@ -13,38 +13,41 @@ import { StatusMessage } from './StatusMessage.js';
 type FormStep =
   | 'email'
   | 'password'
+  | 'confirmPassword'
   | 'validating'
   | 'submitting'
   | 'success'
   | 'error';
 
-export function LoginForm() {
+export function RegisterForm() {
   const { exit } = useApp();
 
   // Form state
   const [step, setStep] = useState<FormStep>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [userName, setUserName] = useState('');
 
+  // Handle Enter key to move between fields
   useInput((input, key) => {
     if (key.return) {
       if (step === 'email' && email.trim()) {
         setStep('password');
       } else if (step === 'password' && password.trim()) {
-        handleLogin();
+        setStep('confirmPassword');
+      } else if (step === 'confirmPassword' && confirmPassword.trim()) {
+        handleRegister();
       }
     }
   });
 
-  const handleLogin = async () => {
-    if (!password.trim()) return; // Don't proceed if empty
-
-    // 1. Validate inputs with Zod BEFORE making api call
+  const handleRegister = async () => {
+    // 1. Validate inputs with Zod BEFORE making API call
     setStep('validating');
 
-    const result = SigninSchema.safeParse({ email, password });
+    const result = SignupSchema.safeParse({ email, password, confirmPassword });
 
     if (!result.success) {
       // Show all validation errors
@@ -58,20 +61,21 @@ export function LoginForm() {
       setTimeout(() => {
         setStep('email');
         setPassword('');
+        setConfirmPassword('');
         setErrorMessage('');
       }, 2000);
       return; // Stop execution here - don't proceed to API call
     }
 
-    // 2. Make api call - vliadation already passed
+    // 2. Make API call - validation already passed
     setStep('submitting');
 
     try {
-      const response = await api.login(result.data!);
+      const response = await api.register(result.data!);
       setUserName(response.email);
       setStep('success');
     } catch (error: any) {
-      setErrorMessage(error.message || 'Login failed');
+      setErrorMessage(error.message || 'Registration failed');
       setStep('error');
     }
 
@@ -89,14 +93,14 @@ export function LoginForm() {
 
       {/** Title */}
       <Text color="gray" dimColor>
-        Login to your account
+        Create your Papyrus account
       </Text>
       <Text color="gray" dimColor>
         Press Ctrl+C to cancel
       </Text>
       <Newline />
 
-      {/** Email */}
+      {/** Email Input */}
       {step === 'email' && (
         <FormInput
           label="Email"
@@ -107,9 +111,10 @@ export function LoginForm() {
         />
       )}
 
-      {/** Password Input */}
+      {/** Password Input with Requirements */}
       {step === 'password' && (
         <Box flexDirection="column">
+          {/* Show entered email (read-only) */}
           <Text color="cyan" bold>
             Email:
           </Text>
@@ -118,10 +123,42 @@ export function LoginForm() {
             <Text>{email}</Text>
           </Box>
 
+          {/* Password input with hint */}
           <FormInput
-            label="Password"
+            label="Password (8+ chars, uppercase, lowercase, number, special char)"
             value={password}
             onChange={setPassword}
+            mask="*"
+            focus={true}
+          />
+        </Box>
+      )}
+
+      {/** Confirm Password Input */}
+      {step === 'confirmPassword' && (
+        <Box flexDirection="column">
+          {/* Show entered email and password masked (read-only) */}
+          <Text color="cyan" bold>
+            Email:
+          </Text>
+          <Box marginLeft={2} marginBottom={1}>
+            <Text color="gray">{'> '}</Text>
+            <Text>{email}</Text>
+          </Box>
+
+          <Text color="cyan" bold>
+            Password:
+          </Text>
+          <Box marginLeft={2} marginBottom={1}>
+            <Text color="gray">{'> '}</Text>
+            <Text>{'*'.repeat(password.length)}</Text>
+          </Box>
+
+          {/* Confirm password input */}
+          <FormInput
+            label="Confirm Password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
             mask="*"
             focus={true}
           />
@@ -135,12 +172,15 @@ export function LoginForm() {
 
       {/* Submitting State */}
       {step === 'submitting' && (
-        <StatusMessage type="loading" message="Logging in..." />
+        <StatusMessage type="loading" message="Creating account..." />
       )}
 
       {/* Success State */}
       {step === 'success' && (
-        <StatusMessage type="success" message={`Welcome back, ${userName}!`} />
+        <StatusMessage
+          type="success"
+          message={`Registration successful!\nPlease check ${userName} to verify your account. If you don't receive the verification email, contact: rewrlution@gmail.com`}
+        />
       )}
 
       {/* Error State */}

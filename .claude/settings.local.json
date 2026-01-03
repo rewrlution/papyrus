@@ -1,5 +1,10 @@
 {
   "permissions": {
-    "allow": ["Bash(pnpm test:*)", "Bash(pnpm add:*)", "Bash(mkdir:*)"]
+    "allow": [
+      "Bash(pnpm test:*)",
+      "Bash(pnpm add:*)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm build:*)"
+    ]
   }
 }
