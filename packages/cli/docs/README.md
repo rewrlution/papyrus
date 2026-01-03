@@ -109,6 +109,23 @@ Prerequisites: Complete tutorial 04 first
 
 ---
 
+#### [06 - Journal Add Command](./06-JOURNAL-ADD-IMPLEMENTATION.md)
+
+**Implementing journal entry creation with external editor integration.**
+
+Learn how to:
+
+- Parse and validate date inputs (today, yesterday, YYYY-MM-DD)
+- Detect and launch external editors (vi, vim, VS Code)
+- Use temporary files for editing
+- Append and strip template comments
+- Save entries with metadata (UUID, timestamps, hashes)
+- Provide user feedback with statistics
+
+Prerequisites: Complete tutorial 01 and understand [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md)
+
+---
+
 ### Architecture Decisions
 
 #### [Architecture: Journal Storage Format](./ARCHITECTURE-JOURNAL-STORAGE.md) 📐
@@ -179,7 +196,8 @@ If you're new to the project, follow this learning path:
 5. **Build login feature** → Work through [04-LOGIN-IMPLEMENTATION.md](./04-LOGIN-IMPLEMENTATION.md)
 6. **Build register feature** → Work through [05-REGISTER-IMPLEMENTATION.md](./05-REGISTER-IMPLEMENTATION.md)
 7. **Understand architecture** → Read [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md)
-8. **Extend the CLI** → Apply what you learned to new features
+8. **Build journal add** → Work through [06-JOURNAL-ADD-IMPLEMENTATION.md](./06-JOURNAL-ADD-IMPLEMENTATION.md)
+9. **Extend the CLI** → Apply what you learned to new features
 
 ## 🎯 Common Tasks
 
@@ -218,6 +236,14 @@ If you're new to the project, follow this learning path:
 3. Store as Markdown with YAML frontmatter
 4. See [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md) for rationale
 5. See [01-STORAGE-LAYER.md](./01-STORAGE-LAYER.md) for implementation
+
+### Implementing journal commands
+
+1. Use `journalStore` for storage operations
+2. Use `parseDate()` utility for date handling
+3. For editor-based commands, use `openInEditor()` from `utils/editor.ts`
+4. Strip template comments with `stripTemplateComments()`
+5. See [06-JOURNAL-ADD-IMPLEMENTATION.md](./06-JOURNAL-ADD-IMPLEMENTATION.md) for complete example
 
 ## 📖 Additional Resources
 
