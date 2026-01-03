@@ -6,6 +6,7 @@ import { SigninSchema } from '@rewrlution/papyrus-shared';
 
 import { api } from '../lib/api/index.js';
 
+import { ColdStartAwareSpinner } from './ColdStart.js';
 import { FormInput } from './FormInput.js';
 import { Logo } from './Logo.js';
 import { StatusMessage } from './StatusMessage.js';
@@ -135,7 +136,7 @@ export function LoginForm() {
 
       {/* Submitting State */}
       {step === 'submitting' && (
-        <StatusMessage type="loading" message="Logging in..." />
+        <ColdStartAwareSpinner message="Logging in..." />
       )}
 
       {/* Success State */}

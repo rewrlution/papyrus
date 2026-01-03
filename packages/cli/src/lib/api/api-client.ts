@@ -24,6 +24,7 @@ export class ApiClient {
   constructor(baseUrl: string) {
     this.http = axios.create({
       baseURL: baseUrl,
+      timeout: 90000, // set api timeout to 90 sec. serverless app warm-up may take up to a minute.
       headers: {
         'Content-Type': 'application/json',
       },

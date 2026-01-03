@@ -6,6 +6,7 @@ import { SignupSchema } from '@rewrlution/papyrus-shared';
 
 import { api } from '../lib/api/index.js';
 
+import { ColdStartAwareSpinner } from './ColdStart.js';
 import { FormInput } from './FormInput.js';
 import { Logo } from './Logo.js';
 import { StatusMessage } from './StatusMessage.js';
@@ -172,7 +173,7 @@ export function RegisterForm() {
 
       {/* Submitting State */}
       {step === 'submitting' && (
-        <StatusMessage type="loading" message="Creating account..." />
+        <ColdStartAwareSpinner message="Creating account..." />
       )}
 
       {/* Success State */}
