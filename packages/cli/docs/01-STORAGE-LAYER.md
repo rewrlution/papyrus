@@ -582,7 +582,149 @@ export class JournalStore extends BaseStorage {
 
 **Alternative:** SQLite for better query performance (future enhancement)
 
-### Step 5: Export Storage API
+### Step 5: Sync Metadata Store
+
+Store synchronization metadata for journal entries (last sync hash, etc.).
+
+```typescript
+// src/lib/storage/sync-meta-store.ts
+import * as path from 'path';
+import { BaseStorage } from './base-storage.js';
+
+/**
+ * Metadata for a single journal entry sync state
+ */
+export interface SyncMetadata {
+  lastSyncHash: string;
+}
+
+/**
+ * Map of date to sync metadata
+ * Example: { "20260101": { lastSyncHash: "abc123..." } }
+ */
+export type SyncMetaMap = Record<string, SyncMetadata>;
+
+/**
+ * Manages sync metadata stored in the data directory
+ * Example: ~/.local/share/papyrus/sync-meta.json (Linux)
+ */
+export class SyncMetaStore extends BaseStorage {
+  private metaPath: string;
+
+  constructor(dataDir?: string) {
+    super();
+    const dir = dataDir ?? this.getDataDir();
+    this.metaPath = path.join(dir, 'sync-meta.json');
+  }
+
+  /**
+   * Load all sync metadata, returns empty object if not found
+   */
+  load(): SyncMetaMap {
+    const content = this.readFile(this.metaPath);
+    if (!content) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(content) as SyncMetaMap;
+    } catch {
+      // Invalid JSON, return empty object
+      return {};
+    }
+  }
+
+  /**
+   * Save all sync metadata
+   */
+  save(metadata: SyncMetaMap): void {
+    const content = JSON.stringify(metadata, null, 2);
+    this.writeFile(this.metaPath, content);
+  }
+
+  /**
+   * Get sync metadata for a specific date
+   */
+  get(date: string): SyncMetadata | null {
+    const allMeta = this.load();
+    return allMeta[date] || null;
+  }
+
+  /**
+   * Set sync metadata for a specific date
+   */
+  set(date: string, metadata: SyncMetadata): void {
+    const allMeta = this.load();
+    allMeta[date] = metadata;
+    this.save(allMeta);
+  }
+
+  /**
+   * Update multiple entries at once
+   */
+  updateBatch(updates: SyncMetaMap): void {
+    const allMeta = this.load();
+    const updated = { ...allMeta, ...updates };
+    this.save(updated);
+  }
+
+  /**
+   * Delete sync metadata for a specific date
+   */
+  delete(date: string): void {
+    const allMeta = this.load();
+    delete allMeta[date];
+    this.save(allMeta);
+  }
+
+  /**
+   * Check if sync metadata exists for a date
+   */
+  exists(date: string): boolean {
+    const allMeta = this.load();
+    return date in allMeta;
+  }
+
+  /**
+   * Clear all sync metadata
+   */
+  clear(): void {
+    this.deleteFile(this.metaPath);
+  }
+
+  /**
+   * Get all dates that have sync metadata
+   */
+  listDates(): string[] {
+    const allMeta = this.load();
+    return Object.keys(allMeta).sort();
+  }
+}
+```
+
+**Why this design?**
+
+**Single file vs. per-entry files:**
+
+- ✅ Simpler to manage (one file to backup/sync)
+- ✅ Faster for batch operations (update multiple entries at once)
+- ✅ Atomic writes (entire metadata state in one transaction)
+- ✅ Smaller disk footprint (no file system overhead per entry)
+- ⚠️ Trade-off: Loading all metadata on each read (acceptable for CLI app scale)
+
+**Data directory vs. config directory:**
+
+- ✅ Metadata is application-generated data (not user configuration)
+- ✅ Paired with journal entries (both in data directory)
+- ✅ Follows XDG standard (derived/cache data goes in data directory)
+
+**Design pattern:**
+
+- Similar to ConfigStore (single JSON file)
+- Provides both individual and batch operations
+- Type-safe with TypeScript interfaces
+
+### Step 6: Export Storage API
 
 Create a convenient API for accessing all stores.
 
@@ -592,6 +734,11 @@ export { BaseStorage } from './base-storage.js';
 export { ConfigStore, type Config } from './config-store.js';
 export { TokenStore } from './token-store.js';
 export { JournalStore, type JournalEntry } from './journal-store.js';
+export {
+  SyncMetaStore,
+  type SyncMetadata,
+  type SyncMetaMap,
+} from './sync-meta-store.js';
 
 /**
  * Singleton instances for easy access
@@ -599,12 +746,18 @@ export { JournalStore, type JournalEntry } from './journal-store.js';
 export const configStore = new ConfigStore();
 export const tokenStore = new TokenStore();
 export const journalStore = new JournalStore();
+export const syncMetaStore = new SyncMetaStore();
 ```
 
 **Usage example:**
 
 ```typescript
-import { configStore, tokenStore, journalStore } from './lib/storage/index.js';
+import {
+  configStore,
+  tokenStore,
+  journalStore,
+  syncMetaStore,
+} from './lib/storage/index.js';
 
 // Config
 configStore.set('apiUrl', 'https://api.papyrus.dev');
@@ -622,6 +775,16 @@ journalStore.save({
   updatedAt: new Date().toISOString(),
 });
 const entry = journalStore.get('2024-01-15');
+
+// Sync metadata
+syncMetaStore.set('20260101', { lastSyncHash: 'abc123...' });
+const metadata = syncMetaStore.get('20260101');
+
+// Batch update
+syncMetaStore.updateBatch({
+  '20260101': { lastSyncHash: 'abc123...' },
+  '20260102': { lastSyncHash: 'def456...' },
+});
 ```
 
 ## Testing
@@ -772,7 +935,7 @@ describe('ConfigStore', () => {
 
 ### Test: Token Store
 
-```typescript
+````typescript
 // src/lib/storage/__tests__/token-store.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TokenStore } from '../token-store.js';
@@ -813,15 +976,143 @@ describe('TokenStore', () => {
 
     expect(store.exists()).toBe(false);
     expect(store.get()).toBeNull();
+  });Sync Metadata Store
+
+```typescript
+// src/lib/storage/__tests__/sync-meta-store.test.ts
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import * as path from 'path';
+import * as fs from 'fs';
+import { SyncMetaStore } from '../sync-meta-store.js';
+
+describe('SyncMetaStore', () => {
+  let store: SyncMetaStore;
+  let testDir: string;
+
+  beforeEach(() => {
+    testDir = path.join(process.cwd(), 'test-temp-sync-meta');
+    store = new SyncMetaStore(testDir);
   });
 
-  it('should trim token whitespace', () => {
-    store.save('  test-token  \n');
-    const token = store.get();
-    expect(token).toBe('test-token');
+  afterEach(() => {
+    if (fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should return empty object when metadata does not exist', () => {
+    const metadata = store.load();
+    expect(metadata).toEqual({});
+  });
+
+  it('should save and load metadata', () => {
+    const metadata = {
+      '20260101': { lastSyncHash: 'abc123' },
+      '20260102': { lastSyncHash: 'def456' },
+    };
+
+    store.save(metadata);
+    const loaded = store.load();
+
+    expect(loaded).toEqual(metadata);
+  });
+
+  it('should get metadata for specific date', () => {
+    store.set('20260101', { lastSyncHash: 'abc123' });
+
+    const meta = store.get('20260101');
+    expect(meta).toEqual({ lastSyncHash: 'abc123' });
+  });
+
+  it('should return null for non-existent date', () => {
+    const meta = store.get('20991231');
+    expect(meta).toBeNull();
+  });
+
+  it('should set metadata for specific date', () => {
+    store.set('20260101', { lastSyncHash: 'abc123' });
+    store.set('20260102', { lastSyncHash: 'def456' });
+
+    const allMeta = store.load();
+    expect(allMeta['20260101'].lastSyncHash).toBe('abc123');
+    expect(allMeta['20260102'].lastSyncHash).toBe('def456');
+  });
+
+  it('should update batch metadata', () => {
+    store.set('20260101', { lastSyncHash: 'old' });
+
+    store.updateBatch({
+      '20260101': { lastSyncHash: 'updated' },
+      '20260102': { lastSyncHash: 'new' },
+    });
+
+    const allMeta = store.load();
+    expect(allMeta['20260101'].lastSyncHash).toBe('updated');
+    expect(allMeta['20260102'].lastSyncHash).toBe('new');
+  });
+
+  it('should delete metadata for specific date', () => {
+    store.set('20260101', { lastSyncHash: 'abc123' });
+    store.set('20260102', { lastSyncHash: 'def456' });
+
+    store.delete('20260101');
+
+    const allMeta = store.load();
+    expect(allMeta['20260101']).toBeUndefined();
+    expect(allMeta['20260102']).toBeDefined();
+  });
+
+  it('should check if metadata exists for date', () => {
+    expect(store.exists('20260101')).toBe(false);
+
+    store.set('20260101', { lastSyncHash: 'abc123' });
+    expect(store.exists('20260101')).toBe(true);
+  });
+
+  it('should list all dates with metadata', () => {
+    store.updateBatch({
+      '20260103': { lastSyncHash: 'c' },
+      '20260101': { lastSyncHash: 'a' },
+      '20260102': { lastSyncHash: 'b' },
+    });
+
+    const dates = store.listDates();
+    expect(dates).toEqual(['20260101', '20260102', '20260103']);
+  });
+
+  it('should clear all metadata', () => {
+    store.updateBatch({
+      '20260101': { lastSyncHash: 'abc123' },
+      '20260102': { lastSyncHash: 'def456' },
+    });
+
+    store.clear();
+
+    const metadata = store.load();
+    expect(metadata).toEqual({});
+  });
+
+  it('should handle invalid JSON gracefully', () => {
+    const metaPath = path.join(testDir, 'sync-meta.json');
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(metaPath, 'invalid json{', 'utf-8');
+
+    const metadata = store.load();
+    expect(metadata).toEqual({});
   });
 });
-```
+````
+
+### Test:
+
+it('should trim token whitespace', () => {
+store.save(' test-token \n');
+const token = store.get();
+expect(token).toBe('test-token');
+});
+});
+
+````
 
 ### Test: Journal Store
 
@@ -930,15 +1221,16 @@ describe('JournalStore', () => {
     const entries = store.list();
     expect(entries).toHaveLength(0);
   });
-});
-```
-
-## Running Tests
-
+});journals, and sync metadata
+- ✅ Follows XDG standards where applicable
+- ✅ Type-safe APIs with TypeScript interfaces
+- ✅ Comprehensive tests for all stores
+- ✅ Industry-standard token storage (config directory, like GitHub CLI, npm, Docker)
+- ✅ Efficient batch operations for sync metadata
 ```bash
 cd packages/cli
 pnpm test
-```
+````
 
 ## Integration with Existing Code
 
@@ -953,12 +1245,14 @@ import { tokenStore } from './storage/index.js';
 export class ApiClient {
   constructor(baseUrl: string) {
     // Use the new token store
-    this.http.interceptors.request.use((config) => {
-      const token = tokenStore.get();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
+    sync-meta-store.ts    # Sync metadata storage
+├── index.ts              # Public API
+└── __tests__/
+    ├── base-storage.test.ts
+    ├── config-store.test.ts
+    ├── token-store.test.ts
+    ├── journal-store.test.ts
+    └── sync-metanfig;
     });
   }
 
