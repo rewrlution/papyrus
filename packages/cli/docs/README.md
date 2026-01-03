@@ -4,7 +4,9 @@ Welcome to the Papyrus CLI development documentation. This collection of guides 
 
 ## 📚 Documentation Index
 
-### [Tutor Principles](../../../TUTOR-PRINCIPLES.md) 🎯
+### Getting Started
+
+#### [Tutor Principles](../../../docs/TUTOR-PRINCIPLES.md) 🎯
 
 **Guidelines for writing technical tutorials and documentation.**
 
@@ -21,7 +23,25 @@ Key principles:
 
 ---
 
-### [01 - API Client Setup](./01-API-CLIENT-SETUP.md)
+### Foundation Tutorials
+
+#### [01 - Storage Layer](./01-STORAGE-LAYER.md)
+
+**Building a cross-platform storage system following XDG standards.**
+
+Learn how to:
+
+- Implement XDG Base Directory specification
+- Store config, tokens, and journal entries
+- Create platform-agnostic file storage
+- Write testable storage classes
+- Use popular libraries (env-paths)
+
+Prerequisites: Basic Node.js file I/O knowledge
+
+---
+
+#### [02 - API Client Setup](./02-API-CLIENT-SETUP.md)
 
 **How to set up and use the API client for server communication.**
 
@@ -31,13 +51,14 @@ Learn how to:
 - Manage authentication tokens
 - Define and use API types
 - Integrate with the shared package
+- Validate with Zod schemas
 - Test API calls
 
 Prerequisites: Basic TypeScript and HTTP knowledge
 
 ---
 
-### [02 - React CLI Components](./02-REACT-CLI-COMPONENTS.md)
+#### [03 - React CLI Components](./03-REACT-CLI-COMPONENTS.md)
 
 **Building terminal UIs with React and Ink.**
 
@@ -54,7 +75,9 @@ Prerequisites: Basic React knowledge
 
 ---
 
-### [03 - Login Implementation](./03-LOGIN-IMPLEMENTATION.md)
+### Feature Implementation Guides
+
+#### [04 - Login Implementation](./04-LOGIN-IMPLEMENTATION.md)
 
 **Complete walkthrough of building a login feature.**
 
@@ -62,26 +85,86 @@ A practical, end-to-end example that combines:
 
 - React components (forms, status messages)
 - API integration (authentication)
+- Client-side Zod validation
 - Token storage
 - User flow management
 
-Prerequisites: Complete tutorials 01 and 02 first
+Prerequisites: Complete tutorials 01, 02, and 03 first
 
 ---
 
-### [04 - Storage Layer](./04-STORAGE-LAYER.md)
+#### [05 - Register Implementation](./05-REGISTER-IMPLEMENTATION.md)
 
-**Building a cross-platform storage system following XDG standards.**
+**Building a registration form with password validation.**
 
 Learn how to:
 
-- Implement XDG Base Directory specification
-- Store config, tokens, and journal entries
-- Create platform-agnostic file storage
-- Write testable storage classes
-- Use popular libraries (xdg-basedir)
+- Handle multi-step forms (email → password → confirm)
+- Validate password strength with Zod
+- Show validation errors clearly
+- Implement progressive disclosure
+- Handle registration flow
 
-Prerequisites: Basic Node.js file I/O knowledge
+Prerequisites: Complete tutorial 04 first
+
+---
+
+### Architecture Decisions
+
+#### [Architecture: Journal Storage Format](./ARCHITECTURE-JOURNAL-STORAGE.md) 📐
+
+**Why we chose Markdown with YAML frontmatter for journal storage.**
+
+An Architecture Decision Record (ADR) that explains:
+
+- Problem statement and requirements
+- Considered alternatives (JSON, SQLite, separate files)
+- Decision outcome and rationale
+- Implementation details
+- Trade-offs and consequences
+
+**Key decision:** Store journals as `.md` files with YAML frontmatter for human-editability and metadata preservation.
+
+---
+
+### Advanced Topics
+
+#### [Sync Strategy](./sync.md)
+
+**Hash-based sync algorithm for conflict detection.**
+
+Covers:
+
+- Three-way comparison using hashes
+- Conflict detection logic
+- Per-device sync state
+- Avoiding the "last modified time" problem
+
+Prerequisites: Understand [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md) first
+
+---
+
+#### [Cold Start Handling](./cold-start-handling.md)
+
+**Managing serverless cold starts in the CLI.**
+
+Learn how to:
+
+- Detect and handle cold starts
+- Show appropriate loading messages
+- Improve perceived performance
+
+---
+
+#### [Token Expiration Handling](./token-expiration-handling.md)
+
+**Handling JWT token expiration gracefully.**
+
+Covers:
+
+- Detecting expired tokens
+- Automatic re-authentication
+- User experience considerations
 
 ---
 
@@ -89,12 +172,14 @@ Prerequisites: Basic Node.js file I/O knowledge
 
 If you're new to the project, follow this learning path:
 
-1. **Understand the principles** → Read [TUTOR-PRINCIPLES.md](../../../TUTOR-PRINCIPLES.md)
-2. **Set up storage layer** → Follow [04-STORAGE-LAYER.md](./04-STORAGE-LAYER.md)
-3. **Set up API client** → Follow [01-API-CLIENT-SETUP.md](./01-API-CLIENT-SETUP.md)
-4. **Learn Ink basics** → Read [02-REACT-CLI-COMPONENTS.md](./02-REACT-CLI-COMPONENTS.md)
-5. **Build login feature** → Work through [03-LOGIN-IMPLEMENTATION.md](./03-LOGIN-IMPLEMENTATION.md)
-6. **Extend the CLI** → Apply what you learned to new features
+1. **Understand the principles** → Read [TUTOR-PRINCIPLES.md](../../../docs/TUTOR-PRINCIPLES.md)
+2. **Set up storage layer** → Follow [01-STORAGE-LAYER.md](./01-STORAGE-LAYER.md)
+3. **Set up API client** → Follow [02-API-CLIENT-SETUP.md](./02-API-CLIENT-SETUP.md)
+4. **Learn Ink basics** → Read [03-REACT-CLI-COMPONENTS.md](./03-REACT-CLI-COMPONENTS.md)
+5. **Build login feature** → Work through [04-LOGIN-IMPLEMENTATION.md](./04-LOGIN-IMPLEMENTATION.md)
+6. **Build register feature** → Work through [05-REGISTER-IMPLEMENTATION.md](./05-REGISTER-IMPLEMENTATION.md)
+7. **Understand architecture** → Read [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md)
+8. **Extend the CLI** → Apply what you learned to new features
 
 ## 🎯 Common Tasks
 
@@ -110,21 +195,29 @@ If you're new to the project, follow this learning path:
 1. Add types in `src/lib/api-types.ts`
 2. Add method to `ApiClient` class
 3. Use in command handlers
-4. See [01-API-CLIENT-SETUP.md](./01-API-CLIENT-SETUP.md)
+4. See [02-API-CLIENT-SETUP.md](./02-API-CLIENT-SETUP.md)
 
 ### Creating UI components
 
 1. Create component in `src/components/`
 2. Use Ink primitives (Box, Text)
 3. Handle input with `useInput`
-4. See [02-REACT-CLI-COMPONENTS.md](./02-REACT-CLI-COMPONENTS.md)
+4. See [03-REACT-CLI-COMPONENTS.md](./03-REACT-CLI-COMPONENTS.md)
 
 ### Building interactive forms
 
 1. Break into reusable components
 2. Manage state with hooks
 3. Handle step progression
-4. See [03-LOGIN-IMPLEMENTATION.md](./03-LOGIN-IMPLEMENTATION.md)
+4. See [04-LOGIN-IMPLEMENTATION.md](./04-LOGIN-IMPLEMENTATION.md) and [05-REGISTER-IMPLEMENTATION.md](./05-REGISTER-IMPLEMENTATION.md)
+
+### Working with journal storage
+
+1. Import from `src/lib/storage/`
+2. Use `journalStore.save()`, `load()`, `list()`
+3. Store as Markdown with YAML frontmatter
+4. See [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md) for rationale
+5. See [01-STORAGE-LAYER.md](./01-STORAGE-LAYER.md) for implementation
 
 ## 📖 Additional Resources
 
@@ -145,7 +238,7 @@ If you're new to the project, follow this learning path:
 
 When adding new features:
 
-1. **Follow the principles** in [../../../TUTOR-PRINCIPLES.md](./../../../TUTOR-PRINCIPLES.md)
+1. **Follow the principles** in [../../../docs/TUTOR-PRINCIPLES.md](../../../docs/TUTOR-PRINCIPLES.md)
 2. **Keep it simple** - Don't over-engineer
 3. **Write tests** - Test command handlers and components
 4. **Document your work** - Update relevant docs
@@ -200,10 +293,3 @@ Found an issue with the documentation? Have suggestions for improvement?
 ---
 
 **Happy coding! 🚀**
-
-### Working with storage
-
-1. Import from `src/lib/storage/`
-2. Use `configStore`, `tokenStore`, or `journalStore`
-3. Call methods like `save()`, `get()`, `list()`
-4. See [04-STORAGE-LAYER.md](./04-STORAGE-LAYER.md)

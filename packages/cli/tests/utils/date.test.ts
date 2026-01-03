@@ -5,6 +5,7 @@ import {
   formatDate,
   isValidDate,
   parseDate,
+  parseDateToLocalTimestamp,
 } from '../../src/utils/date.js';
 
 describe('date utilities', () => {
@@ -133,6 +134,42 @@ describe('date utilities', () => {
       vi.setSystemTime(new Date('2025-01-01T15:30:00'));
       expect(parseDate('-1')).toBe('20241231');
       expect(parseDate('+31')).toBe('20250201');
+    });
+  });
+
+  describe('parseDateToLocalTimestamp', () => {
+    it('should parse YYYYMMDD to Date at noon local time', () => {
+      const result = parseDateToLocalTimestamp('20251231');
+
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(11); // December (0-indexed)
+      expect(result.getDate()).toBe(31);
+      expect(result.getHours()).toBe(12);
+      expect(result.getMinutes()).toBe(0);
+      expect(result.getSeconds()).toBe(0);
+    });
+
+    it('should handle different dates', () => {
+      const jan1 = parseDateToLocalTimestamp('20250101');
+      expect(jan1.getFullYear()).toBe(2025);
+      expect(jan1.getMonth()).toBe(0); // January
+      expect(jan1.getDate()).toBe(1);
+      expect(jan1.getHours()).toBe(12);
+
+      const feb29 = parseDateToLocalTimestamp('20240229'); // Leap year
+      expect(feb29.getFullYear()).toBe(2024);
+      expect(feb29.getMonth()).toBe(1); // February
+      expect(feb29.getDate()).toBe(29);
+      expect(feb29.getHours()).toBe(12);
+    });
+
+    it('should create date in local timezone', () => {
+      const result = parseDateToLocalTimestamp('20251231');
+
+      // The date should be in local timezone, not UTC
+      // Check that the date string contains the correct local date
+      const dateStr = result.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      expect(dateStr).toBe('2025-12-31');
     });
   });
 });

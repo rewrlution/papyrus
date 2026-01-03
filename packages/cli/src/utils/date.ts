@@ -80,3 +80,28 @@ export function parseDate(input: string): string {
 export function isValidDate(date: string): boolean {
   return DateStringSchema.safeParse(date).success;
 }
+
+/**
+ * Parse date string (YYYYMMDD) to Date object in local timezone at noon.
+ *
+ * This function is needed for creating consistent timestamps from date strings
+ * while avoiding timezone edge cases. By using noon (12:00:00), we ensure the
+ * date stays correct regardless of timezone offsets.
+ *
+ * Use case: When reading legacy journal files without frontmatter, we need to
+ * create timestamps from the filename (e.g., "20251231.md") that reflect the
+ * correct date in the user's local timezone.
+ *
+ * @param dateString - date in YYYYMMDD format
+ * @returns Date object at noon in local timezone
+ * @example
+ * parseDateToLocalTimestamp("20251231") // Dec 31, 2025 12:00:00 (local time)
+ */
+export function parseDateToLocalTimestamp(dateString: string): Date {
+  const year = parseInt(dateString.substring(0, 4), 10);
+  const month = parseInt(dateString.substring(4, 6), 10) - 1; // JS months are 0-indexed
+  const day = parseInt(dateString.substring(6, 8), 10);
+
+  // Create date at noon local time to avoid timezone edge cases
+  return new Date(year, month, day, 12, 0, 0);
+}
