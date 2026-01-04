@@ -87,29 +87,72 @@ pnpm test --filter=@rewrlution/papyrus-cli
 ```
 packages/cli/
 ├── src/
-│   ├── cli.tsx                    # Entry point with Commander setup
-│   ├── index.tsx                  # Main exports
+│   ├── cli.tsx                        # Entry point with Commander setup
 │   ├── commands/
-│   │   ├── index.ts              # Command registration exports
-│   │   ├── types.ts              # Command option types
-│   │   ├── journal/
-│   │   │   ├── index.ts          # Journal command registration
-│   │   │   ├── add.ts            # Create new entry
-│   │   │   ├── amend.ts          # Modify existing entry
-│   │   │   ├── show.ts           # Display entry
-│   │   │   ├── list.ts           # List all entries
-│   │   │   └── sync.ts           # Sync with server
-│   │   └── auth/
-│   │       └── index.ts          # Auth command registration (login/logout/register)
-│   └── components/
-│       ├── App.tsx               # Root React component
-│       └── Logo.tsx              # ASCII art logo with gradient
+│   │   ├── index.ts                  # Command registration exports
+│   │   ├── types.ts                  # Command option types
+│   │   ├── auth/
+│   │   │   ├── index.ts              # Auth command registration
+│   │   │   ├── login.ts              # Login command (Ink form)
+│   │   │   ├── logout.ts             # Logout command
+│   │   │   └── register.ts           # Register command (Ink form)
+│   │   └── journal/
+│   │       ├── index.ts              # Journal command registration
+│   │       ├── add.ts                # Create new entry (editor)
+│   │       ├── amend.ts              # Modify existing entry (editor)
+│   │       ├── edit.ts               # Edit utilities
+│   │       ├── show.ts               # Display entry
+│   │       ├── list.ts               # List all entries
+│   │       └── sync.ts               # Sync with server
+│   ├── components/
+│   │   ├── ColdStart.tsx             # Cold start aware spinner
+│   │   ├── FormInput.tsx             # Reusable form input component
+│   │   ├── LoginForm.tsx             # Login form (email/password)
+│   │   ├── RegisterForm.tsx          # Registration form (multi-step)
+│   │   ├── StatusMessage.tsx         # Status message display
+│   │   ├── SyncProgress.tsx          # Sync progress with real-time updates
+│   │   └── Logo.tsx                  # ASCII art logo with gradient
+│   ├── lib/
+│   │   ├── api/
+│   │   │   ├── api-client.ts         # Axios-based API client
+│   │   │   └── index.ts              # API client exports
+│   │   ├── auth/
+│   │   │   ├── require-auth.ts       # Reusable auth middleware
+│   │   │   └── index.ts              # Auth utilities exports
+│   │   ├── storage/
+│   │   │   ├── base-storage.ts       # Base storage class (XDG)
+│   │   │   ├── config-store.ts       # Config storage
+│   │   │   ├── journal-storage.ts    # Journal storage (Markdown)
+│   │   │   ├── sync-meta-store.ts    # Sync metadata storage
+│   │   │   ├── token-store.ts        # JWT token storage
+│   │   │   └── index.ts              # Storage exports
+│   │   └── sync/
+│   │       └── sync-engine.ts        # Hash-based sync logic
+│   └── utils/
+│       ├── date.ts                   # Date parsing utilities
+│       ├── editor.ts                 # External editor integration
+│       ├── template.ts               # Journal template utilities
+│       └── token.ts                  # JWT token utilities
+├── docs/                             # Tutorial documentation
+│   ├── README.md                     # Documentation index
+│   ├── 01-STORAGE-LAYER.md          # Storage layer tutorial
+│   ├── 02-API-CLIENT-SETUP.md       # API client tutorial
+│   ├── 03-REACT-CLI-COMPONENTS.md   # Ink components tutorial
+│   ├── 04-LOGIN-IMPLEMENTATION.md   # Login feature tutorial
+│   ├── 05-REGISTER-IMPLEMENTATION.md # Register feature tutorial
+│   ├── 06-JOURNAL-ADD-IMPLEMENTATION.md # Journal commands tutorial
+│   ├── 07-SYNC-IMPLEMENTATION.md    # Sync feature tutorial
+│   ├── 08-TOKEN-MANAGEMENT.md       # Token management tutorial
+│   ├── ARCHITECTURE-JOURNAL-STORAGE.md # ADR for journal format
+│   ├── sync.md                       # Sync algorithm explanation
+│   ├── cold-start-handling.md       # Cold start handling
+│   └── token-expiration-handling.md # Token expiration strategies
 ├── tests/
-│   └── cli.test.ts               # Test files
-├── dist/                         # Build output (generated)
+│   └── cli.test.ts                   # Test files
+├── dist/                             # Build output (generated)
 ├── package.json
 ├── tsconfig.json
-└── CLAUDE.md                     # This file
+└── CLAUDE.md                         # This file
 ```
 
 ## Command Architecture
@@ -198,33 +241,168 @@ To add a new command:
      .action(async (options) => await deleteEntry(options));
    ```
 
-## Key Files
+## Architecture Overview
+
+The CLI is organized into clear layers following separation of concerns:
+
+### Layer 1: Commands (`src/commands/`)
+
+- **Entry points** for user actions
+- **Thin layer** that delegates to lib/ and utils/
+- **Type-safe** with shared option types
+- **Authenticated commands** use `ensureAuthenticated()` from auth middleware
+
+### Layer 2: Business Logic (`src/lib/`)
+
+- **API Client** - HTTP client for backend communication (Axios)
+- **Auth Middleware** - Reusable authentication checking (`requireAuth`, `ensureAuthenticated`)
+- **Storage** - Cross-platform file storage following XDG Base Directory spec
+- **Sync Engine** - Hash-based three-way sync with conflict resolution
+
+### Layer 3: Utilities (`src/utils/`)
+
+- **Pure functions** with no side effects
+- **Date parsing** - Parse "today", "yesterday", "YYYYMMDD"
+- **Token utilities** - JWT decoding and expiration checking
+- **Editor integration** - Launch external editors ($EDITOR)
+- **Template handling** - Journal entry templates
+
+### Layer 4: UI (`src/components/`)
+
+- **React components** rendered in terminal via Ink
+- **Interactive forms** - Login, register (multi-step)
+- **Progress displays** - Sync progress with real-time updates
+- **Reusable components** - Input, status messages, spinners
+
+## Key Architecture Decisions
+
+### Storage Layer (XDG Base Directory)
+
+- **Platform-agnostic** paths (`~/.local/share/papyrus/`, `~/.config/papyrus/`)
+- **Markdown with YAML frontmatter** for journals (human-editable)
+- **Separate stores** for journals, tokens, config, sync metadata
+- See: `docs/ARCHITECTURE-JOURNAL-STORAGE.md`
+
+### Token Management (Decoupled)
+
+- **JWT utilities** (`src/utils/token.ts`) - Pure functions for token operations
+- **Auth middleware** (`src/lib/auth/`) - Reusable across all authenticated commands
+- **Proactive validation** - Check expiration before operations
+- **Consistent error messages** - All commands use same auth checking
+- See: `docs/08-TOKEN-MANAGEMENT.md`
+
+### Sync Strategy (Hash-Based)
+
+- **Three-way comparison** using content hashes (SHA-256)
+- **Per-device sync state** - No server coordination needed
+- **Conflict resolution** - Automatic merging when both sides changed
+- **Progress callbacks** - Real-time UI updates during sync
+- See: `docs/07-SYNC-IMPLEMENTATION.md` and `docs/sync.md`
+
+### API Client (Axios + Interceptors)
+
+- **Automatic token injection** - Request interceptor adds auth header
+- **Error handling** - Response interceptor handles 401s
+- **Type-safe** - Uses shared types from `@rewrlution/papyrus-shared`
+- **Timeout handling** - 90s timeout for cold starts
+- See: `docs/02-API-CLIENT-SETUP.md`
+
+## Key Files and Modules
 
 ### `src/cli.tsx`
 
 Entry point that:
 
 - Sets up Commander.js program
-- Registers all command groups
-- Renders the Ink App component for visual feedback
+- Registers all command groups (auth, journal)
 - Parses command-line arguments
 
 ### `src/commands/types.ts`
 
-TypeScript interfaces for command options. Uses inheritance to share common options across commands.
+TypeScript interfaces for command options. Uses inheritance to share common options (like `--date`) across commands.
 
-### `src/commands/journal/index.ts` & `src/commands/auth/index.ts`
+### `src/commands/journal/` & `src/commands/auth/`
 
-Command registration functions that attach commands to the Commander program. Keeps CLI setup modular and organized.
+Command handlers that:
 
-### `src/components/Logo.tsx`
+- Parse options and validate input
+- Call business logic from `lib/`
+- Render Ink components for interactive UIs
+- Handle errors and provide user feedback
 
-Displays ASCII art logo using box-drawing characters with gradient colors via Chalk. To create similar logos:
+### `src/lib/api/api-client.ts`
 
-- Use ASCII art generators or design manually
-- Apply colors with `chalk.color('text')`
-- Combine multiple colored segments per line
-- Use Ink's `<Text>` component to render in terminal
+HTTP client for backend communication:
+
+- Axios instance with base URL and timeout
+- Request interceptor for automatic token injection
+- Handles all API operations (auth, journals)
+- Type-safe responses using shared types
+
+### `src/lib/auth/require-auth.ts`
+
+Reusable authentication middleware:
+
+- `requireAuth()` - Returns detailed auth status
+- `ensureAuthenticated()` - Validates or exits (convenience function)
+- Checks token existence, expiration, and warns when expiring soon
+- Consistent error messages across all commands
+
+### `src/lib/storage/`
+
+Cross-platform storage implementations:
+
+- `BaseStorage` - Abstract base class with XDG path resolution
+- `JournalStore` - Markdown file storage for journal entries
+- `TokenStore` - Secure JWT token storage
+- `SyncMetaStore` - Tracks last synced hashes per journal
+- `ConfigStore` - App configuration storage
+
+### `src/lib/sync/sync-engine.ts`
+
+Hash-based synchronization logic:
+
+- Three-way comparison (local, remote, last synced)
+- Conflict detection and automatic merging
+- Progress callbacks for UI updates
+- Returns statistics (uploaded, downloaded, conflicts)
+
+### `src/utils/token.ts`
+
+Pure functions for JWT operations:
+
+- `getTokenExpiration()` - Extract exp claim
+- `isTokenExpired()` - Check if token is expired
+- `isTokenExpiringSoon()` - Check if expiring within threshold
+- `getTimeUntilExpiration()` - Human-readable time string
+
+### `src/utils/date.ts`
+
+Date parsing utilities:
+
+- Parse "today", "yesterday", "tomorrow"
+- Parse "YYYYMMDD" format
+- Validate date strings
+
+### `src/utils/editor.ts`
+
+External editor integration:
+
+- Detect $EDITOR, $VISUAL environment variables
+- Fallback to common editors (vim, vi, nano, code)
+- Launch editor and wait for completion
+- Handle temp file creation and cleanup
+
+### `src/components/`
+
+React/Ink UI components:
+
+- `LoginForm` - Email/password form with validation
+- `RegisterForm` - Multi-step registration (email → password → confirm)
+- `SyncProgress` - Real-time sync progress with spinner
+- `FormInput` - Reusable input component
+- `ColdStartAwareSpinner` - Spinner with cold start warning
+- `Logo` - ASCII art logo with gradient colors
 
 ## Package Scripts
 
@@ -406,25 +584,103 @@ Key dependencies and their purposes:
 - **ink** (^6.6.0): React renderer for CLI apps
 - **react** (^19.2.3): UI component framework
 - **chalk** (^5.6.2): Terminal string styling and colors
-- **@rewrlution/papyrus-shared**: Shared utilities across packages
+- **axios**: HTTP client for API communication
+- **jwt-decode**: JWT token decoding (for expiration checking)
+- **env-paths**: Cross-platform path resolution (XDG)
+- **execa**: Process execution for external editor
+- **@rewrlution/papyrus-shared**: Shared types and utilities
 
 Dev dependencies:
 
 - **tsx**: TypeScript executor for development
 - **vitest**: Test runner
 - **typescript**: Type checking and compilation
+- **@types/\***: TypeScript type definitions
 
-## Next Steps
+## Documentation
 
-To extend the CLI:
+Comprehensive tutorials are available in the `docs/` directory:
 
-1. **Add date parsing utility** - Parse "yesterday", "2024-01-15", etc.
-2. **Integrate editor** - Use `editor` package to open $EDITOR for journal entries
-3. **Add prompts** - Use `@inquirer/prompts` for interactive questions
-4. **Connect to API** - Integrate with `@rewrlution/papyrus-api`
-5. **Local storage** - Store entries locally before syncing
-6. **Rich formatting** - Use Ink components for better output display
-7. **Configuration file** - Support `.papyrusrc` for user preferences
+### Getting Started
+
+- **[Tutor Principles](../../../docs/TUTOR-PRINCIPLES.md)** - Guidelines for writing documentation (read first!)
+- **[README](./docs/README.md)** - Documentation index and learning path
+
+### Foundation Tutorials
+
+1. **[Storage Layer](./docs/01-STORAGE-LAYER.md)** - XDG-based cross-platform storage
+2. **[API Client Setup](./docs/02-API-CLIENT-SETUP.md)** - HTTP client with authentication
+3. **[React CLI Components](./docs/03-REACT-CLI-COMPONENTS.md)** - Building UIs with Ink
+
+### Feature Implementation
+
+4. **[Login Implementation](./docs/04-LOGIN-IMPLEMENTATION.md)** - Interactive login form
+5. **[Register Implementation](./docs/05-REGISTER-IMPLEMENTATION.md)** - Multi-step registration
+6. **[Journal Commands](./docs/06-JOURNAL-ADD-IMPLEMENTATION.md)** - Add, amend, show commands
+7. **[Sync Implementation](./docs/07-SYNC-IMPLEMENTATION.md)** - Hash-based synchronization
+8. **[Token Management](./docs/08-TOKEN-MANAGEMENT.md)** - Decoupled auth middleware
+
+### Architecture Decisions
+
+- **[Journal Storage Format](./docs/ARCHITECTURE-JOURNAL-STORAGE.md)** - Why Markdown with YAML frontmatter
+- **[Sync Strategy](./docs/sync.md)** - Hash-based three-way comparison algorithm
+- **[Cold Start Handling](./docs/cold-start-handling.md)** - Managing serverless cold starts
+- **[Token Expiration](./docs/token-expiration-handling.md)** - Handling JWT expiration
+
+## Completed Features
+
+The following features are fully implemented:
+
+- ✅ **Authentication** - Login, logout, register with JWT tokens
+- ✅ **Token management** - Decoupled, reusable auth checking with expiration warnings
+- ✅ **Journal storage** - Markdown files with YAML frontmatter (XDG paths)
+- ✅ **Date parsing** - Support for "today", "yesterday", "YYYYMMDD"
+- ✅ **External editor** - Integration with $EDITOR, $VISUAL (vim, nano, code)
+- ✅ **Journal commands** - Add, amend, show, list
+- ✅ **Sync engine** - Hash-based three-way sync with conflict resolution
+- ✅ **API client** - Axios with interceptors for auth and error handling
+- ✅ **Interactive forms** - Login and registration using Ink
+- ✅ **Cold start handling** - Spinner with warning for serverless cold starts
+- ✅ **Real-time progress** - Sync progress with live updates
+
+## Future Enhancements
+
+Potential improvements and new features:
+
+1. **Enhanced conflict resolution**
+   - Interactive conflict resolution (choose local/remote/merge)
+   - Diff view for conflicts
+   - Custom merge strategies
+
+2. **Search and filtering**
+   - Full-text search across journals
+   - Filter by date range
+   - Tag support
+
+3. **Rich formatting**
+   - Syntax highlighting for Markdown display
+   - Better table rendering
+   - Image preview (if terminal supports it)
+
+4. **Configuration**
+   - User preferences (`.papyrusrc`)
+   - Custom editor per file type
+   - Sync frequency settings
+
+5. **Offline mode**
+   - Queue operations when offline
+   - Auto-sync when connection restored
+   - Offline indicator in commands
+
+6. **Export/Import**
+   - Export to PDF, HTML
+   - Import from other formats
+   - Backup and restore
+
+7. **Advanced journal features**
+   - Templates for different journal types
+   - Attachments support
+   - Encryption for sensitive entries
 
 ## Resources
 
