@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  getTimeUntilExpiration,
   getTokenExpiration,
   isTokenExpired,
   isTokenExpiringSoon,
@@ -132,6 +133,65 @@ describe('token utilities', () => {
 
       // Should be true with 48h threshold
       expect(isTokenExpiringSoon(token, 48)).toBe(true);
+    });
+
+    describe('getTimeUntilExpiration', () => {
+      it('should return null for invalid token', () => {
+        const invalidToken = 'invalid-token';
+        expect(getTimeUntilExpiration(invalidToken)).toBeNull();
+      });
+
+      it('should return "expired" for expired token', () => {
+        // Mock current time to Jan 2, 2025 (after expiration)
+        vi.spyOn(Date, 'now').mockReturnValue(
+          new Date('2025-01-02T00:00:00Z').getTime()
+        );
+
+        // Token expired Jan 1, 2025
+        const token =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzU2ODk2MDAsImlhdCI6MTczNTY4NjAwMH0.dummy';
+
+        expect(getTimeUntilExpiration(token)).toBe('expired');
+      });
+
+      it('should return minutes for token expiring in less than 1 hour', () => {
+        // Mock current time to 30 minutes before expiration
+        vi.spyOn(Date, 'now').mockReturnValue(
+          new Date('2024-12-31T23:30:00Z').getTime()
+        );
+
+        // Token expires Jan 1, 2025 00:00:00
+        const token =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzU2ODk2MDAsImlhdCI6MTczNTY4NjAwMH0.dummy';
+
+        expect(getTimeUntilExpiration(token)).toBe('30 minutes');
+      });
+
+      it('should return hours for token expiring in less than 24 hours', () => {
+        // Mock current time to 5 hours before expiration
+        vi.spyOn(Date, 'now').mockReturnValue(
+          new Date('2024-12-31T19:00:00Z').getTime()
+        );
+
+        // Token expires Jan 1, 2025 00:00:00
+        const token =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzU2ODk2MDAsImlhdCI6MTczNTY4NjAwMH0.dummy';
+
+        expect(getTimeUntilExpiration(token)).toBe('5 hours');
+      });
+
+      it('should return days for token expiring in more than 24 hours', () => {
+        // Mock current time to 3 days before expiration
+        vi.spyOn(Date, 'now').mockReturnValue(
+          new Date('2024-12-29T00:00:00Z').getTime()
+        );
+
+        // Token expires Jan 1, 2025 00:00:00
+        const token =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzU2ODk2MDAsImlhdCI6MTczNTY4NjAwMH0.dummy';
+
+        expect(getTimeUntilExpiration(token)).toBe('3 days');
+      });
     });
   });
 });

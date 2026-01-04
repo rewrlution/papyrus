@@ -148,6 +148,24 @@ Prerequisites: Complete tutorials 01, 02, and understand [sync.md](./sync.md)
 
 ---
 
+#### [08 - Token Management](./08-TOKEN-MANAGEMENT.md)
+
+**Implementing decoupled, reusable authentication checking across commands.**
+
+Learn how to:
+
+- Understand the problem with coupled token validation (anti-pattern)
+- Design a three-layer architecture for auth management
+- Implement JWT token utilities (pure functions)
+- Build reusable auth middleware (requireAuth, ensureAuthenticated)
+- Use auth checking in commands with one line of code
+- Write tests for token utilities and auth middleware
+- Maintain consistent error messages across the CLI
+
+Prerequisites: Complete tutorials 01 and 02
+
+---
+
 ### Architecture Decisions
 
 #### [Architecture: Journal Storage Format](./ARCHITECTURE-JOURNAL-STORAGE.md) 📐
@@ -220,7 +238,8 @@ If you're new to the project, follow this learning path:
 7. **Understand architecture** → Read [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md)
 8. **Build journal commands** → Work through [06-JOURNAL-ADD-IMPLEMENTATION.md](./06-JOURNAL-ADD-IMPLEMENTATION.md)
 9. **Build sync command** → Work through [07-SYNC-IMPLEMENTATION.md](./07-SYNC-IMPLEMENTATION.md)
-10. **Extend the CLI** → Apply what you learned to new features
+10. **Implement token management** → Work through [08-TOKEN-MANAGEMENT.md](./08-TOKEN-MANAGEMENT.md)
+11. **Extend the CLI** → Apply what you learned to new features
 
 ## 🎯 Common Tasks
 
