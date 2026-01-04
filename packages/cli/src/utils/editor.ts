@@ -12,8 +12,19 @@ import path from 'path';
 const EDITORS = ['vi', 'vim', 'nano', 'code', 'notepad'];
 
 function isAvailable(editor: string): boolean {
+  // Notepad is always available on Windows and doesn't support --version
+  if (editor === 'notepad' && process.platform === 'win32') {
+    return true;
+  }
+
   // Test if the command is actually executable, not just if it exists
-  const result = spawnSync(editor, ['--version'], { stdio: 'ignore' });
+  // shell: true is required to execute batch files (.cmd/.bat) on Windows (e.g., code.cmd)
+  // and works correctly on Linux/macOS as well (uses /bin/sh)
+  const result = spawnSync(editor, ['--version'], {
+    stdio: 'ignore',
+    shell: true,
+    timeout: 1000,
+  });
   return !result.error;
 }
 
@@ -49,7 +60,10 @@ export function openInEditor(
 
     // Determine args based on editor
     const args = editor === 'code' ? ['--wait', tempFile] : [tempFile];
-    const result = spawnSync(editor, args, { stdio: 'inherit' });
+    const result = spawnSync(editor, args, {
+      stdio: 'inherit',
+      shell: true, // Required for batch files on Windows
+    });
 
     if (result.error) {
       throw new Error(`Failed to open editor: ${result.error.message}`);
