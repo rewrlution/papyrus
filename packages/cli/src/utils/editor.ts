@@ -11,6 +11,16 @@ import path from 'path';
  */
 const EDITORS = ['vi', 'vim', 'nano', 'code', 'notepad'];
 
+/**
+ * Determines if an editor needs shell wrapper to execute.
+ * - vi/vim/nano: Better without shell (direct TTY access)
+ * - code: Needs shell on Windows (code.cmd is a batch file)
+ * - notepad: Works either way
+ */
+function needsShell(editor: string): boolean {
+  return editor === 'code' || editor === 'notepad';
+}
+
 function isAvailable(editor: string): boolean {
   // Notepad is always available on Windows and doesn't support --version
   if (editor === 'notepad' && process.platform === 'win32') {
@@ -22,7 +32,7 @@ function isAvailable(editor: string): boolean {
   // and works correctly on Linux/macOS as well (uses /bin/sh)
   const result = spawnSync(editor, ['--version'], {
     stdio: 'ignore',
-    shell: true,
+    shell: needsShell(editor),
     timeout: 1000,
   });
   return !result.error;
@@ -62,7 +72,7 @@ export function openInEditor(
     const args = editor === 'code' ? ['--wait', tempFile] : [tempFile];
     const result = spawnSync(editor, args, {
       stdio: 'inherit',
-      shell: true, // Required for batch files on Windows
+      shell: needsShell(editor), // Required for batch files on Windows
     });
 
     if (result.error) {
