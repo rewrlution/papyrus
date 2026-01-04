@@ -36,6 +36,7 @@ export function editJournalEntry(options: EditOptions): void {
 
       // add: create new entry
       isNew = true;
+      entry = '';
       console.log(`\n✨ Creating new entry for ${displayDate}...\n`);
     } else {
       console.log(`\n📖 Loading existing entry for ${displayDate}...\n`);

@@ -1,4 +1,4 @@
-import { spawnSync, execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
@@ -12,13 +12,9 @@ import path from 'path';
 const EDITORS = ['vi', 'vim', 'nano', 'code', 'notepad'];
 
 function isAvailable(editor: string): boolean {
-  try {
-    const command = process.platform === 'win32' ? 'where' : 'which';
-    execSync(`${command} ${editor}`, { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
+  // Test if the command is actually executable, not just if it exists
+  const result = spawnSync(editor, ['--version'], { stdio: 'ignore' });
+  return !result.error;
 }
 
 export function detectEditor(): string {
