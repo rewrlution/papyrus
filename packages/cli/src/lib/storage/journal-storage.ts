@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 
-import matter from 'gray-matter';
-
-import { generateContentHash, JournalData } from '@rewrlution/papyrus-shared';
-
-import { parseDateToLocalTimestamp } from '../../utils/date.js';
-
 import { BaseStorage } from './base-storage.js';
+
+export interface JournalFileInfo {
+  date: string;
+  path: string;
+  size: number;
+  modified: Date;
+}
 
 /**
  * Manages journal entries stored as markdown files with YAML frontmatter.
@@ -37,84 +38,19 @@ export class JournalStore extends BaseStorage {
   }
 
   /**
-   * Serialize JournalData to markdown with YAML frontmatter
+   * Create a new journal entry
    */
-  private serializeToMarkdown(journal: JournalData): string {
-    return matter.stringify(journal.content, {
-      date: journal.date,
-      hash: journal.hash,
-      createdAt: journal.createdAt.toISOString(),
-      updatedAt: journal.updatedAt.toISOString(),
-      deletedAt: journal.deletedAt ? journal.deletedAt.toISOString() : null,
-    });
-  }
-
-  /**
-   * Parse markdown file with YAML frontmatter to JournalData
-   * Handles both files with frontmatter and content-only files
-   */
-  private parseFromMarkdown(
-    markdown: string,
-    date: string
-  ): JournalData | null {
-    try {
-      const { data, content } = matter(markdown);
-
-      // Case 1: Has frontmatter with all required fields
-      if (data.date && data.hash && data.createdAt && data.updatedAt) {
-        return {
-          date: data.date,
-          hash: data.hash,
-          content: content.trim(),
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-          deletedAt: data.deletedAt ? new Date(data.deletedAt) : null,
-        };
-      }
-
-      // Case 2: No frontmatter - content-only file (legacy)
-      // Use filename as date, create timestamps in local timezone
-      if (Object.keys(data).length === 0) {
-        const timestamp = parseDateToLocalTimestamp(date);
-
-        return {
-          date,
-          hash: generateContentHash(content.trim()),
-          content: content.trim(),
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          deletedAt: null,
-        };
-      }
-
-      // Case 3: Partial/invalid frontmatter
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Save journal entry as markdown file
-   */
-  save(journal: JournalData): void {
-    const markdown = this.serializeToMarkdown(journal);
-    const filepath = this.getEntryPath(journal.date);
-    this.writeFile(filepath, markdown);
+  create(date: string, content: string = ''): void {
+    const filepath = this.getEntryPath(date);
+    this.writeFile(filepath, content);
   }
 
   /**
    * Get journal entry by date
    */
-  get(date: string): JournalData | null {
+  load(date: string): string | null {
     const filepath = this.getEntryPath(date);
-    const markdown = this.readFile(filepath);
-
-    if (!markdown) {
-      return null;
-    }
-
-    return this.parseFromMarkdown(markdown, date);
+    return this.readFile(filepath);
   }
 
   /**
@@ -136,22 +72,23 @@ export class JournalStore extends BaseStorage {
   /**
    * List all journal entries (sorted by date descending)
    */
-  list(): JournalData[] {
+  list(): JournalFileInfo[] {
     this.ensureDir(this.journalsDir);
 
     const files = fs.readdirSync(this.journalsDir);
-    const entries: JournalData[] = [];
-
-    for (const file of files) {
-      if (file.endsWith('.md')) {
-        const date = file.replace('.md', '');
-        const entry = this.get(date);
-        if (entry) {
-          entries.push(entry);
-        }
-      }
-    }
-
-    return entries.sort((a, b) => b.date.localeCompare(a.date));
+    return files
+      .filter((f) => f.endsWith('.md') && /^\d{8}\.md$/.test(f))
+      .map((f) => {
+        const date = f.replace('.md', '');
+        const filepath = path.join(this.journalsDir, f);
+        const stats = fs.statSync(filepath);
+        return {
+          date,
+          path: filepath,
+          size: stats.size,
+          modified: stats.mtime,
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
   }
 }

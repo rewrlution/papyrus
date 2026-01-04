@@ -4,8 +4,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { JOURNAL_TEMPATE, stripTemplateComments } from './template.js';
-
 /**
  * Supported editors in order of preference.
  * Windows: vi -> vim -> code -> notepad (default)
@@ -46,19 +44,15 @@ export function openInEditor(
   const uniqueFilename = `${base}-${randomSuffix}${ext}`;
   const tempFile = path.join(os.tmpdir(), uniqueFilename);
 
-  const contentWithTemplate = content
-    ? `${content}\n${JOURNAL_TEMPATE}`
-    : `${JOURNAL_TEMPATE}`;
+  // Write initial content
+  fs.writeFileSync(tempFile, content, 'utf-8');
 
   try {
     const editor = detectEditor();
     console.log(`Opening in ${editor}...`);
 
     // Determine args based on editor
-    const args =
-      editor === 'code'
-        ? ['--wait', contentWithTemplate]
-        : [contentWithTemplate];
+    const args = editor === 'code' ? ['--wait', tempFile] : [tempFile];
     const result = spawnSync(editor, args, { stdio: 'inherit' });
 
     if (result.error) {
@@ -70,12 +64,11 @@ export function openInEditor(
     }
 
     const editedContent = fs.readFileSync(tempFile, 'utf-8');
-    const cleaned = stripTemplateComments(editedContent);
 
     // Clean up tem file
     fs.unlinkSync(tempFile);
 
-    return cleaned;
+    return editedContent;
   } catch (error) {
     // Clean up temp file on error
     if (fs.existsSync(tempFile)) {

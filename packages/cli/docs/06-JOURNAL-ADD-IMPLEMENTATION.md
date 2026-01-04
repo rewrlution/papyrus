@@ -1,10 +1,12 @@
-# Implementing the Journal Add Command
+# Implementing Journal Commands
 
-A complete, step-by-step guide to building a journal entry command that opens an external editor with templates.
+A complete, step-by-step guide to building journal commands with shared core logic.
 
 ## What We're Building
 
-A journal add command that:
+This tutorial covers three essential journal commands:
+
+**Part 1: `add` command** - Create or edit journal entries
 
 1. Accepts optional date parameter (defaults to today)
 2. Loads existing entry if it exists, or creates new one
@@ -16,7 +18,78 @@ A journal add command that:
 8. Saves to local storage with metadata
 9. Provides clear feedback and error handling
 
-**Note:** This implementation makes `add` work for both creating **new** entries and editing **existing** entries. If you want separate commands (`add` for create-only, `amend` for edit-only), see the Enhancements section.
+**Part 2: `show` command** - Display journal entries
+
+1. Load and display entry for specified date
+2. Show metadata (ID, timestamps, sync status)
+3. Display formatted content
+4. Show statistics (word/character count)
+
+**Part 3: `amend` command** - Edit existing entries only
+
+1. Opens existing entry in editor (fails if doesn't exist)
+2. Shows hint comments (just like `add`)
+3. Uses same core function as `add` with different option (`createIfMissing: false`)
+
+---
+
+## Design: Shared Core with Two Commands
+
+We implement both `add` and `amend` commands with a shared core function to avoid duplication:
+
+```bash
+papyrus add              # Create new or edit existing
+papyrus amend            # Edit existing only (fails if missing)
+papyrus show             # View entry
+```
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────┐
+│  editJournalEntry() - Core Function     │
+│  - Option: createIfMissing              │
+│  - Always shows hint comments           │
+│  - Always strips hint comments on save  │
+└─────────────────┬───────────────────────┘
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+   ┌────▼─────┐      ┌─────▼────┐
+   │   add    │      │  amend   │
+   │ (wrapper)│      │ (wrapper)│
+   └──────────┘      └──────────┘
+```
+
+**Command differences:**
+
+| Feature           | `add`             | `amend`               |
+| ----------------- | ----------------- | --------------------- |
+| **Create new**    | ✅ Yes            | ❌ No (error)         |
+| **Edit existing** | ✅ Yes            | ✅ Yes                |
+| **Hint comments** | ✅ Always shown   | ✅ Always shown       |
+| **Use case**      | "I want to write" | "I want to fix typos" |
+
+**Key insight:**
+
+The hint comments (template) are **always** appended when opening the editor and **always** stripped when saving. This means:
+
+- Users always see the helpful hints when editing
+- Hints never get saved to storage
+- No need for `appendTemplate` option - it's always true
+- The only difference between commands is whether to create missing entries
+
+**Why this design?**
+
+- ✅ **Simpler** - Only one option (`createIfMissing`) needed
+- ✅ **No duplication** - Shared `editJournalEntry()` core function
+- ✅ **Clear intent** - Two commands for different purposes
+- ✅ **Simple wrappers** - `add` and `amend` are just 2 lines each
+- ✅ **Easy to maintain** - All logic in one place
+
+---
+
+## Part 1: Journal Add Command
 
 ## Final Result
 
@@ -244,6 +317,7 @@ Create a module to detect and run editors using Node's built-in `child_process`.
 ```typescript
 // src/utils/editor.ts
 import { spawnSync, execSync } from 'child_process';
+import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -303,16 +377,22 @@ export function detectEditor(): string {
  * Uses synchronous operations - we WANT to block until editing is done
  *
  * @param content - Initial content to load in editor
- * @param filename - Temp filename (for syntax highlighting)
+ * @param baseFilename - Base filename (e.g., "papyrus-20251210.md")
  * @returns Content after user saves and closes editor
  */
 export function openInEditor(
   content: string,
-  filename: string = 'temp.md'
+  baseFilename: string = 'papyrus.md'
 ): string {
-  // Create temp file
+  // Generate unique filename to prevent collisions and security issues
+  const randomSuffix = crypto.randomBytes(6).toString('hex');
+  const ext = path.extname(baseFilename);
+  const base = path.basename(baseFilename, ext);
+  const uniqueFilename = `${base}-${randomSuffix}${ext}`;
+
+  // Create temp file with unique name
   const tempDir = os.tmpdir();
-  const tempFile = path.join(tempDir, filename);
+  const tempFile = path.join(tempDir, uniqueFilename);
 
   // Write initial content
   fs.writeFileSync(tempFile, content, 'utf-8');
@@ -365,6 +445,7 @@ export function openInEditor(
 - **Platform-specific fallbacks** - notepad (Windows), nano (Unix/macOS)
 - **Always succeeds** - Falls back to universally available editors
 - **Cross-platform** - Uses `which` on Unix, `where` on Windows
+- **Unique filenames** - Uses crypto.randomBytes() to prevent collisions and security issues
 - **Automatic cleanup** - Removes temp file even on errors
 
 **Why synchronous operations?**
@@ -394,6 +475,21 @@ const edited = openInEditor(content); // Just works
 
 - **notepad (Windows)** - Cannot be uninstalled, works in restricted environments, GUI-based
 - **nano (Unix)** - More universal than vi, easier for beginners, shows help at bottom
+
+**Why random filenames?**
+
+Using predictable filenames in `/tmp` (or `%TEMP%`) can cause issues:
+
+- **Race conditions** - Two simultaneous `papyrus add` commands would overwrite each other's temp files
+- **Security risk** - Predictable filenames in shared temp directories can be exploited
+- **Stale data** - If cleanup fails, the next run might accidentally load old content
+- **Multi-user systems** - Different users share the same temp directory
+
+By appending 12 hex characters from `crypto.randomBytes(6)`, we get:
+
+- 48 bits of entropy (1 in 281 trillion collision chance)
+- Cryptographically secure randomness
+- Still debuggable (date is visible in filename: `papyrus-20251210-a3f7e2b9c4d1.md`)
 
 **Why `stdio: 'inherit'`?**
 
@@ -534,12 +630,12 @@ export const journalStore = new JournalStore();
 - **Hash computed** - For sync conflict detection
 - **Marked unsynced** - After any edit
 
-### Step 4: Implement Add Command
+### Step 4: Implement Shared Core and Commands
 
-Now implement the main add command. Notice it's **not async** - since `openInEditor()` is synchronous, this command is too:
+First, create the shared core function that both `add` and `amend` will use:
 
 ```typescript
-// src/commands/journal/add.ts
+// src/commands/journal/edit-journal.ts
 import { journalStore } from '../../lib/storage/journal-store.js';
 import { formatDate, parseDate } from '../../utils/date.js';
 import { openInEditor } from '../../utils/editor.js';
@@ -548,46 +644,59 @@ import {
   stripTemplateComments,
 } from '../../utils/template.js';
 
-interface AddOptions {
+interface EditOptions {
   date?: string;
+  createIfMissing: boolean; // Whether to create new entry if missing
 }
 
-export function add(options: AddOptions): void {
+/**
+ * Core function for editing journal entries
+ * Used by both `add` and `amend` commands
+ *
+ * Always appends hint comments when editing, always strips them when saving
+ */
+export function editJournalEntry(options: EditOptions): void {
+  const { date: inputDate, createIfMissing } = options;
+
   try {
-    // 1. Parse date (default to today)
-    const date = parseDate(options.date || 'today'); // Returns YYYYMMDD
-    const displayDate = formatDate(date); // Returns " December 10, 2025"
+    // 1. Parse and validate date
+    const date = parseDate(inputDate || 'today');
+    const displayDate = formatDate(date);
 
-    console.log(`\n📝 Opening journal for${displayDate}...\n`);
-
-    // 2. Load existing entry or create new one
+    // 2. Load existing or create new
     let entry = journalStore.load(date);
     let isNew = false;
 
-    if (entry) {
-      console.log(`📖 Loading existing entry...`);
-    } else {
-      console.log(`✨ Creating new entry...`);
+    if (!entry) {
+      if (!createIfMissing) {
+        // amend: fail if entry doesn't exist
+        console.error(
+          `\n❌ Error: No journal entry found for ${date}.\n` +
+            `💡 Use 'papyrus add -d ${date}' to create a new entry.\n`
+        );
+        process.exit(1);
+      }
+
+      // add: create new entry
+      console.log(`\n✨ Creating new entry for ${displayDate}...\n`);
       isNew = true;
-      // Create with empty content - we'll set it after editing
       entry = journalStore.create(date, '');
+    } else {
+      console.log(`\n📖 Loading existing entry for ${displayDate}...\n`);
     }
 
-    // 3. Prepare content for editor (append template)
-    const contentWithTemplate = entry.content + '\n\n' + JOURNAL_TEMPLATE;
+    // 3. Always append hint comments for user guidance
+    const contentWithHints = entry.content + '\n\n' + JOURNAL_TEMPLATE;
 
-    // 4. Open editor - synchronous, blocks until user closes editor
-    const editedContent = openInEditor(
-      contentWithTemplate,
-      `papyrus-${date}.md`
-    );
+    // 4. Open editor - synchronous, blocks until user closes
+    const editedContent = openInEditor(contentWithHints, `papyrus-${date}.md`);
 
-    // 5. Strip template comments
+    // 5. Always strip hint comments before saving
     const finalContent = stripTemplateComments(editedContent);
 
     // 6. Validate content
     if (!finalContent.trim()) {
-      console.log('⚠️  No content written. Entry not saved.');
+      console.log('⚠️  No content written. Entry not saved.\n');
       return;
     }
 
@@ -622,65 +731,127 @@ function countWords(text: string): number {
 }
 ```
 
+Now create thin wrappers for `add` and `amend`:
+
+```typescript
+// src/commands/add.ts
+import { editJournalEntry } from './journal/edit-journal.js';
+import type { DateOption } from './types.js';
+
+export function add(options: DateOption): void {
+  editJournalEntry({
+    date: options.date,
+    createIfMissing: true, // Add creates if missing
+  });
+}
+```
+
+```typescript
+// src/commands/amend.ts
+import { editJournalEntry } from './journal/edit-journal.js';
+import type { DateOption } from './types.js';
+
+export function amend(options: DateOption): void {
+  editJournalEntry({
+    date: options.date,
+    createIfMissing: false, // Amend fails if missing
+  });
+}
+```
+
 **Key features:**
 
 1. **Synchronous execution** - No async/await, simpler flow
-2. **Uses existing date utilities** - `parseDate()` and `formatDate()` from `utils/date.ts`
-3. **YYYYMMDD format** - All dates handled in this format
-4. **Load or create** - Handle both new and existing entries
-5. **Template appending** - Adds guidance comments
-6. **Editor integration** - Opens user's editor with synchronous `child_process`
-7. **Template stripping** - Removes comments after save
-8. **Validation** - Ensure content is not empty
-9. **Metadata management** - Automatic timestamps and IDs
-10. **User feedback** - Clear messages and stats
+2. **Shared core logic** - No duplication between add/amend
+3. **Single option** - Only `createIfMissing` needed (simpler than before!)
+4. **Thin wrappers** - add and amend are only 2 lines each
+5. **Uses existing date utilities** - `parseDate()` and `formatDate()` from `utils/date.ts`
+6. **YYYYMMDD format** - All dates handled in this format
+7. **Always show hints** - Hint comments always appended when editing
+8. **Always strip hints** - Hint comments always removed when saving
+9. **Validation** - Ensure content is not empty
+10. **Metadata management** - Automatic timestamps and IDs
+11. **User feedback** - Clear messages and stats
 
 **Why not async?**
 
 Since `openInEditor()` is synchronous, the entire command can be synchronous. This makes the code simpler and more straightforward - no promises, no async/await, just sequential execution.
 
-### Step 5: Register Command
+**Why always append/strip hints?**
 
-Register the add command with Commander. Since `add()` is synchronous, no async needed:
+The hint comments serve as a reminder every time you edit:
+
+- Users see helpful tagging syntax (@person, #project, +tech)
+- Hints are stripped automatically, so they never pollute the content
+- No need for conditional logic - simpler code
+- Same experience for both `add` and `amend`
+
+### Step 5: Register Commands
+
+Register both `add` and `amend` commands directly on the program (no `journal` subcommand):
 
 ```typescript
-// src/commands/journal/index.ts
+// src/cli.ts (or wherever you register commands)
 import { Command } from 'commander';
-import { add } from './add.js';
+import { add } from './commands/add.js';
+import { amend } from './commands/amend.js';
+import { show } from './commands/show.js';
 
-export function registerJournalCommands(program: Command) {
-  const journal = program
-    .command('journal')
-    .description('Manage journal entries');
+const program = new Command();
 
-  journal
-    .command('add')
-    .description('Create or edit a journal entry')
-    .option(
-      '-d, --date <date>',
-      'Entry date (YYYYMMDD, YYYY-MM-DD, "today", "yesterday")',
-      'today'
-    )
-    .action((options) => {
-      add(options);
-    });
+program
+  .name('papyrus')
+  .description('AI-powered developer journaling')
+  .version('1.0.0');
 
-  // Alias at top level for convenience
-  program
-    .command('add')
-    .description('Create or edit a journal entry (alias for journal add)')
-    .option('-d, --date <date>', 'Entry date', 'today')
-    .action((options) => {
-      add(options);
-    });
-}
+// Add command - create or edit with template
+program
+  .command('add')
+  .description('Create or edit a journal entry')
+  .option(
+    '-d, --date <date>',
+    'Entry date (YYYYMMDD, "today", "yesterday", etc.)',
+    'today'
+  )
+  .action((options) => {
+    add(options);
+  });
+
+// Amend command - edit existing only, no template
+program
+  .command('amend')
+  .description('Edit an existing journal entry')
+  .option(
+    '-d, --date <date>',
+    'Entry date (YYYYMMDD, "today", "yesterday", etc.)',
+    'today'
+  )
+  .action((options) => {
+    amend(options);
+  });
+
+// Show command - display entry
+program
+  .command('show')
+  .description('Display a journal entry')
+  .option(
+    '-d, --date <date>',
+    'Entry date (YYYYMMDD, "today", "yesterday", etc.)',
+    'today'
+  )
+  .action((options) => {
+    show(options);
+  });
+
+program.parse(process.argv);
 ```
 
-**Why both `journal add` and `add`?**
+**Why direct commands (not `papyrus journal add`)?**
 
-- **`papyrus journal add`** - Explicit, organized under journal namespace
-- **`papyrus add`** - Convenient shortcut for most common operation
-- Users can use whichever they prefer
+- ✅ **Shorter** - `papyrus add` vs `papyrus journal add`
+- ✅ **Simpler** - Fewer words to type
+- ✅ **Common pattern** - Most CLIs use direct commands (git add, not git files add)
+- ✅ **Journal is implied** - The tool is called "papyrus", context is obvious
 
 **Why not async?**
 
@@ -1538,6 +1709,169 @@ journalStore.save('2025-12-10', entry); // Saves as 2025-12-10.md
    metadata.synced = false; // Needs sync
    ```
 
+---
+
+## Part 2: Journal Show Command
+
+Now that we have `add`, let's implement `show` to display journal entries.
+
+### What We're Building
+
+A command to display journal entries with:
+
+1. Optional date parameter (defaults to today)
+2. Display metadata (ID, timestamps, sync status)
+3. Display content with proper formatting
+4. Clear error message if entry doesn't exist
+5. Statistics (word count, character count)
+
+### Final Result
+
+```bash
+$ papyrus show
+📖 Journal Entry - December 10, 2025
+
+ID: 550e8400-e29b-41d4-a716-446655440000
+Created: 2025-12-10T10:00:00Z
+Updated: 2025-12-10T15:30:00Z
+Synced: ✅
+
+─────────────────────────────────────────
+
+# December 10, 2025
+
+Today I implemented the journal add command. Here are the key learnings:
+
+- Using synchronous operations is simpler for blocking tasks
+- Editor fallbacks ensure the command works on all platforms
+- Template comments guide users without cluttering saved content
+
+─────────────────────────────────────────
+
+📊 Words: 42 | Characters: 234
+
+$ papyrus show -d yesterday
+❌ Error: No journal entry found for 20251209
+
+$ papyrus show -d 20241225
+📖 Journal Entry - December 25, 2024
+[... content ...]
+```
+
+### Implementation
+
+#### Step 1: Create Show Command Handler
+
+Create `src/commands/show.ts`:
+
+```typescript
+// src/commands/show.ts
+import { journalStore } from '../lib/storage/journal-store.js';
+import { parseDate, formatDate } from '../utils/date.js';
+import type { DateOption } from './types.js';
+
+export function show(options: DateOption): void {
+  try {
+    // Parse date (default to today)
+    const date = parseDate(options.date || 'today');
+    const displayDate = formatDate(date);
+
+    // Load entry
+    const entry = journalStore.load(date);
+
+    if (!entry) {
+      console.error(`\n❌ Error: No journal entry found for ${date}\n`);
+      process.exit(1);
+    }
+
+    // Display header
+    console.log(`\n📖 Journal Entry - ${displayDate}\n`);
+
+    // Display metadata
+    console.log(`ID: ${entry.metadata.id}`);
+    console.log(`Created: ${entry.metadata.createdAt}`);
+    console.log(`Updated: ${entry.metadata.updatedAt}`);
+    console.log(`Synced: ${entry.metadata.synced ? '✅' : '⚠️  No'}\n`);
+
+    // Separator
+    console.log('─'.repeat(50) + '\n');
+
+    // Display content
+    console.log(entry.content);
+
+    // Separator
+    console.log('\n' + '─'.repeat(50) + '\n');
+
+    // Statistics
+    const wordCount = entry.content.split(/\s+/).filter(Boolean).length;
+    const charCount = entry.content.length;
+    console.log(`📊 Words: ${wordCount} | Characters: ${charCount}\n`);
+  } catch (error: any) {
+    console.error(`\n❌ Error: ${error.message}\n`);
+    process.exit(1);
+  }
+}
+```
+
+**Key points:**
+
+- **No editor needed** - Just load and display
+- **Metadata visibility** - Shows sync status and timestamps
+- **Statistics** - Word and character counts for quick overview
+- **Same date parsing** - Reuses `parseDate()` from utils
+
+#### Test Show Command
+
+```bash
+# Build and test
+$ pnpm build
+
+# Show today's entry
+$ pnpm start journal show
+
+# Show specific date
+$ pnpm start journal show -d 20251210
+
+# Show yesterday
+$ pnpm start journal show -d yesterday
+
+# Test non-existent entry
+$ pnpm start journal show -d 20200101
+❌ Error: No journal entry found for 20200101
+```
+
+### Enhancements (Optional)
+
+**1. Add color coding with chalk:**
+
+```typescript
+import chalk from 'chalk';
+
+console.log(chalk.blue(`\n📖 Journal Entry - ${displayDate}\n`));
+console.log(chalk.gray(`ID: ${entry.metadata.id}`));
+```
+
+**2. Add pagination for long entries:**
+
+```typescript
+// For very long entries, pipe through less
+if (entry.content.split('\n').length > 50) {
+  // Use less or more for pagination
+}
+```
+
+**3. Add syntax highlighting for markdown:**
+
+```typescript
+import { marked } from 'marked';
+import TerminalRenderer from 'marked-terminal';
+
+marked.setOptions({ renderer: new TerminalRenderer() });
+console.log(marked(entry.content));
+```
+
+---
+
 ## Complete File Reference
 
 Files created/used in this tutorial:
@@ -1545,16 +1879,55 @@ Files created/used in this tutorial:
 ```
 src/
 ├── commands/
+│   ├── types.ts                    # Command option types (UPDATED)
+│   ├── add.ts                      # Add command wrapper (NEW)
+│   ├── amend.ts                    # Amend command wrapper (NEW)
+│   ├── show.ts                     # Show command (NEW)
 │   └── journal/
-│       ├── add.ts             # Add command implementation (NEW)
-│       └── index.ts           # Command registration (UPDATED)
+│       └── edit-journal.ts         # Shared core editing logic (NEW)
 ├── utils/
-│   ├── date.ts                # Date parsing utilities (existing)
-│   ├── editor.ts              # Editor detection and launch (NEW)
-│   └── template.ts            # Template and stripping (existing)
+│   ├── date.ts                     # Date parsing utilities (existing)
+│   ├── editor.ts                   # Editor detection and launch (NEW)
+│   └── template.ts                 # Template and stripping (existing)
 └── lib/
     └── storage/
-        └── journal-store.ts   # Storage layer (UPDATED)
+        └── journal-store.ts        # Storage layer (UPDATED)
+```
+
+## Summary
+
+You've now implemented three core journal commands:
+
+1. **`papyrus add`** - Create new or edit existing entries (shows hint comments)
+2. **`papyrus show`** - Display entries with metadata and statistics
+3. **`papyrus amend`** - Edit existing entries only (shows hint comments, fails if missing)
+
+**Architecture highlights:**
+
+- **Shared core function** - `editJournalEntry()` contains all editing logic
+- **Single option** - Only `createIfMissing` differentiates commands
+- **Thin wrappers** - `add` and `amend` are 2-line functions
+- **No duplication** - All logic in one place, easy to maintain
+- **Direct commands** - `papyrus add` not `papyrus journal add`
+- **Always show hints** - Hint comments shown on every edit, stripped on every save
+
+**Key design decision:**
+
+Hint comments are **always** appended and **always** stripped. This means:
+
+- Users always get helpful reminders when editing
+- Hints never pollute saved content
+- Simpler code - no conditional logic needed
+- Same consistent experience for both commands
+
+These commands form the foundation of the journal workflow:
+
+```bash
+papyrus add              # Write/edit (creates if missing)
+papyrus show             # Display entry
+papyrus amend            # Edit only (fails if missing)
+papyrus list             # Browse all (see next tutorial)
+papyrus sync             # Sync with server (see next tutorial)
 ```
 
 ## References

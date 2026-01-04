@@ -109,15 +109,18 @@ Prerequisites: Complete tutorial 04 first
 
 ---
 
-#### [06 - Journal Add Command](./06-JOURNAL-ADD-IMPLEMENTATION.md)
+#### [06 - Journal Commands](./06-JOURNAL-ADD-IMPLEMENTATION.md)
 
-**Implementing journal entry creation with external editor integration.**
+**Implementing journal commands: add, show, and amend.**
 
 Learn how to:
 
-- Parse and validate date inputs (today, yesterday, YYYY-MM-DD)
-- Detect and launch external editors (vi, vim, VS Code)
-- Use temporary files for editing
+- **Add command**: Create or edit entries with external editor integration
+- **Show command**: Display entries with metadata and statistics
+- **Amend command**: Edit existing entries only (fails if entry doesn't exist)
+- Parse and validate date inputs (today, yesterday, YYYYMMDD)
+- Detect and launch external editors (vi, vim, nano, VS Code) with fallbacks
+- Use temporary files with unique random filenames (security)
 - Append and strip template comments
 - Save entries with metadata (UUID, timestamps, hashes)
 - Provide user feedback with statistics
@@ -196,7 +199,7 @@ If you're new to the project, follow this learning path:
 5. **Build login feature** → Work through [04-LOGIN-IMPLEMENTATION.md](./04-LOGIN-IMPLEMENTATION.md)
 6. **Build register feature** → Work through [05-REGISTER-IMPLEMENTATION.md](./05-REGISTER-IMPLEMENTATION.md)
 7. **Understand architecture** → Read [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md)
-8. **Build journal add** → Work through [06-JOURNAL-ADD-IMPLEMENTATION.md](./06-JOURNAL-ADD-IMPLEMENTATION.md)
+8. **Build journal commands** → Work through [06-JOURNAL-ADD-IMPLEMENTATION.md](./06-JOURNAL-ADD-IMPLEMENTATION.md)
 9. **Extend the CLI** → Apply what you learned to new features
 
 ## 🎯 Common Tasks
