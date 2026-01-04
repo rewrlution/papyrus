@@ -20,15 +20,18 @@ describe('SyncMetaStore', () => {
     }
   });
 
-  it('should return empty object when metadata does not exist', () => {
+  it('should return empty entries object when metadata does not exist', () => {
     const metadata = store.load();
-    expect(metadata).toEqual({});
+    expect(metadata).toEqual({ entries: {} });
   });
 
   it('should save and load metadata', () => {
     const metadata = {
-      '20260101': { lastSyncHash: 'abc123' },
-      '20260102': { lastSyncHash: 'def456' },
+      lastSync: '2026-01-04T10:30:00.000Z',
+      entries: {
+        '20260101': { lastSyncHash: 'abc123' },
+        '20260102': { lastSyncHash: 'def456' },
+      },
     };
 
     store.save(metadata);
@@ -44,9 +47,9 @@ describe('SyncMetaStore', () => {
     expect(meta).toEqual({ lastSyncHash: 'abc123' });
   });
 
-  it('should return undefined for non-existent date', () => {
+  it('should return null for non-existent date', () => {
     const meta = store.get('20991231');
-    expect(meta).toBeUndefined();
+    expect(meta).toBeNull();
   });
 
   it('should update metadata for specific date', () => {
@@ -54,8 +57,8 @@ describe('SyncMetaStore', () => {
     store.update('20260102', 'def456');
 
     const allMeta = store.load();
-    expect(allMeta['20260101'].lastSyncHash).toBe('abc123');
-    expect(allMeta['20260102'].lastSyncHash).toBe('def456');
+    expect(allMeta.entries['20260101'].lastSyncHash).toBe('abc123');
+    expect(allMeta.entries['20260102'].lastSyncHash).toBe('def456');
   });
 
   it('should overwrite existing metadata when updating', () => {
@@ -72,6 +75,32 @@ describe('SyncMetaStore', () => {
     fs.writeFileSync(metaPath, 'invalid json{', 'utf-8');
 
     const metadata = store.load();
-    expect(metadata).toEqual({});
+    expect(metadata).toEqual({ entries: {} });
+  });
+
+  it('should update and get lastSync timestamp', () => {
+    store.updateLastSync();
+
+    const lastSync = store.getLastSync();
+    expect(lastSync).toBeTruthy();
+    expect(new Date(lastSync!).getTime()).toBeGreaterThan(Date.now() - 1000); // Within last second
+  });
+
+  it('should return null for lastSync when no sync has occurred', () => {
+    const lastSync = store.getLastSync();
+    expect(lastSync).toBeNull();
+  });
+
+  it('should persist lastSync timestamp across save/load', () => {
+    const testTime = '2026-01-04T10:30:00.000Z';
+    store.save({
+      lastSync: testTime,
+      entries: {
+        '20260101': { lastSyncHash: 'abc123' },
+      },
+    });
+
+    const lastSync = store.getLastSync();
+    expect(lastSync).toBe(testTime);
   });
 });

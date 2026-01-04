@@ -120,5 +120,8 @@ export async function performSync(
     }
   }
 
+  // Update last sync timestamp
+  syncMetaStore.updateLastSync();
+
   return result;
 }
