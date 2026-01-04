@@ -5,6 +5,10 @@ import type {
   SigninResponse,
   SignupInput,
   SignupResponse,
+  JournalData,
+  JournalMetaData,
+  JournalMetadataListResponse,
+  JournalResponse,
 } from '@rewrlution/papyrus-shared';
 
 import { tokenStore } from '../storage/index.js';
@@ -76,6 +80,51 @@ export class ApiClient {
 
   isAuthenticated(): boolean {
     return tokenStore.exists();
+  }
+
+  async listJournalsMetadata(): Promise<JournalMetaData[]> {
+    try {
+      const response =
+        await this.http.get<JournalMetadataListResponse>('/journals/metadata');
+      return response.data.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getJournal(date: string): Promise<JournalData> {
+    try {
+      const response = await this.http.get<JournalResponse>(
+        `/journals/${date}`
+      );
+      return response.data.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async createJournal(date: string, content: string): Promise<JournalData> {
+    try {
+      const response = await this.http.post<JournalResponse>('/journals', {
+        date,
+        content,
+      });
+      return response.data.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async updateJournal(date: string, content: string): Promise<JournalData> {
+    try {
+      const response = await this.http.put<JournalResponse>(
+        `/journals/${date}`,
+        { content }
+      );
+      return response.data.data;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   private handleError(error: unknown): never {

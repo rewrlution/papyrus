@@ -129,6 +129,25 @@ Prerequisites: Complete tutorial 01 and understand [ARCHITECTURE-JOURNAL-STORAGE
 
 ---
 
+#### [07 - Journal Sync Command](./07-SYNC-IMPLEMENTATION.md)
+
+**Implementing hash-based journal synchronization with conflict detection.**
+
+Learn how to:
+
+- Understand hash-based three-way comparison for sync
+- Extend API client with journal operations (list, get, create, update)
+- Implement SHA-256 hash computation for content
+- Build sync engine with conflict detection and resolution
+- Track sync state per-device using sync metadata
+- Handle upload, download, and merge scenarios
+- Provide progress feedback during sync operations
+- Resolve conflicts by merging content
+
+Prerequisites: Complete tutorials 01, 02, and understand [sync.md](./sync.md)
+
+---
+
 ### Architecture Decisions
 
 #### [Architecture: Journal Storage Format](./ARCHITECTURE-JOURNAL-STORAGE.md) 📐
@@ -200,7 +219,8 @@ If you're new to the project, follow this learning path:
 6. **Build register feature** → Work through [05-REGISTER-IMPLEMENTATION.md](./05-REGISTER-IMPLEMENTATION.md)
 7. **Understand architecture** → Read [ARCHITECTURE-JOURNAL-STORAGE.md](./ARCHITECTURE-JOURNAL-STORAGE.md)
 8. **Build journal commands** → Work through [06-JOURNAL-ADD-IMPLEMENTATION.md](./06-JOURNAL-ADD-IMPLEMENTATION.md)
-9. **Extend the CLI** → Apply what you learned to new features
+9. **Build sync command** → Work through [07-SYNC-IMPLEMENTATION.md](./07-SYNC-IMPLEMENTATION.md)
+10. **Extend the CLI** → Apply what you learned to new features
 
 ## 🎯 Common Tasks
 
