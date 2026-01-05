@@ -13,7 +13,6 @@
   },
   "type": "module",
   "bin": {
-    "pp": "./dist/cli.js",
     "paper": "./dist/cli.js",
     "papyrus": "./dist/cli.js"
   },

@@ -85,20 +85,145 @@ pnpm test --filter=@rewrlution/papyrus-cli
 
 ## Local Testing
 
-Test the CLI as if installed globally:
+When developing, you need to test your changes before publishing. Here are different approaches depending on your needs.
+
+### Option 1: Using `pnpm link` (Recommended)
+
+Test the CLI exactly as end users would, using the global `papyrus` command.
+
+**When to use:** Testing the full user experience, verifying production builds, final testing before release.
 
 ```bash
-# Build and link
+# 1. If you have the npm package installed globally, uninstall it first
+npm uninstall -g @rewrlution/papyrus-cli
+
+# 2. Build your local changes
+cd packages/cli
 pnpm build
+
+# 3. Link your local version globally
 pnpm link --global
 
-# Test commands
-papyrus --version
-papyrus add
+# 4. IMPORTANT: Restart your terminal
+# Close and reopen your terminal for the PATH changes to take effect
+# (especially important on Windows)
 
-# Unlink when done
+# 5. Now 'papyrus' and 'paper' use your local code!
+papyrus logout
+paper add
+papyrus list
+
+# 6. When done testing, unlink
 pnpm unlink --global
+
+# 7. (Optional) Reinstall the published version
+npm i -g @rewrlution/papyrus-cli
 ```
+
+**Pros:**
+
+- ✅ Test exactly like end users (global command)
+- ✅ Test production build
+- ✅ No path specifications needed
+
+**Cons:**
+
+- ❌ Must rebuild after each code change
+
+### Option 2: Direct Execution (Quick Testing)
+
+Run the built CLI directly without global installation.
+
+**When to use:** Quick one-off tests, testing in CI, avoiding global package conflicts.
+
+```bash
+# Build once
+cd packages/cli
+pnpm build
+
+# Run directly with node
+node dist/cli.js logout
+node dist/cli.js add
+node dist/cli.js list
+
+# Or use pnpm start (shortcut for node dist/cli.js)
+pnpm start logout
+pnpm start add
+```
+
+**Pros:**
+
+- ✅ No global package conflicts
+- ✅ Quick for one-off tests
+
+**Cons:**
+
+- ❌ Must type full path or `node dist/cli.js`
+- ❌ Must rebuild after changes
+
+### Option 3: Development Mode (Fastest Iteration)
+
+Run TypeScript directly without building, with hot reload on file changes.
+
+**When to use:** Active development, rapid iteration, debugging.
+
+```bash
+# Terminal 1: Watch for file changes (optional)
+cd packages/cli
+pnpm dev
+
+# Terminal 2: Run commands directly with tsx
+npx tsx src/cli.tsx logout
+npx tsx src/cli.tsx add
+npx tsx src/cli.tsx list
+```
+
+**Pros:**
+
+- ✅ No build step needed
+- ✅ Fastest development cycle
+- ✅ Immediate feedback
+
+**Cons:**
+
+- ❌ Requires typing full path each time
+- ❌ Not testing production build
+- ❌ Slightly different runtime than production
+
+### Option 4: Shell Alias (Convenience)
+
+Create a shorter command for development testing.
+
+**When to use:** Frequent testing during development, when you want convenience of a short command.
+
+```bash
+# Add to ~/.bashrc, ~/.zshrc, or PowerShell profile
+
+# For production-like testing (requires rebuild)
+alias papyrus-dev='node /path/to/papyrus/packages/cli/dist/cli.js'
+
+# For hot-reload development
+alias papyrus-dev='npx tsx /path/to/papyrus/packages/cli/src/cli.tsx'
+
+# Then use like normal
+papyrus-dev logout
+papyrus-dev add
+```
+
+### Quick Comparison
+
+| Method               | Command                   | Rebuild needed? | Like production? | Speed   |
+| -------------------- | ------------------------- | --------------- | ---------------- | ------- |
+| **pnpm link**        | `papyrus xxx`             | Yes             | ✅ Yes           | Medium  |
+| **Direct execution** | `node dist/cli.js xxx`    | Yes             | ✅ Yes           | Medium  |
+| **Dev mode (tsx)**   | `npx tsx src/cli.tsx xxx` | No              | ❌ No            | Fast    |
+| **Shell alias**      | `papyrus-dev xxx`         | Depends         | Depends          | Depends |
+
+### Recommended Workflow
+
+1. **During active development:** Use Option 3 (tsx) for rapid iteration
+2. **Before committing:** Use Option 1 (pnpm link) to test production build
+3. **For quick checks:** Use Option 2 (direct execution)
 
 ## Building for Production
 

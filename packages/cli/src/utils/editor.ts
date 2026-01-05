@@ -66,7 +66,6 @@ export function openInEditor(
 
   try {
     const editor = detectEditor();
-    console.log(`Opening in ${editor}...`);
 
     // Determine args based on editor
     const args = editor === 'code' ? ['--wait', tempFile] : [tempFile];

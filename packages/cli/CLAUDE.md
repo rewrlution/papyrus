@@ -247,6 +247,118 @@ To add a new command:
      .action(async (options) => await deleteEntry(options));
    ```
 
+## User Feedback & Messaging Patterns
+
+The CLI uses a **dual messaging strategy** for consistent, compact user feedback:
+
+### When to Use Console (msg utility)
+
+Use `src/utils/messages.ts` functions for **simple, non-interactive commands**:
+
+- ✅ Quick confirmations (logout, delete)
+- ✅ Simple errors (file not found, invalid input)
+- ✅ One-off informational messages
+- ✅ Progress messages in transactional commands
+
+**Available functions:**
+
+```typescript
+import * as msg from '../utils/messages.js';
+
+// Success messages
+msg.success('Logged out successfully');
+msg.sparkles('Created your first journal entry!'); // Special occasions
+
+// Error messages (exits with code 1)
+msg.error('Journal not found', "Run 'papyrus list' to see all entries");
+
+// Informational messages
+msg.info('Opening in vim...');
+msg.warn('Token expires in 5 minutes'); // Non-fatal warnings
+msg.hint('Press Ctrl+C to cancel');
+msg.stats('Uploaded: 3, Downloaded: 1, Conflicts: 0');
+```
+
+**Key characteristics:**
+
+- Instant output (no React rendering overhead)
+- Always compact spacing (`\n` before and after)
+- Consistent icons (✅, ❌, 📖, ⚠️, 💡, 📊, ✨)
+- `msg.error()` automatically exits with error code
+
+### When to Use Ink Components
+
+Use Ink components for **interactive, stateful, or rich UI**:
+
+- ✅ Multi-step forms (login, register)
+- ✅ Interactive browsers (list/read journals)
+- ✅ Real-time progress (sync with live updates)
+- ✅ Components with user input (keyboard navigation)
+
+**Available components:**
+
+```typescript
+import { StatusMessage } from '../components/StatusMessage.js';
+import { SyncProgress } from '../components/SyncProgress.js';
+import { Browser } from '../components/Browser.js';
+
+// Status messages with optional hints
+<StatusMessage
+  type="error"
+  message="Invalid email address"
+  hint="Use format: user@example.com"
+/>
+
+// Real-time progress updates
+<SyncProgress
+  currentFile={filename}
+  totalFiles={10}
+  processed={5}
+/>
+```
+
+**Key characteristics:**
+
+- Always compact (no marginTop/marginBottom)
+- Consistent icons matching msg utility (✅, ❌, ℹ️, 🔄️)
+- Supports hints with 💡 prefix
+- Manages own state and lifecycle
+
+### Messaging Guidelines
+
+1. **Keep it compact** - Single `\n` before/after messages, no extra spacing
+2. **Use consistent icons** - Same icons across console and Ink (✅, ❌, 💡, etc.)
+3. **Provide helpful hints** - Add contextual help when users might be stuck
+4. **Exit on fatal errors** - Use `msg.error()` to exit immediately with error code
+5. **Non-blocking warnings** - Use `msg.warn()` for non-fatal issues
+
+### Example: Migrating to New Pattern
+
+**Before:**
+
+```typescript
+console.log(`\n✨ Created new entry for ${date}\n`);
+console.error(`\n❌ Error: Journal not found`);
+console.error(`💡 Run 'papyrus list' to see all entries\n`);
+process.exit(1);
+```
+
+**After:**
+
+```typescript
+import * as msg from '../utils/messages.js';
+
+msg.sparkles(`Created new entry for ${date}`);
+msg.error('Journal not found', "Run 'papyrus list' to see all entries");
+```
+
+**Benefits:**
+
+- Consistent spacing and icons
+- Less boilerplate code
+- Automatic process.exit() on errors
+- Easier to maintain
+
 ## Architecture Overview
 
 The CLI is organized into clear layers following separation of concerns:

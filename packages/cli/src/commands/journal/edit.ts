@@ -2,6 +2,7 @@
 import { journalStore } from '../../lib/storage/index.js';
 import { formatDate, parseDate } from '../../utils/date.js';
 import { openInEditor } from '../../utils/editor.js';
+import * as msg from '../../utils/messages.js';
 import {
   JOURNAL_TEMPATE,
   stripTemplateComments,
@@ -27,19 +28,18 @@ export function editJournalEntry(options: EditOptions): void {
     if (!entry) {
       if (!createIfMissing) {
         // amend: fail if entry doesn't exist
-        console.error(
-          `\n❌ Error: No journal entry found for ${date}.\n` +
-            `💡 Use 'papyrus add -d ${date}' to create a new entry.\n`
+        msg.error(
+          `No journal entry found for ${date}`,
+          `Use 'papyrus add -d ${date}' to create a new entry`
         );
-        process.exit(1);
       }
 
       // add: create new entry
       isNew = true;
       entry = '';
-      console.log(`\n✨ Creating new entry for ${displayDate}...\n`);
+      msg.sparkles(`Creating new entry for ${displayDate}...`);
     } else {
-      console.log(`\n📖 Loading existing entry for ${displayDate}...\n`);
+      msg.info(`Loading existing entry for ${displayDate}...`);
     }
 
     // 3. Append hint comments for user guidance
@@ -50,7 +50,7 @@ export function editJournalEntry(options: EditOptions): void {
     const finalContent = stripTemplateComments(editedContent);
 
     if (!finalContent.trim()) {
-      console.log('⚠️  No content written. Entry not saved.\n');
+      msg.warn('No content written. Entry not saved');
       return;
     }
 
@@ -60,13 +60,10 @@ export function editJournalEntry(options: EditOptions): void {
     const words = countWords(finalContent);
     const chars = finalContent.length;
 
-    console.log(
-      `\n✅ Journal entry ${isNew ? 'created' : 'updated'} for ${date}`
-    );
-    console.log(`📊 Words: ${words} | Characters: ${chars}\n`);
+    msg.success(`Journal entry ${isNew ? 'created' : 'updated'} for ${date}`);
+    msg.stats(`Words: ${words} | Characters: ${chars}`);
   } catch (error: any) {
-    console.error(`\n❌ Error: ${error.message}\n`);
-    process.exit(1);
+    msg.error(error.message);
   }
 }
 

@@ -6,6 +6,7 @@ type MessageType = 'success' | 'error' | 'info' | 'loading';
 interface StatusMessageProps {
   type: MessageType;
   message: string;
+  hint?: string; // Optional hint message (e.g., "Run 'papyrus list' to see all entries")
 }
 
 const icons = {
@@ -22,16 +23,17 @@ const colors = {
   loading: 'cyan',
 };
 
-export function StatusMessage({ type, message }: StatusMessageProps) {
+export function StatusMessage({ type, message, hint }: StatusMessageProps) {
   const lines = message.split('\n');
 
   return (
-    <Box marginTop={1} flexDirection="column">
+    <Box flexDirection="column">
       {lines.map((line, index) => (
         <Text key={index} color={colors[type]}>
           {index === 0 ? `${icons[type]} ${line}` : `   ${line}`}
         </Text>
       ))}
+      {hint && <Text color="gray">💡 {hint}</Text>}
     </Box>
   );
 }

@@ -1,3 +1,4 @@
+import * as msg from '../../utils/messages.js';
 import {
   isTokenExpired,
   isTokenExpiringSoon,
@@ -131,16 +132,14 @@ export function ensureAuthenticated(options: RequireAuthOptions = {}): void {
   const authResult = requireAuth(options);
 
   if (!authResult.isAuthenticated) {
-    console.error(`Error: ${authResult.message}`);
-    process.exit(1);
+    msg.error(authResult.message!);
   }
 
   if (authResult.isExpired) {
-    console.error(`Error: ${authResult.message}`);
-    process.exit(1);
+    msg.error(authResult.message!);
   }
 
   if (authResult.isExpiringSoon && authResult.message) {
-    console.warn(`Warning: ${authResult.message}`);
+    msg.warn(authResult.message);
   }
 }
