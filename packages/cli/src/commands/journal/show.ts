@@ -1,8 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render } from 'ink';
-import React from 'react';
-
-import { JournalViewer } from '../../components/JournalViewer.js';
 import { journalStore } from '../../lib/storage/index.js';
 import { formatDate, parseDate } from '../../utils/date.js';
 import * as msg from '../../utils/messages.js';
@@ -30,12 +26,10 @@ export async function showEntry(options: ShowOptions): Promise<void> {
       msg.error(`Failed to load journal entry for ${date}`);
     }
 
-    // 4. Display the entry
-    const { waitUntilExit } = render(
-      React.createElement(JournalViewer, { date, content })
-    );
-
-    await waitUntilExit();
+    // 4. Output the journal content
+    console.log(`\n# ${displayDate}\n`);
+    console.log(content);
+    console.log('');
   } catch (error: any) {
     msg.error(
       error.message,

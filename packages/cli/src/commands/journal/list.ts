@@ -4,6 +4,7 @@ import React from 'react';
 
 import { Browser } from '../../components/Browser.js';
 import { journalStore } from '../../lib/storage/index.js';
+import { withAlternateScreen } from '../../utils/alternate-screen.js';
 import * as msg from '../../utils/messages.js';
 
 export async function listEntries(): Promise<void> {
@@ -11,12 +12,13 @@ export async function listEntries(): Promise<void> {
     // Load all journal entries
     const journals = journalStore.list();
 
-    // Render the interactive browser
-    const { waitUntilExit } = render(
-      React.createElement(Browser, { journals })
-    );
-
-    await waitUntilExit();
+    // Render the interactive browser in alternate screen
+    await withAlternateScreen(async () => {
+      const { waitUntilExit } = render(
+        React.createElement(Browser, { journals })
+      );
+      await waitUntilExit();
+    });
   } catch (error: any) {
     msg.error(`Failed to list journal entries: ${error.message}`);
   }

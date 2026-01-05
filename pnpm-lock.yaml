@@ -141,6 +141,9 @@ importers:
       '@rewrlution/papyrus-shared':
         specifier: workspace:*
         version: link:../shared
+      ansi-escapes:
+        specifier: ^7.2.0
+        version: 7.2.0
       axios:
         specifier: ^1.13.2
         version: 1.13.2
