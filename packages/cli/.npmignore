@@ -1,0 +1,24 @@
+# Source files
+src/
+tests/
+*.test.ts
+*.spec.ts
+
+# Development files
+.github/
+.vscode/
+docs/
+CLAUDE.md
+
+# Config files
+tsconfig.json
+vitest.config.ts
+eslint.config.js
+
+# Build artifacts
+*.tsbuildinfo
+node_modules/
+
+# Environment
+.env
+.env.*

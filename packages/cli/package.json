@@ -1,6 +1,16 @@
 {
   "name": "@rewrlution/papyrus-cli",
   "version": "0.0.1",
+  "description": "AI-powered developer journaling CLI",
+  "keywords": [
+    "journal",
+    "productivity"
+  ],
+  "license": "MIT",
+  "author": "rewrlution@gmail.com",
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "bin": {
     "pp": "./dist/cli.js",
@@ -9,11 +19,17 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "rimraf dist && tsc --build",
     "dev": "tsx watch src/cli.tsx",
     "start": "node dist/cli.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm run test"
   },
   "dependencies": {
     "@rewrlution/papyrus-shared": "workspace:*",
