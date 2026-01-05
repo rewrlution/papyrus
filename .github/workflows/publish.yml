@@ -54,8 +54,6 @@ jobs:
         run: pnpm build --filter=@rewrlution/papyrus-cli...
 
       - name: Publish to npm
-        run: |
-          cd packages/cli
-          npm publish --access public
+        run: pnpm publish --filter=@rewrlution/papyrus-cli --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
