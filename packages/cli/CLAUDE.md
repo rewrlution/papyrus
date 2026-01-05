@@ -105,6 +105,11 @@ packages/cli/
 │   │       ├── list.ts               # List all entries
 │   │       └── sync.ts               # Sync with server
 │   ├── components/
+│   │   ├── Browser.tsx               # Interactive journal browser
+│   │   ├── BrowserHeader.tsx         # Browser header (title, count)
+│   │   ├── BrowserFooter.tsx         # Browser footer (shortcuts)
+│   │   ├── JournalListView.tsx       # Virtual scrolling journal list
+│   │   ├── JournalViewer.tsx         # Full journal reader with scrolling
 │   │   ├── ColdStart.tsx             # Cold start aware spinner
 │   │   ├── FormInput.tsx             # Reusable form input component
 │   │   ├── LoginForm.tsx             # Login form (email/password)
@@ -143,6 +148,7 @@ packages/cli/
 │   ├── 06-JOURNAL-ADD-IMPLEMENTATION.md # Journal commands tutorial
 │   ├── 07-SYNC-IMPLEMENTATION.md    # Sync feature tutorial
 │   ├── 08-TOKEN-MANAGEMENT.md       # Token management tutorial
+│   ├── 09-LIST-BROWSE-MIGRATION.md # List/browse feature migration
 │   ├── ARCHITECTURE-JOURNAL-STORAGE.md # ADR for journal format
 │   ├── sync.md                       # Sync algorithm explanation
 │   ├── cold-start-handling.md       # Cold start handling
@@ -183,8 +189,8 @@ program.parse(process.argv);
 
 - `papyrus add [-d <date>]` - Create a new journal entry
 - `papyrus amend [-d <date>]` - Modify an existing entry
-- `papyrus show [-d <date>]` - Display an entry
-- `papyrus list` or `papyrus ls` - List all entries
+- `papyrus show [-d <date>]` - Display an entry in reader view
+- `papyrus list` or `papyrus ls` - Browse all entries interactively
 - `papyrus sync` - Sync journals with server
 
 #### Auth Commands
@@ -397,6 +403,11 @@ External editor integration:
 
 React/Ink UI components:
 
+- `Browser` - Interactive journal browser with list/reader views
+- `BrowserHeader` - Header showing title and journal count
+- `BrowserFooter` - Footer showing keyboard shortcuts
+- `JournalListView` - Virtual scrolling list of journal entries
+- `JournalViewer` - Full journal reader with line numbers and scrolling
 - `LoginForm` - Email/password form with validation
 - `RegisterForm` - Multi-step registration (email → password → confirm)
 - `SyncProgress` - Real-time sync progress with spinner
@@ -619,6 +630,7 @@ Comprehensive tutorials are available in the `docs/` directory:
 6. **[Journal Commands](./docs/06-JOURNAL-ADD-IMPLEMENTATION.md)** - Add, amend, show commands
 7. **[Sync Implementation](./docs/07-SYNC-IMPLEMENTATION.md)** - Hash-based synchronization
 8. **[Token Management](./docs/08-TOKEN-MANAGEMENT.md)** - Decoupled auth middleware
+9. **[List & Browse](./docs/09-LIST-BROWSE-MIGRATION.md)** - Interactive journal browser
 
 ### Architecture Decisions
 
@@ -636,7 +648,8 @@ The following features are fully implemented:
 - ✅ **Journal storage** - Markdown files with YAML frontmatter (XDG paths)
 - ✅ **Date parsing** - Support for "today", "yesterday", "YYYYMMDD"
 - ✅ **External editor** - Integration with $EDITOR, $VISUAL (vim, nano, code)
-- ✅ **Journal commands** - Add, amend, show, list
+- ✅ **Journal commands** - Add, amend, show commands
+- ✅ **Interactive browser** - List and read journals with vim-style navigation
 - ✅ **Sync engine** - Hash-based three-way sync with conflict resolution
 - ✅ **API client** - Axios with interceptors for auth and error handling
 - ✅ **Interactive forms** - Login and registration using Ink
