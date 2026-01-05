@@ -6,6 +6,7 @@ import { formatDateHeader } from '../utils/date.js';
 interface JournalViewerProps {
   date: string; // YYYYMMDD format
   content: string;
+  onExit?: () => void; // Optional callback when user presses 'q' or Escape
 }
 
 /**
@@ -33,7 +34,11 @@ interface JournalViewerProps {
  * - Auto-reset horizontal position when moving vertically (better UX)
  * - React keys use line numbers (unique, stable identifiers)
  */
-export const JournalViewer = ({ date, content }: JournalViewerProps) => {
+export const JournalViewer = ({
+  date,
+  content,
+  onExit,
+}: JournalViewerProps) => {
   const { exit } = useApp();
 
   // Split content into lines (memoized to avoid re-splitting on every render)
@@ -70,7 +75,11 @@ export const JournalViewer = ({ date, content }: JournalViewerProps) => {
   useInput((input, key) => {
     // Quit (q or Escape)
     if (input === 'q' || key.escape) {
-      exit();
+      if (onExit) {
+        onExit(); // Call callback if provided (for returning to list view)
+      } else {
+        exit(); // Exit app if no callback (standalone viewer)
+      }
       return;
     }
 
