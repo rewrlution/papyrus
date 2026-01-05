@@ -111,7 +111,7 @@ pnpm link --global
 # 5. Now 'papyrus' and 'paper' use your local code!
 papyrus logout
 paper add
-papyrus list
+papyrus app
 
 # 6. When done testing, unlink
 pnpm unlink --global

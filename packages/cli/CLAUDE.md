@@ -102,7 +102,7 @@ packages/cli/
 │   │       ├── amend.ts              # Modify existing entry (editor)
 │   │       ├── edit.ts               # Edit utilities
 │   │       ├── show.ts               # Display entry
-│   │       ├── list.ts               # List all entries
+│   │       ├── app.ts                # Launch TUI browser
 │   │       └── sync.ts               # Sync with server
 │   ├── components/
 │   │   ├── Browser.tsx               # Interactive journal browser
@@ -190,7 +190,7 @@ program.parse(process.argv);
 - `papyrus add [-d <date>]` - Create a new journal entry
 - `papyrus amend [-d <date>]` - Modify an existing entry
 - `papyrus show [-d <date>]` - Display an entry in reader view
-- `papyrus list` or `papyrus ls` - Browse all entries interactively
+- `papyrus app` - Launch TUI to browse and read entries interactively
 - `papyrus sync` - Sync journals with server
 
 #### Auth Commands
@@ -270,7 +270,7 @@ msg.success('Logged out successfully');
 msg.sparkles('Created your first journal entry!'); // Special occasions
 
 // Error messages (exits with code 1)
-msg.error('Journal not found', "Run 'papyrus list' to see all entries");
+msg.error('Journal not found', "Run 'papyrus app' to see all entries");
 
 // Informational messages
 msg.info('Opening in vim...');
@@ -339,7 +339,7 @@ import { Browser } from '../components/Browser.js';
 ```typescript
 console.log(`\n✨ Created new entry for ${date}\n`);
 console.error(`\n❌ Error: Journal not found`);
-console.error(`💡 Run 'papyrus list' to see all entries\n`);
+console.error(`💡 Run 'papyrus app' to see all entries\n`);
 process.exit(1);
 ```
 
@@ -349,7 +349,7 @@ process.exit(1);
 import * as msg from '../utils/messages.js';
 
 msg.sparkles(`Created new entry for ${date}`);
-msg.error('Journal not found', "Run 'papyrus list' to see all entries");
+msg.error('Journal not found', "Run 'papyrus app' to see all entries");
 ```
 
 **Benefits:**
@@ -630,7 +630,7 @@ pnpm link --global
 
 # Now you can run it anywhere
 papyrus add
-papyrus list
+papyrus app
 papyrus show --date yesterday
 
 # When done testing, unlink

@@ -53,7 +53,7 @@ papyrus/
 **Entry Points:**
 
 - `papyrus add` - Create new journal entry
-- `papyrus list` - Browse entries interactively
+- `papyrus app` - Launch TUI to browse and read entries interactively
 - `papyrus show` - Read entry in viewer
 - `papyrus sync` - Sync with server
 - `papyrus login/logout` - Authentication
@@ -556,7 +556,7 @@ cd packages/shared && pnpm dev
 cd packages/cli && pnpm dev
 
 # Terminal 3: Test CLI commands
-papyrus list
+papyrus app
 ```
 
 ### Debugging

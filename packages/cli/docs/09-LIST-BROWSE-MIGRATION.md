@@ -1,6 +1,6 @@
-# Journal List & Browse Feature - Migration Guide
+# Journal App & Browse Feature - Migration Guide
 
-This guide explains how the journal browsing feature was migrated from the previous `nav` command to the new `list` command, integrating with the enhanced `JournalViewer` component.
+This guide explains how the journal browsing feature was migrated from the previous `nav` command to the new `app` command (previously called `list`), integrating with the enhanced `JournalViewer` component.
 
 ## What We Built
 
@@ -12,7 +12,7 @@ An interactive journal browser that lets users:
 - Use familiar keyboard shortcuts (vim-style navigation)
 
 **Previous version**: `papyrus nav` - Basic browse functionality with separate `JournalReader` component
-**New version**: `papyrus list` - Enhanced browse with unified `JournalViewer` component
+**Current version**: `papyrus app` - Enhanced browse with unified `JournalViewer` component (renamed from `list`)
 
 ## Architecture
 
@@ -79,7 +79,7 @@ The browser is composed of four main components working together:
 ### Command Name
 
 - **Before**: `papyrus nav`
-- **After**: `papyrus list` (with alias `ls`)
+- **After**: `papyrus app` (previously `list` with alias `ls`, now simplified to just `app`)
 
 ### Reader Component
 
@@ -309,11 +309,8 @@ export async function listEntries(): Promise<void> {
 ### List and Browse Journals
 
 ```bash
-# List all journals interactively
-papyrus list
-
-# Or use the short alias
-papyrus ls
+# Launch the Papyrus TUI to browse journals interactively
+papyrus app
 ```
 
 ### Keyboard Shortcuts
@@ -455,7 +452,7 @@ If you're migrating code that used the old `nav` command:
    papyrus add -d 20260103
 
    # Test list view
-   papyrus list
+   papyrus app
    # - Press j/k to navigate
    # - Verify selection indicator moves
    # - Verify circular navigation at edges
@@ -465,7 +462,7 @@ If you're migrating code that used the old `nav` command:
 
    ```bash
    # Open a journal
-   papyrus list
+   papyrus app
    # - Press Enter on an entry
    # - Verify reader opens with content
    # - Press q to return to list
@@ -481,7 +478,7 @@ If you're migrating code that used the old `nav` command:
    done
 
    # Test scrolling
-   papyrus list
+   papyrus app
    # - Navigate through all entries
    # - Verify "More above/below" indicators
    # - Verify selection stays centered

@@ -61,9 +61,7 @@ This opens your default editor. Write your thoughts, save, and close.
 ### 4. Browse Your Journals
 
 ```bash
-papyrus list
-# Or use the short alias
-papyrus ls
+papyrus app
 ```
 
 Use arrow keys or `j/k` to navigate, press `Enter` to read an entry.
@@ -147,14 +145,12 @@ papyrus show -d yesterday
 - `0` - Jump to start of line
 - `q` or `Esc` - Quit
 
-#### `papyrus list` or `papyrus ls`
+#### `papyrus app`
 
-Browse all journal entries interactively.
+Launch the Papyrus TUI to browse and read journal entries interactively.
 
 ```bash
-papyrus list
-# Or
-papyrus ls
+papyrus app
 ```
 
 **Features:**

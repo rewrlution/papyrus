@@ -1926,7 +1926,7 @@ These commands form the foundation of the journal workflow:
 papyrus add              # Write/edit (creates if missing)
 papyrus show             # Display entry
 papyrus amend            # Edit only (fails if missing)
-papyrus list             # Browse all (see next tutorial)
+papyrus app              # Browse all (see next tutorial)
 papyrus sync             # Sync with server (see next tutorial)
 ```
 

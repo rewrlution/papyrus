@@ -7,7 +7,7 @@ import { journalStore } from '../../lib/storage/index.js';
 import { withAlternateScreen } from '../../utils/alternate-screen.js';
 import * as msg from '../../utils/messages.js';
 
-export async function listEntries(): Promise<void> {
+export async function launchApp(): Promise<void> {
   try {
     // Load all journal entries
     const journals = journalStore.list();
@@ -20,6 +20,6 @@ export async function listEntries(): Promise<void> {
       await waitUntilExit();
     });
   } catch (error: any) {
-    msg.error(`Failed to list journal entries: ${error.message}`);
+    msg.error(`Failed to launch Papyrus app: ${error.message}`);
   }
 }
