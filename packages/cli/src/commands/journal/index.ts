@@ -25,7 +25,7 @@ export function registerJournalCommands(program: Command) {
 
   program
     .command('show')
-    .description('Display a new journal entry')
+    .description('Display a journal entry')
     .option(
       '-d, --date <date>',
       'Date of the entry to show (default: today)',
@@ -36,7 +36,7 @@ export function registerJournalCommands(program: Command) {
   program
     .command('list')
     .alias('ls')
-    .description('List all journal entries')
+    .description('List all local journal entries')
     .action(async () => await listEntries());
 
   program
