@@ -111,11 +111,9 @@ export function parseDateToLocalTimestamp(dateString: string): Date {
  * Example: "20260104" → "January 4, 2026 (Saturday)"
  */
 export function formatDateHeader(dateStr: string): string {
-  const year = dateStr.substring(0, 4);
-  const month = dateStr.substring(4, 6);
-  const day = dateStr.substring(6, 8);
-
-  const date = new Date(`${year}-${month}-${day}`);
+  // Use parseDateToLocalTimestamp to create Date in local timezone at noon
+  // This avoids timezone edge cases (e.g., "2025-10-06" as UTC being "2025-10-05" in PST)
+  const date = parseDateToLocalTimestamp(dateStr);
   const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',

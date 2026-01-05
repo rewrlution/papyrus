@@ -1,9 +1,17 @@
-import { Box, Text, useInput, useApp } from 'ink';
+import { Box, Text, useInput, useApp, useStdout } from 'ink';
 import React, { useState, useMemo } from 'react';
 
 import { formatDateHeader } from '../utils/date.js';
 
 import { AppLayoutGeneric } from './AppLayoutGeneric.js';
+
+// Special characters
+const NBSP = '\u00A0'; // Non-breaking space
+const VBAR = '│'; // Vertical bar for line number separator
+
+// Line number formatting
+const LINE_NUMBER_WIDTH = 4; // Width for padded line numbers
+const LINE_NUMBER_SEPARATOR = ` ${VBAR} `; // " │ " with spaces
 
 interface JournalViewerScreenProps {
   date: string; // YYYYMMDD format
@@ -23,22 +31,41 @@ export const JournalViewerScreen: React.FC<JournalViewerScreenProps> = ({
   onExit,
 }) => {
   const { exit } = useApp();
+  const { stdout } = useStdout();
 
   // Split content into lines (memoized to avoid re-splitting on every render)
-  const contentLines = useMemo(() => content.split('\n'), [content]);
+  // Remove trailing empty line if file ends with newline (which is standard)
+  const contentLines = useMemo(() => {
+    const lines = content.split('\n');
+    // If file ends with newline, split creates an empty last element - remove it
+    if (lines.length > 0 && lines[lines.length - 1] === '') {
+      return lines.slice(0, -1);
+    }
+    return lines;
+  }, [content]);
 
-  // Viewport configuration
-  const terminalHeight = process.stdout.rows || 24;
-  const terminalWidth = process.stdout.columns || 120;
+  // Viewport configuration - use same stdout as AppLayoutGeneric
+  const terminalHeight = stdout?.rows || 24;
+  const terminalWidth = stdout?.columns || 120;
 
-  // Reserve space for UI elements: logo(1) + divider(1) + header(1) + divider(1) + divider(1) + footer(1) + borders(2) = 8
-  const reservedHeight = 8;
+  // Reserve space for UI elements:
+  // - Outer box border: 2 (top + bottom, handled by AppLayoutGeneric's height={terminalHeight-2})
+  // - Logo: 1
+  // - Divider: 1
+  // - Header: 1
+  // - Divider: 1
+  // - [Content area - what we calculate here]
+  // - Divider: 1
+  // - Footer: 1
+  // - Flex layout overhead: 2 (accounting for flexbox rendering and potential shrinkage)
+  // Total reserved: 2 + 1 + 1 + 1 + 1 + 1 + 1 + 2 = 10
+  const reservedHeight = 10;
   const visibleLines = Math.max(5, terminalHeight - reservedHeight);
 
   // Calculate available width for content
   const borderWidth = 2;
   const paddingWidth = 2;
-  const lineNumberWidth = 7; // "   1 │ " format
+  const lineNumberWidth = LINE_NUMBER_WIDTH + LINE_NUMBER_SEPARATOR.length; // e.g., "   1 │ " = 4 + 3 = 7
   const contentWidth =
     terminalWidth - borderWidth - paddingWidth - lineNumberWidth;
 
@@ -127,7 +154,7 @@ export const JournalViewerScreen: React.FC<JournalViewerScreenProps> = ({
   const headerContent = (
     <Box justifyContent="space-between">
       <Text bold color="cyan">
-        # {formatDateHeader(date)}
+        {formatDateHeader(date)}
       </Text>
       <Text dimColor>
         Line {lastVisibleLine}/{contentLines.length} ({progress}%)
@@ -143,21 +170,27 @@ export const JournalViewerScreen: React.FC<JournalViewerScreenProps> = ({
     </Text>
   );
 
+  // Format empty line number column (matches width of actual line numbers)
+  const emptyLineNumberColumn =
+    ''.padStart(LINE_NUMBER_WIDTH, ' ') + LINE_NUMBER_SEPARATOR;
+
   // Content area: scrollable journal lines
   const contentArea = (
     <Box flexDirection="column" flexGrow={1}>
       {visibleContent.map((line, idx) => {
         const lineNumber = scrollOffset + idx + 1;
-        const lineNumberStr = lineNumber.toString().padStart(4, ' ');
+        const lineNumberStr = lineNumber
+          .toString()
+          .padStart(LINE_NUMBER_WIDTH, ' ');
         const visiblePortion = line.substring(
           horizontalOffset,
           horizontalOffset + contentWidth
         );
-        const displayContent = visiblePortion || '\u00A0'; // Non-breaking space
+        const displayContent = visiblePortion || NBSP;
 
         return (
           <Box key={lineNumber} flexDirection="row" minHeight={1}>
-            <Text dimColor>{lineNumberStr} │ </Text>
+            <Text dimColor>{lineNumberStr + LINE_NUMBER_SEPARATOR}</Text>
             <Text>{displayContent}</Text>
           </Box>
         );
@@ -165,8 +198,8 @@ export const JournalViewerScreen: React.FC<JournalViewerScreenProps> = ({
       {/* Fill remaining space with empty lines */}
       {emptyLines.map((_, idx) => (
         <Box key={`empty-${idx}`} flexDirection="row" minHeight={1}>
-          <Text dimColor> │ </Text>
-          <Text>{'\u00A0'}</Text>
+          <Text dimColor>{emptyLineNumberColumn}</Text>
+          <Text>{NBSP}</Text>
         </Box>
       ))}
     </Box>
