@@ -9,6 +9,7 @@ import { BrowserFooter } from './BrowserFooter.js';
 import { BrowserHeader } from './BrowserHeader.js';
 import { JournalListView } from './JournalListView.js';
 import { JournalViewer } from './JournalViewer.js';
+import { LogoCompact } from './LogoCompact.js';
 
 interface BrowserProps {
   journals: JournalFileInfo[];
@@ -25,13 +26,15 @@ type ViewMode = 'list' | 'reader';
  * - Circular navigation (wrap around at top/bottom)
  * - Today marker for current date's entry
  * - Virtual scrolling for large journal collections
+ * - Dynamic window sizing based on terminal height
  * - Press Enter to read, q to return to list or quit
  *
  * Architecture:
- * 1. BrowserHeader - Shows total journal count
- * 2. JournalListView - Virtual scrolling list of journals
- * 3. BrowserFooter - Keyboard shortcuts reference
- * 4. JournalViewer - Full journal reader (opens when selecting entry)
+ * 1. LogoCompact - Branding header
+ * 2. BrowserHeader - Shows total journal count
+ * 3. JournalListView - Virtual scrolling list of journals (dynamic size)
+ * 4. BrowserFooter - Keyboard shortcuts reference
+ * 5. JournalViewer - Full journal reader (opens when selecting entry)
  *
  * State Management:
  * - viewMode: 'list' | 'reader' - Current view
@@ -48,6 +51,19 @@ export const Browser: React.FC<BrowserProps> = ({ journals }) => {
 
   const { exit } = useApp();
   const today = getTodayDate();
+
+  // Calculate dynamic window size based on terminal height
+  // Fixed UI elements take up approximately:
+  // - LogoCompact: 1 line
+  // - BrowserHeader: 3 lines (border + content + border)
+  // - JournalListView chrome: 5 lines (marginTop + borders + padding)
+  // - Indicators: 2 lines (max, for "more above/below")
+  // - BrowserFooter: 4 lines (margin + border + content + border)
+  // Total fixed: 15 lines
+  const FIXED_UI_HEIGHT = 15;
+  const terminalHeight = process.stdout.rows || 24; // Default to 24 if not available
+  const availableHeight = Math.max(3, terminalHeight - FIXED_UI_HEIGHT); // Minimum 3 entries
+  const windowSize = Math.min(availableHeight, 10); // Cap at 10 for usability
 
   // Keyboard input handlers
   useInput((input, key) => {
@@ -157,13 +173,14 @@ export const Browser: React.FC<BrowserProps> = ({ journals }) => {
   // List view (default)
   return (
     <Box flexDirection="column">
+      <LogoCompact />
       <BrowserHeader totalJournals={journals.length} />
 
       <JournalListView
         journals={journals}
         selectedIndex={selectedIndex}
         todayDate={today}
-        windowSize={10}
+        windowSize={windowSize}
       />
 
       <BrowserFooter shortcuts="↑↓/jk Navigate • Enter Read • q Quit" />

@@ -20,7 +20,7 @@ const icons = {
  * @param message The success message to display
  */
 export function success(message: string): void {
-  console.log(`\n${icons.success} ${message}\n`);
+  console.log(`${icons.success} ${message}`);
 }
 
 /**
@@ -34,7 +34,7 @@ export function error(
   hint?: string,
   exitCode: number = 1
 ): never {
-  console.error(`\n${icons.error} ${message}`);
+  console.error(`${icons.error} ${message}`);
   if (hint) {
     console.error(`${icons.hint} ${hint}`);
   }
@@ -47,7 +47,7 @@ export function error(
  * @param message The info message to display
  */
 export function info(message: string): void {
-  console.log(`\n${icons.info} ${message}\n`);
+  console.log(`${icons.info} ${message}`);
 }
 
 /**
@@ -55,7 +55,7 @@ export function info(message: string): void {
  * @param message The warning message to display
  */
 export function warn(message: string): void {
-  console.warn(`\n${icons.warning} ${message}\n`);
+  console.warn(`${icons.warning} ${message}`);
 }
 
 /**
@@ -63,7 +63,7 @@ export function warn(message: string): void {
  * @param message The hint message to display
  */
 export function hint(message: string): void {
-  console.log(`\n${icons.hint} ${message}\n`);
+  console.log(`${icons.hint} ${message}`);
 }
 
 /**
@@ -71,7 +71,7 @@ export function hint(message: string): void {
  * @param message The stats message to display
  */
 export function stats(message: string): void {
-  console.log(`\n${icons.stats} ${message}\n`);
+  console.log(`${icons.stats} ${message}`);
 }
 
 /**
@@ -79,5 +79,5 @@ export function stats(message: string): void {
  * @param message The message to display
  */
 export function sparkles(message: string): void {
-  console.log(`\n${icons.sparkles} ${message}\n`);
+  console.log(`${icons.sparkles} ${message}`);
 }

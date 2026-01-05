@@ -8,7 +8,7 @@ import { api } from '../lib/api/index.js';
 
 import { ColdStartAwareSpinner } from './ColdStart.js';
 import { FormInput } from './FormInput.js';
-import { Logo } from './Logo.js';
+import { LogoCompact } from './LogoCompact.js';
 import { StatusMessage } from './StatusMessage.js';
 
 type FormStep =
@@ -85,7 +85,7 @@ export function LoginForm() {
   return (
     <Box flexDirection="column" paddingX={2} paddingY={2}>
       {/** Logo */}
-      <Logo />
+      <LogoCompact />
       <Newline />
 
       {/** Title */}
