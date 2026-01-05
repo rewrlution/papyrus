@@ -7,6 +7,7 @@ import { getTodayDate } from '../utils/date.js';
 
 import { BrowserFooter } from './BrowserFooter.js';
 import { BrowserHeader } from './BrowserHeader.js';
+import { Divider } from './Divider.js';
 import { JournalListView } from './JournalListView.js';
 import { JournalViewer } from './JournalViewer.js';
 import { LogoCompact } from './LogoCompact.js';
@@ -53,14 +54,17 @@ export const Browser: React.FC<BrowserProps> = ({ journals }) => {
   const today = getTodayDate();
 
   // Calculate dynamic window size based on terminal height
-  // Fixed UI elements take up approximately:
+  // Fixed UI elements in unified box:
   // - LogoCompact: 1 line
-  // - BrowserHeader: 3 lines (border + content + border)
-  // - JournalListView chrome: 5 lines (marginTop + borders + padding)
+  // - Divider: 1 line
+  // - BrowserHeader: 1 line
+  // - Divider: 1 line
   // - Indicators: 2 lines (max, for "more above/below")
-  // - BrowserFooter: 4 lines (margin + border + content + border)
-  // Total fixed: 15 lines
-  const FIXED_UI_HEIGHT = 15;
+  // - Divider: 1 line
+  // - BrowserFooter: 1 line
+  // - Box borders: 2 lines (top + bottom)
+  // Total fixed: 10 lines
+  const FIXED_UI_HEIGHT = 10;
   const terminalHeight = process.stdout.rows || 24; // Default to 24 if not available
   const availableHeight = Math.max(3, terminalHeight - FIXED_UI_HEIGHT); // Minimum 3 entries
   const windowSize = Math.min(availableHeight, 10); // Cap at 10 for usability
@@ -172,10 +176,23 @@ export const Browser: React.FC<BrowserProps> = ({ journals }) => {
 
   // List view (default)
   return (
-    <Box flexDirection="column">
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="blue"
+      paddingX={1}
+    >
+      {/* Logo */}
       <LogoCompact />
+
+      <Divider />
+
+      {/* Header */}
       <BrowserHeader totalJournals={journals.length} />
 
+      <Divider />
+
+      {/* Journal List */}
       <JournalListView
         journals={journals}
         selectedIndex={selectedIndex}
@@ -183,6 +200,9 @@ export const Browser: React.FC<BrowserProps> = ({ journals }) => {
         windowSize={windowSize}
       />
 
+      <Divider />
+
+      {/* Footer */}
       <BrowserFooter shortcuts="↑↓/jk Navigate • Enter Read • q Quit" />
     </Box>
   );

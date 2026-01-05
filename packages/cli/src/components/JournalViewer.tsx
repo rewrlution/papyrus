@@ -1,7 +1,10 @@
 import { Box, Text, useInput, useApp } from 'ink';
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import { formatDateHeader } from '../utils/date.js';
+
+import { Divider } from './Divider.js';
+import { LogoCompact } from './LogoCompact.js';
 
 interface JournalViewerProps {
   date: string; // YYYYMMDD format
@@ -48,11 +51,16 @@ export const JournalViewer = ({
   const terminalHeight = process.stdout.rows || 24;
   const terminalWidth = process.stdout.columns || 120;
 
-  // Reserve space for UI elements
-  // Note: These are estimates. Ink's flexbox will determine actual layout.
-  const headerHeight = 3; // Header box takes ~3 lines
-  const footerHeight = 2; // Footer box takes ~2 lines
-  const reservedHeight = headerHeight + footerHeight;
+  // Reserve space for UI elements in unified box
+  // - LogoCompact: 1 line
+  // - Divider: 1 line
+  // - Header: 1 line
+  // - Divider: 1 line
+  // - Content borders: 2 lines (top + bottom)
+  // - Divider: 1 line
+  // - Footer: 1 line
+  // Total: 8 lines reserved
+  const reservedHeight = 8;
 
   // Ensure we have at least 5 visible lines even in small terminals
   const visibleLines = Math.max(5, terminalHeight - reservedHeight);
@@ -144,6 +152,10 @@ export const JournalViewer = ({
     scrollOffset + visibleLines
   );
 
+  // Pad with empty lines to fill the terminal height
+  const paddingNeeded = Math.max(0, visibleLines - visibleContent.length);
+  const emptyLines = Array(paddingNeeded).fill('');
+
   // Calculate position info based on LAST visible line
   // This ensures progress shows 100% when all content is visible
   // Example: Viewing lines 1-11 of 11 shows "Line 11/11 (100%)"
@@ -154,32 +166,31 @@ export const JournalViewer = ({
   const progress = calculateProgress(lastVisibleLine, contentLines.length);
 
   return (
-    <Box flexDirection="column">
-      {/* Sticky Header - always visible at top */}
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="cyan"
-        paddingX={1}
-      >
-        <Box justifyContent="space-between">
-          <Text bold color="cyan">
-            # {formatDateHeader(date)}
-          </Text>
-          <Text dimColor>
-            Line {lastVisibleLine}/{contentLines.length} ({progress}%)
-          </Text>
-        </Box>
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="cyan"
+      paddingX={1}
+    >
+      {/* Logo */}
+      <LogoCompact />
+
+      <Divider />
+
+      {/* Header - date and position info */}
+      <Box justifyContent="space-between">
+        <Text bold color="cyan">
+          # {formatDateHeader(date)}
+        </Text>
+        <Text dimColor>
+          Line {lastVisibleLine}/{contentLines.length} ({progress}%)
+        </Text>
       </Box>
 
+      <Divider />
+
       {/* Content Area - scrollable viewport */}
-      <Box
-        flexDirection="column"
-        flexGrow={1}
-        borderStyle="round"
-        borderColor="gray"
-        paddingX={1}
-      >
+      <Box flexDirection="column" flexGrow={1}>
         {visibleContent.map((line, idx) => {
           // Calculate actual line number in the full content
           const lineNumber = scrollOffset + idx + 1;
@@ -205,21 +216,23 @@ export const JournalViewer = ({
             </Box>
           );
         })}
+        {/* Fill remaining space with empty lines to use full terminal height */}
+        {emptyLines.map((_, idx) => (
+          <Box key={`empty-${idx}`} flexDirection="row" minHeight={1}>
+            <Text dimColor> │ </Text>
+            <Text>{'\u00A0'}</Text>
+          </Box>
+        ))}
       </Box>
 
-      {/* Sticky Footer - always visible at bottom */}
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="cyan"
-        paddingX={1}
-      >
-        <Text dimColor>
-          ↑↓/jk Scroll • ←→/hl Pan • 0 Home • PgUp/PgDn Page • g/G Top/Bot • q
-          Quit
-          {horizontalOffset > 0 && ` • Col ${horizontalOffset + 1}+`}
-        </Text>
-      </Box>
+      <Divider />
+
+      {/* Footer - keyboard shortcuts */}
+      <Text dimColor>
+        ↑↓/jk Scroll • ←→/hl Pan • 0 Home • PgUp/PgDn Page • g/G Top/Bot • q
+        Quit
+        {horizontalOffset > 0 && ` • Col ${horizontalOffset + 1}+`}
+      </Text>
     </Box>
   );
 };

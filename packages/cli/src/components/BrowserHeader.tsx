@@ -9,13 +9,11 @@ export const BrowserHeader: React.FC<BrowserHeaderProps> = ({
   totalJournals,
 }) => {
   return (
-    <Box borderStyle="round" borderColor="blue" paddingX={1}>
+    <Box justifyContent="space-between">
       <Text bold color="blue">
         Browse Your Journals
       </Text>
-      <Box marginLeft={2}>
-        <Text dimColor>Total: {totalJournals} entries</Text>
-      </Box>
+      <Text dimColor>Total: {totalJournals} entries</Text>
     </Box>
   );
 };

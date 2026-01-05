@@ -44,14 +44,14 @@ export const JournalListView: React.FC<JournalListViewProps> = ({
   const showMoreBelow =
     selectedIndex < journals.length - Math.floor(windowSize / 2) - 1;
 
+  // Calculate padding needed to fill terminal height
+  const linesUsed =
+    visibleJournals.length + (showMoreAbove ? 1 : 0) + (showMoreBelow ? 1 : 0);
+  const paddingNeeded = Math.max(0, windowSize - linesUsed);
+  const emptyLines = Array(paddingNeeded).fill('');
+
   return (
-    <Box
-      flexDirection="column"
-      marginTop={1}
-      borderStyle="round"
-      paddingX={1}
-      paddingY={1}
-    >
+    <Box flexDirection="column" flexGrow={1}>
       {/* Indicator: More items above */}
       {showMoreAbove && (
         <Box justifyContent="center">
@@ -82,6 +82,13 @@ export const JournalListView: React.FC<JournalListViewProps> = ({
           <Text dimColor>↓ More below</Text>
         </Box>
       )}
+
+      {/* Fill remaining space with empty lines to use full terminal height */}
+      {emptyLines.map((_, idx) => (
+        <Box key={`empty-${idx}`} minHeight={1}>
+          <Text>{'\u00A0'}</Text>
+        </Box>
+      ))}
     </Box>
   );
 };

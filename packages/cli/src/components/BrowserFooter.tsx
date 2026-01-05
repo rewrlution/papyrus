@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { Text } from 'ink';
 import React from 'react';
 
 interface BrowserFooterProps {
@@ -6,9 +6,5 @@ interface BrowserFooterProps {
 }
 
 export const BrowserFooter: React.FC<BrowserFooterProps> = ({ shortcuts }) => {
-  return (
-    <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
-      <Text dimColor>{shortcuts}</Text>
-    </Box>
-  );
+  return <Text dimColor>{shortcuts}</Text>;
 };

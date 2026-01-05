@@ -10,7 +10,12 @@
       "Bash(pnpm dev:*)",
       "Bash(tsc:*)",
       "Bash(pnpm exec tsc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm view:*)",
+      "Bash(pnpm install:*)"
     ]
   }
 }
