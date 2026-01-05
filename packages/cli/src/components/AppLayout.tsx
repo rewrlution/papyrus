@@ -1,8 +1,16 @@
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
-import React from 'react';
+import React, { useState } from 'react';
+
+import { type JournalFileInfo } from '../lib/storage/journal-storage.js';
+import { getTodayDate } from '../utils/date.js';
 
 import { Divider } from './Divider.js';
+import { JournalListViewSimple } from './JournalListViewSimple.js';
 import { LogoCompact } from './LogoCompact.js';
+
+interface AppLayoutProps {
+  journals: JournalFileInfo[];
+}
 
 /**
  * Modern app layout with sticky header and footer.
@@ -28,14 +36,52 @@ import { LogoCompact } from './LogoCompact.js';
  * - Responsive to terminal size changes
  * - Clean separation of concerns
  */
-export const AppLayout: React.FC = () => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ journals }) => {
   const { exit } = useApp();
   const { stdout } = useStdout();
 
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const today = getTodayDate();
   const terminalHeight = stdout?.rows || 24;
+
+  // Calculate available height for journal list
+  // Terminal height - header (logo 1 + divider 1 + title 1 + divider 1 = 4)
+  //                 - footer (divider 1 + shortcuts 1 = 2)
+  //                 - borders (2)
+  //                 - content margins (2)
+  const availableHeight = Math.max(5, terminalHeight - 10);
+
+  // Navigation handlers
+  const handleNavigateUp = () => {
+    setSelectedIndex((current) => {
+      const next = current - 1;
+      // Circular navigation: wrap to bottom if at top
+      return next < 0 ? journals.length - 1 : next;
+    });
+  };
+
+  const handleNavigateDown = () => {
+    setSelectedIndex((current) => {
+      const next = current + 1;
+      // Circular navigation: wrap to top if at bottom
+      return next >= journals.length ? 0 : next;
+    });
+  };
 
   // Keyboard input handlers
   useInput((input, key) => {
+    // Navigate up (↑ or k)
+    if (key.upArrow || input === 'k') {
+      handleNavigateUp();
+      return;
+    }
+
+    // Navigate down (↓ or j)
+    if (key.downArrow || input === 'j') {
+      handleNavigateDown();
+      return;
+    }
+
     // Quit (q or Escape)
     if (input === 'q' || key.escape) {
       exit();
@@ -59,21 +105,19 @@ export const AppLayout: React.FC = () => {
           <Text bold color="cyan">
             Browse Your Journals
           </Text>
-          <Text dimColor> (42 entries)</Text>
+          <Text dimColor> ({journals.length} entries)</Text>
         </Box>
         <Divider />
       </Box>
 
       {/* CONTENT - Expands to fill remaining space */}
-      <Box flexDirection="column" flexGrow={1} flexShrink={1} marginY={1}>
-        {/* Mock content - simulating a scrollable list */}
-        {Array.from({ length: 100 }, (_, i) => (
-          <Text key={i} dimColor={i !== 2}>
-            {i === 2 ? '› ' : '  '}
-            2026-01-{String(i + 1).padStart(2, '0')} - Mock Journal Entry #
-            {i + 1}
-          </Text>
-        ))}
+      <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+        <JournalListViewSimple
+          journals={journals}
+          selectedIndex={selectedIndex}
+          todayDate={today}
+          availableHeight={availableHeight}
+        />
       </Box>
 
       {/* FOOTER - Sticky at bottom, natural height */}
