@@ -1,6 +1,9 @@
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
 import React from 'react';
 
+import { Divider } from './Divider.js';
+import { LogoCompact } from './LogoCompact.js';
+
 /**
  * Modern app layout with sticky header and footer.
  *
@@ -50,13 +53,15 @@ export const AppLayout: React.FC = () => {
     >
       {/* HEADER - Sticky at top, natural height */}
       <Box flexDirection="column" flexShrink={0}>
-        <Text bold color="magenta">
-          PAPYRUS
-        </Text>
-        <Text bold color="cyan">
-          Browse Your Journals
-        </Text>
-        <Text dimColor>(42 entries)</Text>
+        <LogoCompact />
+        <Divider />
+        <Box>
+          <Text bold color="cyan">
+            Browse Your Journals
+          </Text>
+          <Text dimColor> (42 entries)</Text>
+        </Box>
+        <Divider />
       </Box>
 
       {/* CONTENT - Expands to fill remaining space */}
@@ -73,6 +78,7 @@ export const AppLayout: React.FC = () => {
 
       {/* FOOTER - Sticky at bottom, natural height */}
       <Box flexDirection="column" flexShrink={0}>
+        <Divider />
         <Text dimColor>↑↓/jk Navigate • Enter Read • q Quit</Text>
       </Box>
     </Box>
