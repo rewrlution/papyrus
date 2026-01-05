@@ -53,7 +53,12 @@ jobs:
       - name: Build packages
         run: pnpm build --filter=@rewrlution/papyrus-cli...
 
-      - name: Publish to npm
+      - name: Publish shared package to npm
+        run: pnpm publish --filter=@rewrlution/papyrus-shared --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish CLI to npm
         run: pnpm publish --filter=@rewrlution/papyrus-cli --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
