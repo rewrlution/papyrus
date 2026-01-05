@@ -22,6 +22,7 @@ export function registerJournalCommands(program: Command) {
       'today'
     )
     .action(async (options) => await amendEntry(options));
+
   program
     .command('show')
     .description('Display a new journal entry')

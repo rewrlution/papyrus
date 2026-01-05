@@ -105,3 +105,23 @@ export function parseDateToLocalTimestamp(dateString: string): Date {
   // Create date at noon local time to avoid timezone edge cases
   return new Date(year, month, day, 12, 0, 0);
 }
+
+/**
+ * Format date string as "Month DD, YYYY (Day)"
+ * Example: "20260104" → "January 4, 2026 (Saturday)"
+ */
+export function formatDateHeader(dateStr: string): string {
+  const year = dateStr.substring(0, 4);
+  const month = dateStr.substring(4, 6);
+  const day = dateStr.substring(6, 8);
+
+  const date = new Date(`${year}-${month}-${day}`);
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  };
+
+  return date.toLocaleDateString('en-US', options);
+}

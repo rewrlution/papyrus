@@ -166,6 +166,25 @@ Prerequisites: Complete tutorials 01 and 02
 
 ---
 
+#### [09 - Journal Show Command](./09-JOURNAL-SHOW-IMPLEMENTATION.md)
+
+**Building an interactive journal viewer with Ink, keyboard navigation, and virtual scrolling.**
+
+Learn how to:
+
+- Understand why Ink vs external pagers (less, more)
+- Design an interactive terminal viewer with sticky header/footer
+- Implement virtual scrolling for long content (1000+ lines)
+- Add keyboard navigation (↑↓, j/k, PgUp/PgDn, Home/End)
+- Build consistent UI (same header/footer regardless of content length)
+- Detect piped output and provide simple text output
+- Display line position indicator with percentage
+- Build cross-platform consistent experience
+
+Prerequisites: Complete tutorials 01 and 03
+
+---
+
 ### Architecture Decisions
 
 #### [Architecture: Journal Storage Format](./ARCHITECTURE-JOURNAL-STORAGE.md) 📐
