@@ -1,123 +1,17 @@
-# Tutorial: Interactive Journal Viewer with Ink
+# Journal Show Implementation - Interactive Viewer
 
 **Learn how to build an interactive journal viewer with keyboard navigation and virtual scrolling**
 
-## What We're Building
+## Overview
 
-An interactive terminal viewer for displaying journal entries with:
+The journal show command displays journal entries in an interactive terminal viewer with:
 
-- **Sticky header** always showing date and position indicator
-- **Sticky footer** always showing keyboard shortcuts
-- **Line numbers** for easy reference and navigation
-- **Virtual scrolling** for long content (handles 1000+ lines smoothly)
-- **Keyboard navigation** (↑↓, j/k, PgUp/PgDn, Home/End)
-- **Consistent UI** regardless of content length
-- **Consistent interaction** (always requires 'q' to quit)
-- **Cross-platform** (works identically on Windows, Mac, Linux)
-
-### Example Output
-
-**For long content (requires scrolling):**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ # January 4, 2026 (Saturday)           Line 20/234 (8%)    │
-└─────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│   1 │ Today was incredibly productive. I finished...        │
-│   2 │ the token management system and wrote a...            │
-│   3 │ comprehensive tutorial about it.                      │
-│   4 │                                                       │
-│   5 │ Key achievements:                                     │
-│   6 │ - JWT token utilities (pure functions)               │
-│   7 │ - Reusable auth middleware                            │
-│   8 │ - Complete tutorial with examples                     │
-│   9 │                                                       │
-│  10 │ [... more visible lines ...]                          │
-└─────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│ ↑↓/jk Scroll • PgUp/PgDn Page • Home/End Jump • q Quit    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**For short content (fits on one screen):**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ # January 4, 2026 (Saturday)          Line 3/3 (100%)      │
-└─────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│   1 │                                                       │
-│   2 │ Quick note for today.                                 │
-│   3 │                                                       │
-└─────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│ ↑↓/jk Scroll • PgUp/PgDn Page • Home/End Jump • q Quit    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Note: Shows "Line 3/3 (100%)" because you're viewing all 3 lines. Each line is prefixed with its line number for easy reference. The UI looks identical to long content, but scroll keys simply don't move since you're already viewing everything.
-
-## Why Ink for This Feature?
-
-We're using Ink (React for terminals) instead of external pagers (like `less`) because:
-
-### Advantages of Ink Approach
-
-1. **Cross-platform consistency**
-   - `less` doesn't exist on Windows by default
-   - `more` has limited features and different behavior
-   - Ink works identically everywhere
-
-2. **Custom UI control**
-   - Sticky header/footer (not possible with `less`)
-   - Custom keyboard shortcuts
-   - Progress indicators
-   - Themed colors matching our app
-
-3. **Better integration**
-   - Part of our app, not external process
-   - No temp files needed
-   - Access to app state (theme, config, etc.)
-
-4. **Consistent dependencies**
-   - Already using Ink for login/register
-   - No new tech stack
-   - React patterns familiar to team
-
-### Trade-offs
-
-**Ink Approach:**
-
-- ✅ Cross-platform
-- ✅ Custom UI
-- ✅ Integrated experience
-- ❌ More code to write
-- ❌ Takes over terminal (blocks)
-
-**External Pager (`less`):**
-
-- ✅ Powerful features (search, marks, etc.)
-- ✅ Users already know it
-- ❌ Not on Windows by default
-- ❌ Can't customize UI
-- ❌ Inconsistent behavior
-
-**Simple Console Output:**
-
-- ✅ Simplest implementation
-- ✅ Works with pipes (`papyrus show | grep`)
-- ❌ No navigation for long content
-- ❌ Can't see position while reading
-
-### Our Decision
-
-Use **Ink with TTY detection**:
-
-- Interactive terminal: Always show viewer (requires 'q' to quit)
-- Piped output: Detect and use simple text output
-
-This provides a consistent, predictable user experience.
+- **Vertical scrolling** - Navigate through long journal entries
+- **Horizontal panning** - View long lines without wrapping
+- **Line numbers** - Easy reference for each line
+- **Keyboard navigation** - Multiple navigation methods (arrows, vim keys, page controls)
+- **Virtual scrolling** - High performance even with 1000+ line journals
+- **Sticky UI** - Header and footer always visible
 
 ## Architecture
 
@@ -145,10 +39,9 @@ This provides a consistent, predictable user experience.
                    ↓
 ┌─────────────────────────────────────────────────────────┐
 │                   Utility Layer                          │
-│  (src/utils/)                                           │
+│  (src/utils/date.ts)                                    │
 │                                                          │
-│  • date.ts - Parse date strings                          │
-│  • format.ts - Format headers, calculate progress      │
+│  • formatDateHeader() - Format date for header           │
 └─────────────────────────────────────────────────────────┘
                    │
                    ↓
@@ -161,84 +54,42 @@ This provides a consistent, predictable user experience.
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Prerequisites
+## Example Output
 
-**Required:**
-
-- Complete [03 - React CLI Components](./03-REACT-CLI-COMPONENTS.md) - Understanding Ink basics
-- Complete [01 - Storage Layer](./01-STORAGE-LAYER.md) - Understanding journal storage
-
-**Assumed knowledge:**
-
-- Basic React (useState, useEffect)
-- Keyboard event handling
-- Array slicing for virtual scrolling
-
-**Dependencies already installed:**
-
-- `ink` - React for terminals
-- `react` - UI framework
+```
+┌─────────────────────────────────────────────────────────────┐
+│ # January 4, 2026 (Saturday)           Line 20/234 (9%)    │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│   1 │ Today was incredibly productive. I finished...        │
+│   2 │ the token management system and wrote a...            │
+│   3 │ comprehensive tutorial about it.                      │
+│   4 │                                                       │
+│   5 │ Key achievements:                                     │
+│   6 │ - JWT token utilities (pure functions)               │
+│   7 │ - Reusable auth middleware                            │
+│   8 │ - Complete tutorial with examples                     │
+│   9 │                                                       │
+│  10 │ [... more visible lines ...]                          │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ ↑↓/jk Scroll • ←→/hl Pan • 0 Home • PgUp/PgDn Page • q   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Implementation
 
-### Step 1: Formatting Utilities
+### Step 1: JournalViewer Component
 
-First, create utilities for formatting dates and calculating position progress.
+The core component handles all UI and interaction logic.
 
-```typescript
-// src/utils/format.ts
-
-/**
- * Format date string as "Month DD, YYYY (Day)"
- * Example: "20260104" → "January 4, 2026 (Saturday)"
- */
-export function formatDateHeader(dateStr: string): string {
-  const year = dateStr.substring(0, 4);
-  const month = dateStr.substring(4, 6);
-  const day = dateStr.substring(6, 8);
-
-  const date = new Date(`${year}-${month}-${day}`);
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  };
-
-  return date.toLocaleDateString('en-US', options);
-}
-
-/**
- * Calculate percentage through content
- */
-export function calculateProgress(
-  currentLine: number,
-  totalLines: number
-): number {
-  if (totalLines === 0) return 0;
-  return Math.round(((currentLine + 1) / totalLines) * 100);
-}
-```
-
-**Why separate utilities:**
-
-- **Pure functions** - Easy to test
-- **Reusable** - Can use in other commands (list, search, etc.)
-- **Single responsibility** - Each function does one thing
-
-### Step 2: Basic Journal Viewer Component
-
-Create the Ink component with virtual scrolling and keyboard navigation.
+**File: `src/components/JournalViewer.tsx`**
 
 ```typescript
-// src/components/JournalViewer.tsx
 import { Box, Text, useInput, useApp } from 'ink';
 import React, { useState, useMemo } from 'react';
 
-import {
-  formatDateHeader,
-  calculateProgress,
-} from '../utils/format.js';
+import { formatDateHeader } from '../utils/date.js';
 
 interface JournalViewerProps {
   date: string; // YYYYMMDD format
@@ -248,75 +99,96 @@ interface JournalViewerProps {
 export const JournalViewer = ({ date, content }: JournalViewerProps) => {
   const { exit } = useApp();
 
-  // Split content into lines
+  // Split content into lines (memoized for performance)
   const contentLines = useMemo(() => content.split('\n'), [content]);
 
   // Viewport configuration
   const terminalHeight = process.stdout.rows || 24;
-  const headerHeight = 3; // Header takes 3 lines
-  const footerHeight = 2; // Footer takes 2 lines
+  const terminalWidth = process.stdout.columns || 120;
+  const headerHeight = 3;
+  const footerHeight = 2;
   const visibleLines = terminalHeight - headerHeight - footerHeight;
+
+  // Calculate content width
+  const borderWidth = 2;
+  const paddingWidth = 2;
+  const lineNumberWidth = 7; // "   1 │ "
+  const contentWidth =
+    terminalWidth - borderWidth - paddingWidth - lineNumberWidth;
 
   // Scroll state
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [horizontalOffset, setHorizontalOffset] = useState(0);
   const maxScroll = Math.max(0, contentLines.length - visibleLines);
 
   // Keyboard navigation
   useInput((input, key) => {
-    // Quit
     if (input === 'q' || key.escape) {
       exit();
       return;
     }
 
-    // Scroll down (↓, j)
+    // Vertical navigation
     if (key.downArrow || input === 'j') {
       setScrollOffset((prev) => Math.min(prev + 1, maxScroll));
+      setHorizontalOffset(0);
     }
 
-    // Scroll up (↑, k)
     if (key.upArrow || input === 'k') {
       setScrollOffset((prev) => Math.max(prev - 1, 0));
+      setHorizontalOffset(0);
     }
 
-    // Page down (PgDn, Space)
     if (key.pageDown || input === ' ') {
       setScrollOffset((prev) => Math.min(prev + visibleLines, maxScroll));
+      setHorizontalOffset(0);
     }
 
-    // Page up (PgUp)
     if (key.pageUp) {
       setScrollOffset((prev) => Math.max(prev - visibleLines, 0));
+      setHorizontalOffset(0);
     }
 
-    // Jump to top (Home, g)
     if (key.home || input === 'g') {
       setScrollOffset(0);
+      setHorizontalOffset(0);
     }
 
-    // Jump to bottom (End, G)
     if (key.end || input === 'G') {
       setScrollOffset(maxScroll);
+      setHorizontalOffset(0);
+    }
+
+    // Horizontal navigation
+    if (key.leftArrow || input === 'h') {
+      setHorizontalOffset((prev) => Math.max(prev - 10, 0));
+    }
+
+    if (key.rightArrow || input === 'l') {
+      setHorizontalOffset((prev) => prev + 10);
+    }
+
+    if (input === '0') {
+      setHorizontalOffset(0);
     }
   });
 
-  // Virtual scrolling: only render visible lines
+  // Virtual scrolling
   const visibleContent = contentLines.slice(
     scrollOffset,
     scrollOffset + visibleLines
   );
 
-  // Calculate current position info based on LAST visible line
-  // This ensures progress shows 100% when all content is visible
+  // Progress calculation
   const lastVisibleLine = Math.min(
     scrollOffset + visibleLines,
     contentLines.length
   );
-  const progress = calculateProgress(lastVisibleLine - 1, contentLines.length);
+  const progress = Math.round((lastVisibleLine / contentLines.length) * 100);
 
   return (
     <Box flexDirection="column" height={terminalHeight}>
-      {/* Sticky Header */}
+      {/* Header */}
       <Box
         flexDirection="column"
         borderStyle="round"
@@ -333,7 +205,7 @@ export const JournalViewer = ({ date, content }: JournalViewerProps) => {
         </Box>
       </Box>
 
-      {/* Content Area (scrollable) */}
+      {/* Content */}
       <Box
         flexDirection="column"
         flexGrow={1}
@@ -344,25 +216,31 @@ export const JournalViewer = ({ date, content }: JournalViewerProps) => {
         {visibleContent.map((line, idx) => {
           const lineNumber = scrollOffset + idx + 1;
           const lineNumberStr = lineNumber.toString().padStart(4, ' ');
+          const visiblePortion = line.substring(
+            horizontalOffset,
+            horizontalOffset + contentWidth
+          );
+
           return (
-            <Box key={scrollOffset + idx} flexDirection="row">
+            <Box key={lineNumber} flexDirection="row">
               <Text dimColor>{lineNumberStr} │ </Text>
-              <Text wrap="wrap">{line || ' '}</Text>
+              <Text>{visiblePortion || ' '}</Text>
             </Box>
           );
         })}
       </Box>
 
-      {/* Sticky Footer */}
+      {/* Footer */}
       <Box
         flexDirection="column"
         borderStyle="round"
         borderColor="cyan"
         paddingX={1}
       >
-        {/* Keyboard shortcuts - always show full navigation */}
         <Text dimColor>
-          ↑↓/jk Scroll • PgUp/PgDn Page • Home/End Jump • q Quit
+          ↑↓/jk Scroll • ←→/hl Pan • 0 Home • PgUp/PgDn Page • g/G Top/Bot •
+          q Quit
+          {horizontalOffset > 0 && ` • Col ${horizontalOffset + 1}+`}
         </Text>
       </Box>
     </Box>
@@ -370,76 +248,24 @@ export const JournalViewer = ({ date, content }: JournalViewerProps) => {
 };
 ```
 
-**Key design decisions:**
+### Step 2: Command Integration
 
-1. **Virtual scrolling**
-   - Only renders visible lines (`contentLines.slice(scrollOffset, ...)`)
-   - Handles 10,000+ line journals smoothly
-   - No performance issues
-
-2. **Consistent UI**
-   - Always show the same header (with position indicator)
-   - Always show the same footer (with full navigation shortcuts)
-   - UI looks identical regardless of content length
-   - Scroll keys simply don't move when viewing all content
-
-3. **Progress calculation based on last visible line**
-   - Shows 100% when all content is visible
-   - Calculates progress from the **last** visible line, not the first
-   - Example: Viewing lines 1-11 of 11 shows "Line 11/11 (100%)"
-   - This is more intuitive than showing "Line 1/11 (9%)" when viewing all content
-
-4. **Line numbers for reference**
-   - Each line prefixed with its line number (e.g., " 1 │ ")
-   - 4-character wide field, right-aligned, space-padded
-   - Dimmed color to differentiate from content
-   - Separator "│" between line number and content
-   - Makes it easy to reference specific lines
-   - Line numbers correspond to actual content lines (not wrapped display lines)
-
-5. **Text wrapping enabled**
-   - Uses `wrap="wrap"` to wrap long lines within terminal width
-   - Prevents text from being cut off in narrow terminals
-   - Each content line can wrap to multiple display lines
-   - Virtual scrolling still works by content lines, not display lines
-   - Line number shows the content line number, even if it wraps
-
-6. **Consistent interaction model**
-   - Always requires 'q' to quit (no auto-quit)
-   - Predictable behavior for all content lengths
-   - User explicitly controls when to exit
-
-7. **Flexible viewport**
-   - Calculates visible lines based on terminal height
-   - Adapts to resized terminals
-   - Reserves space for header/footer
-
-8. **Multiple navigation methods**
-   - Arrow keys (intuitive for everyone)
-   - vim keys (j/k/g/G for vim users)
-   - Page up/down (fast navigation)
-   - Home/End (jump to top/bottom)
-
-### Step 3: Command Integration
-
-Now integrate the viewer component into the `show` command.
+**File: `src/commands/journal/show.ts`**
 
 ```typescript
-// src/commands/journal/show.ts
 import { render } from 'ink';
 import React from 'react';
 
-import { ShowOptions } from '../types.js';
-import { parseDate } from '../../utils/date.js';
-import { journalStore } from '../../lib/storage/index.js';
 import { JournalViewer } from '../../components/JournalViewer.js';
-import { formatDateHeader } from '../../utils/format.js';
+import { journalStore } from '../../lib/storage/index.js';
+import { formatDate, parseDate } from '../../utils/date.js';
+import { ShowOptions } from '../types.js';
 
 export async function showEntry(options: ShowOptions): Promise<void> {
-  const dateInput = options.date || 'today';
-
-  // Parse the date
+  const dateInput = options.date;
   const date = parseDate(dateInput);
+  const displayDate = formatDate(date);
+
   if (!date) {
     console.error(`Error: Invalid date "${dateInput}"`);
     console.error(
@@ -450,7 +276,7 @@ export async function showEntry(options: ShowOptions): Promise<void> {
 
   // Check if entry exists
   if (!journalStore.exists(date)) {
-    console.error(`No journal entry found for ${formatDateHeader(date)}`);
+    console.error(`No journal entry found for ${displayDate}`);
     console.error(`Run 'papyrus add -d ${date}' to create one`);
     process.exit(1);
   }
@@ -462,146 +288,177 @@ export async function showEntry(options: ShowOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Detect if output is piped/redirected (not interactive)
-  if (!process.stdout.isTTY) {
-    // Simple output for piped/redirected output
-    console.log(`\n# ${formatDateHeader(date)}\n`);
-    console.log(content);
-    console.log(); // Empty line
-    return;
-  }
-
   // Render interactive viewer
   const { waitUntilExit } = render(
     React.createElement(JournalViewer, { date, content })
   );
 
-  // Wait for user to quit
   await waitUntilExit();
 }
 ```
 
-**Key features:**
+## Key Design Decisions
 
-1. **Piped output detection**
-   - Checks `process.stdout.isTTY`
-   - If piped (`papyrus show | grep`), uses simple output
-   - If interactive, uses Ink viewer
+### 1. Virtual Scrolling
 
-2. **Error handling**
-   - Validates date format
-   - Checks entry exists
-   - Provides helpful error messages
-   - Suggests next action (`papyrus add -d ...`)
+**Why:** Performance with large journals (1000+ lines)
 
-3. **Async handling**
-   - Waits for `waitUntilExit()` before returning
-   - Ensures Ink component has full control
-   - Clean exit after user quits
-
-### Step 4: Export and Type Definitions
-
-Make sure types are properly defined:
+**How:** Only render visible lines using array slicing
 
 ```typescript
-// src/commands/types.ts (no changes needed)
-export interface DateOption {
-  date: string;
-}
-
-export interface ShowOptions extends DateOption {}
+const visibleContent = contentLines.slice(
+  scrollOffset,
+  scrollOffset + visibleLines
+);
 ```
 
-### Step 5: Command Registration
+**Benefit:**
 
-The command should already be registered, but here's the complete registration:
+- No performance degradation with large files
+- Constant memory usage
+- Smooth scrolling
+
+### 2. Horizontal Panning (No Wrapping)
+
+**Why:** Simpler logic, predictable behavior
+
+**How:** Use `substring()` to slice each line horizontally
 
 ```typescript
-// src/commands/journal/index.ts
-import { Command } from 'commander';
+const visiblePortion = line.substring(
+  horizontalOffset,
+  horizontalOffset + contentWidth
+);
+```
 
-import { showEntry } from './show.js';
-// ... other imports
+**Benefits:**
 
-export function registerJournalCommands(program: Command) {
-  // ... other commands
+- Each content line = 1 display row (1:1 mapping)
+- No line skipping bugs
+- Traditional pager UX (like `less`)
+- Simple implementation
 
-  program
-    .command('show')
-    .description('Display a journal entry')
-    .option(
-      '-d, --date <date>',
-      'Date of the entry to show (default: today)',
-      'today'
-    )
-    .action(async (options) => await showEntry(options));
+**Alternative (rejected):** Text wrapping
 
-  // ... other commands
+- Complex wrapping calculations
+- Line numbers don't match (wrapped lines create multiple display rows)
+- Hard to implement "jump to line N"
+- More bugs (off-by-one errors)
+
+### 3. Line Numbers
+
+**Why:** Easy reference and navigation
+
+**Format:** `"   1 │ "` (4 digits, right-aligned, space-padded)
+
+**Implementation:**
+
+```typescript
+const lineNumber = scrollOffset + idx + 1;
+const lineNumberStr = lineNumber.toString().padStart(4, ' ');
+```
+
+**Benefits:**
+
+- Clear visual separation from content
+- Support up to 9999 lines
+- Easy to reference specific lines
+
+### 4. React Keys (Critical!)
+
+**Problem:** Using `scrollOffset + idx` as React key causes stale content bug
+
+**Why it fails:**
+
+```typescript
+// BAD: Keys overlap between renders
+// Initial: Line 1 has key 0, Line 2 has key 1
+// After scroll: Line 2 has key 1 (same!), Line 3 has key 2 (same!)
+// React reuses components and shows old content
+<Box key={scrollOffset + idx}>...</Box>
+```
+
+**Solution:** Use line number as key (unique, stable identifier)
+
+```typescript
+// GOOD: Each line always has the same key
+const lineNumber = scrollOffset + idx + 1;
+<Box key={lineNumber}>...</Box>
+```
+
+**Lesson:** When rendering a window/slice of data, use unique identifiers from the data itself, not array indices.
+
+### 5. Progress Calculation
+
+**Why based on last visible line:**
+
+When viewing lines 1-20 of a 234-line file, you've read up to line 20, not line 1.
+
+```typescript
+// Show progress of LAST visible line
+const lastVisibleLine = Math.min(
+  scrollOffset + visibleLines,
+  contentLines.length
+);
+const progress = Math.round((lastVisibleLine / contentLines.length) * 100);
+```
+
+**Result:**
+
+- Viewing lines 1-11 of 11: Shows "Line 11/11 (100%)" ✓
+- Viewing lines 1-20 of 234: Shows "Line 20/234 (9%)" ✓
+
+### 6. Auto-Reset Horizontal Position
+
+**Why:** Better UX when moving vertically
+
+```typescript
+// Reset to start of line when scrolling vertically
+if (key.downArrow || input === 'j') {
+  setScrollOffset((prev) => Math.min(prev + 1, maxScroll));
+  setHorizontalOffset(0); // Reset!
 }
 ```
 
-## User Experience Examples
+**Benefit:** Users start fresh on each line instead of being confused by mid-line positions.
 
-### Short Entry (< 1 screen)
+### 7. Multiple Navigation Methods
+
+**Support both casual and power users:**
+
+| Action    | Casual | Power User |
+| --------- | ------ | ---------- |
+| Down      | ↓      | j          |
+| Up        | ↑      | k          |
+| Left      | ←      | h          |
+| Right     | →      | l          |
+| Top       | Home   | g          |
+| Bottom    | End    | G          |
+| Page Down | PgDn   | Space      |
+| Page Up   | PgUp   | PgUp       |
+
+## Usage Examples
+
+### View today's entry
 
 ```bash
 $ papyrus show
 
-┌─────────────────────────────────────────────────────┐
-│ # January 4, 2026 (Saturday)         Line 5/5 (100%)│
-└─────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────┐
-│   1 │                                                │
-│   2 │ Quick note for today.                          │
-│   3 │                                                │
-│   4 │ Finished the show command implementation.      │
-│   5 │                                                │
-└─────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────┐
-│ ↑↓/jk Scroll • PgUp/PgDn Page • Home/End Jump • q │
-└─────────────────────────────────────────────────────┘
-
-[Shows 100% since all content is visible. Scroll keys do nothing. Press 'q' to quit]
+# Interactive viewer opens
+# Press ↑/↓ or j/k to scroll
+# Press ←/→ or h/l to pan horizontally
+# Press q to quit
 ```
 
-### Long Entry (Requires scrolling)
+### View specific date
 
 ```bash
 $ papyrus show -d 20260101
-
-┌─────────────────────────────────────────────────────┐
-│ # January 1, 2026 (Thursday)       Line 20/234 (8%)│
-└─────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────┐
-│   1 │ New Year's Day reflections...                  │
-│   2 │                                                │
-│   3 │ Looking back on 2025, it was an incredible...  │
-│   4 │ [... more visible lines with line numbers ...] │
-│  20 │                                                │
-└─────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────┐
-│ ↑↓/jk Scroll • PgUp/PgDn Page • Home/End Jump • q │
-└─────────────────────────────────────────────────────┘
-
-[User can scroll through content, then press 'q' to quit]
+$ papyrus show -d yesterday
+$ papyrus show -d "-7"  # 7 days ago
 ```
 
-### Piped Output (Non-interactive)
-
-```bash
-$ papyrus show | grep TODO
-
-# January 4, 2026 (Saturday)
-
-Today I worked on several items:
-- TODO: Implement search feature
-- TODO: Add export functionality
-
-$ papyrus show > journal.txt
-[Saves simple text output to file]
-```
-
-### Entry Not Found
+### Entry not found
 
 ```bash
 $ papyrus show -d yesterday
@@ -610,497 +467,202 @@ Error: No journal entry found for January 3, 2026 (Friday)
 Run 'papyrus add -d 20260103' to create one
 ```
 
-## Testing
+## Keyboard Reference
 
-### Unit Tests for Utilities
+| Key           | Action                |
+| ------------- | --------------------- |
+| ↓ or j        | Scroll down one line  |
+| ↑ or k        | Scroll up one line    |
+| → or l        | Pan right (10 chars)  |
+| ← or h        | Pan left (10 chars)   |
+| 0             | Jump to start of line |
+| PgDn or Space | Page down             |
+| PgUp          | Page up               |
+| Home or g     | Jump to top           |
+| End or G      | Jump to bottom        |
+| q or Esc      | Quit viewer           |
 
-```typescript
-// tests/utils/format.test.ts
-import { describe, it, expect } from 'vitest';
-import { formatDateHeader, calculateProgress } from '../../src/utils/format.js';
+## Common Issues and Solutions
 
-describe('formatDateHeader', () => {
-  it('should format date correctly', () => {
-    expect(formatDateHeader('20260104')).toMatch(/January 4, 2026/);
-  });
+### Issue 1: Lines Showing Stale Content
 
-  it('should include day of week', () => {
-    expect(formatDateHeader('20260104')).toMatch(/Saturday/);
-  });
-});
+**Symptom:** After scrolling, some lines show old content or text appears corrupted
 
-describe('calculateProgress', () => {
-  it('should calculate percentage correctly', () => {
-    expect(calculateProgress(0, 100)).toBe(1); // Line 1 of 100 = 1%
-    expect(calculateProgress(49, 100)).toBe(50); // Line 50 of 100 = 50%
-    expect(calculateProgress(99, 100)).toBe(100); // Line 100 of 100 = 100%
-  });
+**Cause:** React key collision (using `scrollOffset + idx` as key)
 
-  it('should handle zero lines', () => {
-    expect(calculateProgress(0, 0)).toBe(0);
-  });
-});
-```
-
-### Integration Tests
+**Solution:** Use line number as React key
 
 ```typescript
-// tests/commands/show.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { showEntry } from '../../src/commands/journal/show.js';
-import { journalStore } from '../../src/lib/storage/index.js';
+// GOOD
+const lineNumber = scrollOffset + idx + 1;
+<Box key={lineNumber}>...</Box>
 
-describe('show command', () => {
-  beforeEach(() => {
-    // Mock journal storage
-    vi.spyOn(journalStore, 'exists').mockReturnValue(true);
-    vi.spyOn(journalStore, 'load').mockReturnValue('Test content');
-  });
-
-  it('should load journal for today by default', async () => {
-    await showEntry({ date: 'today' });
-    expect(journalStore.load).toHaveBeenCalled();
-  });
-
-  it('should handle non-existent entry', async () => {
-    vi.spyOn(journalStore, 'exists').mockReturnValue(false);
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-      throw new Error('process.exit');
-    });
-
-    await expect(showEntry({ date: 'today' })).rejects.toThrow();
-    expect(exitSpy).toHaveBeenCalledWith(1);
-  });
-
-  it('should handle invalid date', async () => {
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-      throw new Error('process.exit');
-    });
-
-    await expect(showEntry({ date: 'invalid' })).rejects.toThrow();
-    expect(exitSpy).toHaveBeenCalledWith(1);
-  });
-});
+// BAD
+<Box key={scrollOffset + idx}>...</Box>
 ```
 
-### Manual Testing
+### Issue 2: Long Lines Cut Off
 
-```bash
-# Test short entry (UI should look same as long entry)
-$ papyrus add -d today
-[Write: "Short entry"]
-$ papyrus show
-[Should display viewer with position indicator and full navigation]
-[Scroll keys do nothing since content fits on screen]
-[Press: q to quit]
+**Symptom:** Text disappears after terminal width
 
-# Test long entry (should allow scrolling)
-$ papyrus add -d yesterday
-[Write: 100+ lines of content]
-$ papyrus show -d yesterday
-[Should show identical UI to short entry]
-[Press: ↓, j, PgDn, etc. to test navigation - should scroll]
-[Position indicator should update as you scroll]
-[Press: q to quit]
+**Solution:** Use horizontal navigation
 
-# Test piped output
-$ papyrus show | head -5
-[Should show simple text output]
+- Press → or l to pan right
+- Press ← or h to pan left
+- Press 0 to jump to start of line
+- Footer shows "Col 51+" when panned
 
-# Test non-existent entry
-$ papyrus show -d 20250101
-[Should show error with helpful message]
-```
+### Issue 3: Slow Performance
 
-## Common Issues
-
-### Issue 1: Component Doesn't Render
-
-**Symptom:**
-
-```bash
-$ papyrus show
-[Nothing appears, or command hangs]
-```
-
-**Cause:** Ink component has error in render method
-
-**Solution:**
-
-1. Check for syntax errors in JSX
-2. Verify all imports are correct
-3. Check console for React error messages
-4. Ensure `process.stdout.isTTY` is true (not piped)
-
-**Debug:**
-
-```typescript
-// Add before render
-console.log('Is TTY:', process.stdout.isTTY);
-console.log('Content length:', content.length);
-```
-
-### Issue 2: Keyboard Input Not Working
-
-**Symptom:**
-
-```bash
-[Viewer shows but arrow keys don't scroll]
-```
-
-**Cause:** `useInput` hook not properly configured
-
-**Solution:**
-
-1. Verify `useInput` is called at component top level
-2. Check stdin is in raw mode (Ink handles this)
-3. Ensure not running in non-interactive mode
-
-**Debug:**
-
-```typescript
-useInput((input, key) => {
-  console.log('Input:', input, 'Key:', key); // Debug what's received
-  // ... rest of handler
-});
-```
-
-### Issue 3: Content Doesn't Scroll to Bottom
-
-**Symptom:**
-
-```bash
-[Can't reach last lines of content]
-```
-
-**Cause:** `maxScroll` calculation incorrect
-
-**Solution:**
-
-```typescript
-// Correct calculation
-const maxScroll = Math.max(0, contentLines.length - visibleLines);
-
-// NOT this (off by one):
-const maxScroll = contentLines.length - visibleLines;
-```
-
-### Issue 4: Border Characters Don't Render
-
-**Symptom:**
-
-```bash
-[Boxes show as ASCII instead of nice lines]
-```
-
-**Cause:** Terminal doesn't support box-drawing characters
-
-**Solution:**
-
-1. Use `borderStyle="single"` instead of `"round"`
-2. Or remove borders entirely for minimal terminals
-3. Check terminal encoding (should be UTF-8)
-
-### Issue 5: Progress Shows Wrong Percentage for Short Content
-
-**Symptom:**
-
-```bash
-[Viewing all 11 lines of a short entry, but header shows "Line 1/11 (9%)"]
-[Expected: "Line 11/11 (100%)" since all content is visible]
-```
-
-**Cause:** Progress calculated from **first** visible line (scrollOffset), not last
-
-**Why it's wrong:**
-
-- `scrollOffset = 0` means you're at the TOP of the content
-- But you're viewing lines 1-11, so you've reached the BOTTOM (100%)
-- Using `scrollOffset` only shows position of the TOP line, not what's actually visible
-
-**Solution:**
-
-```typescript
-// GOOD: Calculate based on LAST visible line
-const lastVisibleLine = Math.min(
-  scrollOffset + visibleLines,
-  contentLines.length
-);
-const progress = calculateProgress(lastVisibleLine - 1, contentLines.length);
-
-// BAD: Calculate based on FIRST visible line
-const currentLineNumber = scrollOffset + 1;
-const progress = calculateProgress(scrollOffset, contentLines.length);
-```
-
-**Result:**
-
-- Viewing lines 1-11 of 11: `lastVisibleLine = 11` → 100% ✓
-- Viewing lines 1-20 of 234: `lastVisibleLine = 20` → 8%
-- Viewing lines 215-234 of 234: `lastVisibleLine = 234` → 100% ✓
-
-### Issue 6: Text Disappears in Narrow Terminal
-
-**Symptom:**
-
-```bash
-[Terminal width is 80 characters]
-[Journal line is 150 characters long]
-[Only first 80 characters show, rest is cut off]
-```
-
-**Cause:** Ink's `<Text>` doesn't wrap by default - it clips overflow
-
-**Solution:**
-
-```typescript
-// GOOD: Enable wrapping
-<Text wrap="wrap">{line || ' '}</Text>
-
-// BAD: No wrapping (default behavior)
-<Text>{line || ' '}</Text>
-```
-
-**Important notes:**
-
-- With wrapping, one content line can become multiple display lines
-- Virtual scrolling still works by content lines (not display lines)
-- If line 5 wraps to 3 display lines, it's still counted as 1 content line
-- This means line count in header reflects content lines, not wrapped display lines
-
-### Issue 7: Slow Performance with Long Entries
-
-**Symptom:**
-
-```bash
-[Scrolling is laggy with 5000+ line entries]
-```
+**Symptom:** Laggy scrolling with large journals
 
 **Cause:** Rendering all lines instead of virtual scrolling
 
-**Solution:**
+**Solution:** Only render visible lines
 
 ```typescript
-// GOOD: Virtual scrolling (only visible lines)
+// GOOD: Virtual scrolling
 const visibleContent = contentLines.slice(
   scrollOffset,
   scrollOffset + visibleLines
 );
 
-// BAD: Rendering everything
-{contentLines.map((line, idx) => <Text>{line}</Text>)}
+// BAD: Render everything
+{contentLines.map(...)}
 ```
 
-## Enhancements
+### Issue 4: Can't Scroll to Bottom
 
-### Enhancement 1: Search Functionality
+**Symptom:** Last lines not reachable
+
+**Cause:** Incorrect maxScroll calculation
+
+**Solution:** Use Math.max to handle edge cases
+
+```typescript
+const maxScroll = Math.max(0, contentLines.length - visibleLines);
+```
+
+## Testing
+
+### Manual Testing
+
+```bash
+# Test short entry (< 1 screen)
+$ papyrus add -d today
+[Write: "Short entry"]
+$ papyrus show
+[Verify: Shows all content, progress at 100%]
+[Try: Arrow keys do nothing (already viewing all content)]
+[Press: q to quit]
+
+# Test long entry (requires scrolling)
+$ papyrus add -d yesterday
+[Write: 100+ lines of content]
+$ papyrus show -d yesterday
+[Verify: Header shows "Line X/100+"]
+[Try: ↓ to scroll down, progress increases]
+[Try: PgDn to page down]
+[Try: End to jump to bottom, progress shows 100%]
+[Try: Home to jump back to top]
+[Press: q to quit]
+
+# Test horizontal panning
+$ papyrus add -d "-1"
+[Write: Line with 200+ characters]
+$ papyrus show -d "-1"
+[Verify: Long line is cut off at terminal width]
+[Try: → to pan right, see more text]
+[Try: ← to pan left]
+[Try: 0 to jump back to start]
+[Verify: Footer shows "Col X+" when panned]
+[Press: q to quit]
+```
+
+### Edge Cases
+
+```bash
+# Empty entry
+$ papyrus add -d today
+[Save without writing anything]
+$ papyrus show
+[Should show empty content area]
+
+# Single line entry
+$ papyrus add -d today
+[Write: "One line"]
+$ papyrus show
+[Should show "Line 1/1 (100%)"]
+
+# Very long journal (1000+ lines)
+$ papyrus add -d today
+[Write: Generate 1000+ lines]
+$ papyrus show
+[Should scroll smoothly without lag]
+```
+
+## Future Enhancements
+
+### 1. Search Functionality
 
 Add ability to search within entry:
 
-```typescript
-const [searchQuery, setSearchQuery] = useState('');
-const [searchMode, setSearchMode] = useState(false);
+- Press `/` to enter search mode
+- Type query and press Enter
+- Jump to next match
+- Highlight matches
 
-useInput((input, key) => {
-  if (input === '/') {
-    setSearchMode(true);
-    return;
-  }
+### 2. Syntax Highlighting
 
-  if (searchMode) {
-    if (key.return) {
-      // Find next match
-      const matchIndex = contentLines.findIndex(
-        (line, idx) => idx > scrollOffset && line.includes(searchQuery)
-      );
-      if (matchIndex !== -1) {
-        setScrollOffset(matchIndex);
-      }
-      setSearchMode(false);
-    } else {
-      setSearchQuery((prev) => prev + input);
-    }
-  }
-  // ... rest of navigation
-});
-```
+Highlight markdown syntax:
 
-### Enhancement 2: Syntax Highlighting for Markdown
+- Headers in cyan
+- Lists in yellow
+- Links in blue
+- Code blocks in gray
 
-Highlight markdown syntax in content:
-
-```typescript
-function highlightMarkdown(line: string): React.ReactNode {
-  // Headers
-  if (line.startsWith('# ')) {
-    return <Text bold color="cyan">{line}</Text>;
-  }
-  // Lists
-  if (line.startsWith('- ') || line.startsWith('* ')) {
-    return <Text color="yellow">{line}</Text>;
-  }
-  // Links
-  if (line.includes('[') && line.includes('](')) {
-    return <Text color="blue">{line}</Text>;
-  }
-  // Default
-  return <Text>{line}</Text>;
-}
-
-// Use in render:
-{visibleContent.map((line, idx) => (
-  <Box key={scrollOffset + idx}>{highlightMarkdown(line)}</Box>
-))}
-```
-
-### Enhancement 3: Export to File
-
-Add option to export entry:
-
-```typescript
-useInput((input, key) => {
-  if (input === 'e') {
-    // Export to file
-    const filename = `journal-${date}.txt`;
-    writeFileSync(filename, content, 'utf-8');
-    exit(); // Exit after export
-  }
-  // ... rest of navigation
-});
-
-// Update footer to show new shortcut:
-<Text dimColor>
-  ↑↓/jk Scroll • e Export • q Quit
-</Text>
-```
-
-### Enhancement 4: Jump to Section (Markdown Headers)
+### 3. Section Navigation
 
 Navigate between markdown headers:
 
-```typescript
-const headerIndices = useMemo(() => {
-  return contentLines
-    .map((line, idx) => (line.startsWith('#') ? idx : -1))
-    .filter((idx) => idx !== -1);
-}, [contentLines]);
+- Press `n` to jump to next header
+- Press `p` to jump to previous header
+- Show section outline in header
 
-const [currentHeaderIndex, setCurrentHeaderIndex] = useState(0);
+### 4. Export
 
-useInput((input, key) => {
-  if (input === 'n') {
-    // Next header
-    const nextIndex = currentHeaderIndex + 1;
-    if (nextIndex < headerIndices.length) {
-      setScrollOffset(headerIndices[nextIndex]);
-      setCurrentHeaderIndex(nextIndex);
-    }
-  }
-  if (input === 'p') {
-    // Previous header
-    const prevIndex = currentHeaderIndex - 1;
-    if (prevIndex >= 0) {
-      setScrollOffset(headerIndices[prevIndex]);
-      setCurrentHeaderIndex(prevIndex);
-    }
-  }
-  // ... rest of navigation
-});
+Add export functionality:
+
+- Press `e` to export to file
+- Support formats: txt, md, pdf, html
+
+### 5. Split View
+
+Compare two journal entries side by side:
+
+```bash
+$ papyrus show -d today -d yesterday
 ```
-
-### Enhancement 5: Theme Support
-
-Support different color themes:
-
-```typescript
-interface Theme {
-  headerColor: string;
-  borderColor: string;
-  textColor: string;
-}
-
-const themes = {
-  default: {
-    headerColor: 'cyan',
-    borderColor: 'gray',
-    textColor: 'white',
-  },
-  dark: {
-    headerColor: 'blue',
-    borderColor: 'dim',
-    textColor: 'white',
-  },
-};
-
-// Use theme in component:
-<Box borderColor={theme.borderColor}>
-  <Text color={theme.headerColor}># {formatDateHeader(date)}</Text>
-</Box>
-```
-
-## Next Steps
-
-### Immediate Next Steps
-
-1. **Implement the show command**
-   - Copy code from this tutorial
-   - Test with short and long entries
-   - Verify keyboard navigation works
-
-2. **Add tests**
-   - Test formatters
-   - Test component logic
-   - Test command integration
-
-3. **Try it out**
-   ```bash
-   $ papyrus add -d today
-   [Write a long entry with 100+ lines]
-   $ papyrus show
-   [Test the interactive viewer]
-   ```
-
-### Future Enhancements
-
-Consider building:
-
-- **Search feature** - Find text within entry
-- **Export feature** - Save to different formats
-- **Markdown highlighting** - Syntax colors
-- **Section navigation** - Jump between headers
-- **Theme support** - Custom colors
-
-### Related Tutorials
-
-- **[03 - React CLI Components](./03-REACT-CLI-COMPONENTS.md)** - Learn more about Ink
-- **[06 - Journal Commands](./06-JOURNAL-ADD-IMPLEMENTATION.md)** - Related journal commands
-- **Next: Search Command** - Full-text search across journals
-
----
 
 ## Summary
 
-You've learned how to build an interactive journal viewer with:
+The JournalViewer provides a robust, performant, and user-friendly way to view journal entries:
 
-✅ **Ink component** with React hooks
-✅ **Line numbers** for easy reference
-✅ **Virtual scrolling** for performance
-✅ **Keyboard navigation** (multiple styles)
-✅ **Text wrapping** for long lines
-✅ **Consistent UI** (same header/footer regardless of content length)
-✅ **Consistent interaction** (always press 'q' to quit)
-✅ **Piped output** detection
-✅ **Cross-platform** consistency
-
-The viewer provides a smooth, intuitive experience for reading journal entries of any length. Each line is numbered for easy reference, and the UI always looks the same - for short entries, navigation keys simply don't move since you're already viewing all content.
+✅ **Virtual scrolling** - Handles 1000+ line journals smoothly
+✅ **Horizontal panning** - View long lines without wrapping
+✅ **Line numbers** - Easy reference for each line
+✅ **Multiple navigation methods** - Arrows, vim keys, page controls
+✅ **Sticky UI** - Header and footer always visible
+✅ **Progress indicator** - Shows current position
+✅ **Auto-reset horizontal** - Better UX when moving vertically
 
 **Key Takeaways:**
 
-1. **Ink is ideal for custom interactive UIs** - Full control over layout and behavior
-2. **Virtual scrolling is essential** - Don't render 1000s of lines
-3. **Consistent UI is better than conditional** - Always show same header/footer regardless of content length
-4. **Detect TTY for piped output** - Support Unix philosophy
-5. **Multiple navigation methods** - Serve both casual and power users
-6. **Predictable interaction model** - Always press 'q' to quit, scroll keys just don't move for short content
+1. **Virtual scrolling is essential** for performance with large files
+2. **Horizontal panning is simpler** than text wrapping (no line skipping bugs)
+3. **React keys must be unique** - use line numbers, not array indices
+4. **Progress from last visible line** - more intuitive than first line
+5. **Multiple navigation methods** - serve both casual and power users
+6. **Auto-reset horizontal position** - better UX when scrolling vertically
 
-Happy reading! 📖
+Happy journaling! 📖

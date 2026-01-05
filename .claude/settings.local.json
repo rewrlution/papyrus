@@ -5,7 +5,9 @@
       "Bash(pnpm add:*)",
       "Bash(mkdir:*)",
       "Bash(pnpm build:*)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm dev:*)"
     ]
   }
 }
