@@ -3,7 +3,7 @@ name: Publish CLI to npm
 on:
   push:
     tags:
-      - "cli-v*" # Triggers on cli-v1.0.0, cli-v1.0.1, etc.
+      - "v*" # Triggers on v0.0.2, v1.0.0, etc.
 
 jobs:
   test:

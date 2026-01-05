@@ -452,16 +452,40 @@ git add packages/cli/package.json packages/cli/CHANGELOG.md
 git commit -m "chore(cli): bump version to 0.0.2"
 
 # 4. Create tag
-git tag cli-v0.0.2 -m "Release CLI v0.0.2"
+# For bug fixes (1.0.0 → 1.0.1)
+npm version patch
+git push --follow-tags
 
-# 5. Push
+# For new features (1.0.0 → 1.1.0)
+npm version minor
+git push --follow-tags
+
+# For breaking changes (1.0.0 → 2.0.0)
+npm version major
+git push --follow-tags
+```
+
+The `npm version` command:
+
+- ✅ Updates `package.json`
+- ✅ Creates a git commit
+- ✅ Creates a git tag
+- ✅ All in one command!
+
+## Quick Reference Card:
+
+```bash
+# Normal development (no publish)
+git add .
+git commit -m "Add feature"
 git push origin main
-git push origin cli-v0.0.2
 
-# 6. GitHub Actions will automatically:
-#    - Run tests
-#    - Build package
-#    - Publish to npm
+# When ready to release (publishes to npm)
+npm version patch      # or minor/major
+git push --follow-tags
+
+# Delete tags (only use it if you create a tag by mistake)
+git tag -d v1.0.0
 ```
 
 **For detailed deployment instructions, see [Deployment Guide](./docs/10-DEPLOYMENT-GUIDE.md).**
