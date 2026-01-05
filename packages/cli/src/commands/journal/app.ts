@@ -2,21 +2,15 @@
 import { render } from 'ink';
 import React from 'react';
 
-import { Browser } from '../../components/Browser.js';
-import { journalStore } from '../../lib/storage/index.js';
+import { AppLayout } from '../../components/AppLayout.js';
 import { withAlternateScreen } from '../../utils/alternate-screen.js';
 import * as msg from '../../utils/messages.js';
 
 export async function launchApp(): Promise<void> {
   try {
-    // Load all journal entries
-    const journals = journalStore.list();
-
-    // Render the interactive browser in alternate screen
+    // Render the new app layout in alternate screen
     await withAlternateScreen(async () => {
-      const { waitUntilExit } = render(
-        React.createElement(Browser, { journals })
-      );
+      const { waitUntilExit } = render(React.createElement(AppLayout));
       await waitUntilExit();
     });
   } catch (error: any) {
