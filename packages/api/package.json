@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "prisma migrate deploy && rimraf dist && tsc --build && copyfiles -u 1 src/email/templates/**/* dist/",
+    "build": "prisma migrate deploy && rimraf dist tsconfig.tsbuildinfo && tsc --build && copyfiles -u 1 src/email/templates/**/* dist/",
     "dev": "tsx watch src/index.ts",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
