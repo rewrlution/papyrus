@@ -12,6 +12,13 @@ The Papyrus CLI is an AI-powered journaling tool for developers. It's built usin
 - **Chalk** - Terminal string styling and colors
 - **TypeScript** - Type-safe development
 
+The CLI is available under two command names:
+
+- `papyrus` - Full command name
+- `paper` - Short alias for convenience
+
+Both commands work identically. Use whichever you prefer!
+
 ## Prerequisites
 
 Make sure you're in the monorepo root and have installed dependencies:
@@ -105,11 +112,12 @@ packages/cli/
 │   │       ├── app.ts                # Launch TUI browser
 │   │       └── sync.ts               # Sync with server
 │   ├── components/
-│   │   ├── Browser.tsx               # Interactive journal browser
-│   │   ├── BrowserHeader.tsx         # Browser header (title, count)
-│   │   ├── BrowserFooter.tsx         # Browser footer (shortcuts)
-│   │   ├── JournalListView.tsx       # Virtual scrolling journal list
+│   │   ├── JournalBrowser.tsx        # Interactive journal browser (main app)
+│   │   ├── AppLayout.tsx             # Reusable layout with header/footer
+│   │   ├── JournalList.tsx           # Journal list with viewport rendering
 │   │   ├── JournalViewer.tsx         # Full journal reader with scrolling
+│   │   ├── LogoCompact.tsx           # Compact logo for app header
+│   │   ├── Divider.tsx               # Horizontal divider line
 │   │   ├── ColdStart.tsx             # Cold start aware spinner
 │   │   ├── FormInput.tsx             # Reusable form input component
 │   │   ├── LoginForm.tsx             # Login form (email/password)
@@ -137,7 +145,11 @@ packages/cli/
 │       ├── date.ts                   # Date parsing utilities
 │       ├── editor.ts                 # External editor integration
 │       ├── template.ts               # Journal template utilities
-│       └── token.ts                  # JWT token utilities
+│       ├── token.ts                  # JWT token utilities
+│       ├── messages.ts               # Console message utilities
+│       ├── journal-preview.ts        # Extract preview from journal content
+│       ├── text.ts                   # Text width utilities (truncate, pad)
+│       └── alternate-screen.ts       # Alternate screen buffer management
 ├── docs/                             # Tutorial documentation
 │   ├── README.md                     # Documentation index
 │   ├── 01-STORAGE-LAYER.md          # Storage layer tutorial
@@ -300,7 +312,7 @@ Use Ink components for **interactive, stateful, or rich UI**:
 ```typescript
 import { StatusMessage } from '../components/StatusMessage.js';
 import { SyncProgress } from '../components/SyncProgress.js';
-import { Browser } from '../components/Browser.js';
+import { JournalBrowser } from '../components/JournalBrowser.js';
 
 // Status messages with optional hints
 <StatusMessage
@@ -384,10 +396,16 @@ The CLI is organized into clear layers following separation of concerns:
 - **Token utilities** - JWT decoding and expiration checking
 - **Editor integration** - Launch external editors ($EDITOR)
 - **Template handling** - Journal entry templates
+- **Message utilities** - Consistent console messaging with icons
+- **Text utilities** - Width-aware text truncation and padding (CJK/emoji support)
+- **Journal preview** - Extract content previews from journal files
+- **Alternate screen** - Terminal alternate screen buffer management
 
 ### Layer 4: UI (`src/components/`)
 
 - **React components** rendered in terminal via Ink
+- **Journal Browser** - Full-screen TUI with list/viewer modes
+- **Layout components** - AppLayout, Divider, LogoCompact for consistent UI structure
 - **Interactive forms** - Login, register (multi-step)
 - **Progress displays** - Sync progress with real-time updates
 - **Reusable components** - Input, status messages, spinners
@@ -424,6 +442,18 @@ The CLI is organized into clear layers following separation of concerns:
 - **Type-safe** - Uses shared types from `@rewrlution/papyrus-shared`
 - **Timeout handling** - 90s timeout for cold starts
 - See: `docs/02-API-CLIENT-SETUP.md`
+
+### Journal Browser (Component Architecture)
+
+- **Alternate screen buffer** - Clean full-screen experience (like vim/less/htop)
+- **Modular layout** - AppLayout component provides consistent header/footer structure
+- **Viewport rendering** - JournalList only renders visible items for performance
+- **Dual modes** - Seamlessly switch between list view and full reader view
+- **Content previews** - List view shows first line of each journal
+- **Keyboard navigation** - j/k (or arrows) for navigation, Enter to open, Esc/q to quit
+- **Responsive** - Adapts to terminal size dynamically
+- **Zero visual artifacts** - Alternate screen ensures clean terminal state on exit
+- See: `docs/09-LIST-BROWSE-MIGRATION.md`
 
 ## Key Files and Modules
 
@@ -511,30 +541,72 @@ External editor integration:
 - Launch editor and wait for completion
 - Handle temp file creation and cleanup
 
+### `src/utils/messages.ts`
+
+Console message utilities for consistent user feedback:
+
+- `msg.success()` - Success messages with ✅
+- `msg.sparkles()` - Special occasion messages with ✨
+- `msg.error()` - Error messages with ❌ (exits process)
+- `msg.info()` - Informational messages with ℹ️
+- `msg.warn()` - Warning messages with ⚠️
+- `msg.hint()` - Hint messages with 💡
+- `msg.stats()` - Statistics messages with 📊
+
+### `src/utils/journal-preview.ts`
+
+Extract content preview from journals:
+
+- `extractPreview()` - Extract first non-empty line from journal content
+- Skips YAML frontmatter automatically
+- Returns "(empty)" for empty journals
+- Used by JournalList to show content previews
+
+### `src/utils/text.ts`
+
+Terminal text width utilities:
+
+- `truncateToWidth()` - Truncate text to fit width (handles CJK/emoji)
+- `padToWidth()` - Pad text to exact width
+- Uses `string-width` library for accurate width measurement
+- Essential for proper terminal alignment
+
+### `src/utils/alternate-screen.ts`
+
+Alternate screen buffer management:
+
+- `enterAlternateScreen()` - Switch to alternate screen buffer
+- `exitAlternateScreen()` - Restore original screen
+- `withAlternateScreen()` - Execute function in alternate screen (auto-cleanup)
+- Provides clean full-screen TUI experience like vim/less/htop
+
 ### `src/components/`
 
 React/Ink UI components:
 
-- `Browser` - Interactive journal browser with list/reader views
-- `BrowserHeader` - Header showing title and journal count
-- `BrowserFooter` - Footer showing keyboard shortcuts
-- `JournalListView` - Virtual scrolling list of journal entries
+- `JournalBrowser` - Main interactive journal browser with list/viewer modes
+- `AppLayout` - Reusable layout component with sticky header/footer
+- `JournalList` - Viewport-based journal list with content previews
 - `JournalViewer` - Full journal reader with line numbers and scrolling
+- `LogoCompact` - Compact logo for app header (single line)
+- `Divider` - Horizontal divider line component
 - `LoginForm` - Email/password form with validation
 - `RegisterForm` - Multi-step registration (email → password → confirm)
 - `SyncProgress` - Real-time sync progress with spinner
 - `FormInput` - Reusable input component
-- `ColdStartAwareSpinner` - Spinner with cold start warning
+- `ColdStart` - Spinner with cold start warning
+- `StatusMessage` - Status message display component
 - `Logo` - ASCII art logo with gradient colors
 
 ## Package Scripts
 
-| Script  | Command                 | Description                         |
-| ------- | ----------------------- | ----------------------------------- |
-| `build` | `tsc`                   | Compile TypeScript to JavaScript    |
-| `dev`   | `tsx watch src/cli.tsx` | Run with hot reload for development |
-| `start` | `node dist/cli.js`      | Run the built CLI                   |
-| `test`  | `vitest run`            | Run tests once                      |
+| Script           | Command                                           | Description                                |
+| ---------------- | ------------------------------------------------- | ------------------------------------------ |
+| `build`          | `rimraf dist tsconfig.tsbuildinfo && tsc --build` | Clean and compile TypeScript to JavaScript |
+| `dev`            | `tsx watch src/cli.tsx`                           | Run with hot reload for development        |
+| `start`          | `node dist/cli.js`                                | Run the built CLI                          |
+| `test`           | `vitest run`                                      | Run tests once                             |
+| `prepublishOnly` | `npm run build && npm run test`                   | Build and test before publishing to npm    |
 
 ## How Commander.js Works
 
@@ -583,7 +655,7 @@ export function App() {
 
 ## Testing Strategy
 
-Current tests are minimal. To add more tests:
+Current tests cover utility functions (`journal-preview.test.ts`, `text.test.ts`). To add more tests:
 
 1. **Command tests**: Test command handlers directly
 
@@ -707,18 +779,24 @@ Key dependencies and their purposes:
 - **ink** (^6.6.0): React renderer for CLI apps
 - **react** (^19.2.3): UI component framework
 - **chalk** (^5.6.2): Terminal string styling and colors
-- **axios**: HTTP client for API communication
-- **jwt-decode**: JWT token decoding (for expiration checking)
-- **env-paths**: Cross-platform path resolution (XDG)
-- **execa**: Process execution for external editor
+- **axios** (^1.13.2): HTTP client for API communication
+- **jwt-decode** (^4.0.0): JWT token decoding (for expiration checking)
+- **env-paths** (^3.0.0): Cross-platform path resolution (XDG)
+- **ansi-escapes** (^7.2.0): ANSI escape codes for alternate screen
+- **string-width** (^8.1.0): Accurate text width measurement (CJK/emoji support)
+- **date-fns** (^4.1.0): Date formatting utilities
+- **gray-matter** (^4.0.3): YAML frontmatter parsing
+- **ink-spinner** (^5.0.0): Spinner component for Ink
+- **ink-text-input** (^6.0.0): Text input component for Ink
 - **@rewrlution/papyrus-shared**: Shared types and utilities
 
 Dev dependencies:
 
-- **tsx**: TypeScript executor for development
-- **vitest**: Test runner
+- **tsx** (^4.21.0): TypeScript executor for development
+- **vitest**: Test runner (configured in root)
 - **typescript**: Type checking and compilation
-- **@types/\***: TypeScript type definitions
+- **@types/node** (^25.0.3): Node.js type definitions
+- **@types/react** (^19.2.7): React type definitions
 
 ## Documentation
 
@@ -761,12 +839,16 @@ The following features are fully implemented:
 - ✅ **Date parsing** - Support for "today", "yesterday", "YYYYMMDD"
 - ✅ **External editor** - Integration with $EDITOR, $VISUAL (vim, nano, code)
 - ✅ **Journal commands** - Add, amend, show commands
-- ✅ **Interactive browser** - List and read journals with vim-style navigation
+- ✅ **Interactive browser** - Full-screen TUI with list/viewer modes, content previews, vim-style navigation
+- ✅ **Alternate screen buffer** - Clean terminal experience (no visual artifacts on exit)
+- ✅ **Viewport rendering** - Efficient list rendering for large journal collections
 - ✅ **Sync engine** - Hash-based three-way sync with conflict resolution
 - ✅ **API client** - Axios with interceptors for auth and error handling
 - ✅ **Interactive forms** - Login and registration using Ink
 - ✅ **Cold start handling** - Spinner with warning for serverless cold starts
 - ✅ **Real-time progress** - Sync progress with live updates
+- ✅ **Message utilities** - Consistent console messaging with icons
+- ✅ **Text utilities** - Width-aware text handling (CJK/emoji support)
 
 ## Future Enhancements
 
