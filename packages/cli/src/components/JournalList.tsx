@@ -4,7 +4,7 @@ import React from 'react';
 import { type JournalFileInfo } from '../lib/storage/journal-storage.js';
 import { formatDate } from '../utils/date.js';
 
-interface JournalListViewSimpleProps {
+interface JournalListProps {
   journals: JournalFileInfo[];
   selectedIndex: number;
   todayDate: string;
@@ -12,12 +12,12 @@ interface JournalListViewSimpleProps {
 }
 
 /**
- * Simplified journal list view with viewport-based rendering.
+ * Journal list view with viewport-based rendering.
  *
  * Only renders journals that fit in the available height, centered around
- * the selected item. Much simpler than the original virtual scrolling.
+ * the selected item.
  */
-export const JournalListViewSimple: React.FC<JournalListViewSimpleProps> = ({
+export const JournalList: React.FC<JournalListProps> = ({
   journals,
   selectedIndex,
   todayDate,

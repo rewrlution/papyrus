@@ -1,10 +1,17 @@
-import { Box, Text, useInput, useApp } from 'ink';
-import { useState, useMemo } from 'react';
+import { Box, Text, useInput, useApp, useStdout } from 'ink';
+import React, { useState, useMemo } from 'react';
 
 import { formatDateHeader } from '../utils/date.js';
 
-import { Divider } from './Divider.js';
-import { LogoCompact } from './LogoCompact.js';
+import { AppLayout } from './AppLayout.js';
+
+// Special characters
+const NBSP = '\u00A0'; // Non-breaking space
+const VBAR = '│'; // Vertical bar for line number separator
+
+// Line number formatting
+const LINE_NUMBER_WIDTH = 4; // Width for padded line numbers
+const LINE_NUMBER_SEPARATOR = ` ${VBAR} `; // " │ " with spaces
 
 interface JournalViewerProps {
   date: string; // YYYYMMDD format
@@ -13,70 +20,60 @@ interface JournalViewerProps {
 }
 
 /**
- * Interactive journal viewer with keyboard navigation and scrolling.
+ * Journal viewer - displays full journal content with scrolling.
  *
- * Features:
- * - Virtual scrolling (only renders visible lines for performance)
- * - Horizontal panning for long lines (no text wrapping)
- * - Line numbers for easy reference
- * - Sticky header with date and position indicator
- * - Sticky footer with keyboard shortcuts
- * - Multiple navigation methods (arrows, vim keys, page up/down)
- *
- * Architecture:
- * 1. Split content into lines (memoized for performance)
- * 2. Calculate viewport dimensions based on terminal size
- * 3. Track scroll position (vertical and horizontal)
- * 4. Only render visible slice of content (virtual scrolling)
- * 5. Update scroll position on keyboard input
- *
- * Key Design Decisions:
- * - Each content line = 1 display row (no wrapping, use horizontal panning instead)
- * - Line numbers always correspond to content lines (1:1 mapping)
- * - Progress calculated from last visible line (shows 100% when viewing all content)
- * - Auto-reset horizontal position when moving vertically (better UX)
- * - React keys use line numbers (unique, stable identifiers)
+ * Uses AppLayout for consistent layout structure.
+ * Handles viewer-specific navigation and scrolling.
  */
-export const JournalViewer = ({
+export const JournalViewer: React.FC<JournalViewerProps> = ({
   date,
   content,
   onExit,
-}: JournalViewerProps) => {
+}) => {
   const { exit } = useApp();
+  const { stdout } = useStdout();
 
   // Split content into lines (memoized to avoid re-splitting on every render)
-  const contentLines = useMemo(() => content.split('\n'), [content]);
+  // Remove trailing empty line if file ends with newline (which is standard)
+  const contentLines = useMemo(() => {
+    const lines = content.split('\n');
+    // If file ends with newline, split creates an empty last element - remove it
+    if (lines.length > 0 && lines[lines.length - 1] === '') {
+      return lines.slice(0, -1);
+    }
+    return lines;
+  }, [content]);
 
-  // Viewport configuration - calculate available space
-  const terminalHeight = process.stdout.rows || 24;
-  const terminalWidth = process.stdout.columns || 120;
+  // Viewport configuration - use same stdout as AppLayoutGeneric
+  const terminalHeight = stdout?.rows || 24;
+  const terminalWidth = stdout?.columns || 120;
 
-  // Reserve space for UI elements in unified box
-  // - LogoCompact: 1 line
-  // - Divider: 1 line
-  // - Header: 1 line
-  // - Divider: 1 line
-  // - Content borders: 2 lines (top + bottom)
-  // - Divider: 1 line
-  // - Footer: 1 line
-  // Total: 8 lines reserved
-  const reservedHeight = 8;
-
-  // Ensure we have at least 5 visible lines even in small terminals
+  // Reserve space for UI elements:
+  // - Outer box border: 2 (top + bottom, handled by AppLayoutGeneric's height={terminalHeight-2})
+  // - Logo: 1
+  // - Divider: 1
+  // - Header: 1
+  // - Divider: 1
+  // - [Content area - what we calculate here]
+  // - Divider: 1
+  // - Footer: 1
+  // - Flex layout overhead: 2 (accounting for flexbox rendering and potential shrinkage)
+  // Total reserved: 2 + 1 + 1 + 1 + 1 + 1 + 1 + 2 = 10
+  const reservedHeight = 10;
   const visibleLines = Math.max(5, terminalHeight - reservedHeight);
 
-  // Calculate available width for content (account for borders, padding, line numbers)
-  const borderWidth = 2; // Left + right border (1 char each)
-  const paddingWidth = 2; // paddingX={1} means 1 space on each side
-  const lineNumberWidth = 7; // "   1 │ " format (4 digits + space + │ + space)
+  // Calculate available width for content
+  const borderWidth = 2;
+  const paddingWidth = 2;
+  const lineNumberWidth = LINE_NUMBER_WIDTH + LINE_NUMBER_SEPARATOR.length; // e.g., "   1 │ " = 4 + 3 = 7
   const contentWidth =
     terminalWidth - borderWidth - paddingWidth - lineNumberWidth;
 
   // Scroll state
-  const [scrollOffset, setScrollOffset] = useState(0); // Vertical scroll (which line is at top)
-  const [horizontalOffset, setHorizontalOffset] = useState(0); // Horizontal scroll (which column to start from)
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [horizontalOffset, setHorizontalOffset] = useState(0);
 
-  // Calculate maximum scroll position (can't scroll past end of content)
+  // Calculate maximum scroll position
   const maxScroll = Math.max(0, contentLines.length - visibleLines);
 
   // Keyboard navigation
@@ -84,69 +81,59 @@ export const JournalViewer = ({
     // Quit (q or Escape)
     if (input === 'q' || key.escape) {
       if (onExit) {
-        onExit(); // Call callback if provided (for returning to list view)
+        onExit();
       } else {
-        exit(); // Exit app if no callback (standalone viewer)
+        exit();
       }
       return;
     }
 
     // Vertical navigation
-    // Down (↓ or j)
     if (key.downArrow || input === 'j') {
       setScrollOffset((prev) => Math.min(prev + 1, maxScroll));
-      setHorizontalOffset(0); // Reset to start of line
+      setHorizontalOffset(0);
     }
 
-    // Up (↑ or k)
     if (key.upArrow || input === 'k') {
       setScrollOffset((prev) => Math.max(prev - 1, 0));
-      setHorizontalOffset(0); // Reset to start of line
+      setHorizontalOffset(0);
     }
 
-    // Page down (PgDn or Space)
     if (key.pageDown || input === ' ') {
       setScrollOffset((prev) => Math.min(prev + visibleLines, maxScroll));
-      setHorizontalOffset(0); // Reset to start of line
+      setHorizontalOffset(0);
     }
 
-    // Page up (PgUp)
     if (key.pageUp) {
       setScrollOffset((prev) => Math.max(prev - visibleLines, 0));
-      setHorizontalOffset(0); // Reset to start of line
+      setHorizontalOffset(0);
     }
 
-    // Jump to top (Home or g)
     if (key.home || input === 'g') {
       setScrollOffset(0);
-      setHorizontalOffset(0); // Reset to start of line
+      setHorizontalOffset(0);
     }
 
-    // Jump to bottom (End or G)
     if (key.end || input === 'G') {
       setScrollOffset(maxScroll);
-      setHorizontalOffset(0); // Reset to start of line
+      setHorizontalOffset(0);
     }
 
     // Horizontal navigation
-    // Left (← or h)
     if (key.leftArrow || input === 'h') {
       setHorizontalOffset((prev) => Math.max(prev - 10, 0));
     }
 
-    // Right (→ or l)
     if (key.rightArrow || input === 'l') {
       setHorizontalOffset((prev) => prev + 10);
     }
 
-    // Jump to start of line (0)
     if (input === '0') {
       setHorizontalOffset(0);
     }
   });
 
   // Virtual scrolling: only render visible lines
-  // This is critical for performance with large journals (1000+ lines)
   const visibleContent = contentLines.slice(
     scrollOffset,
     scrollOffset + visibleLines
@@ -156,93 +143,77 @@ export const JournalViewer = ({
   const paddingNeeded = Math.max(0, visibleLines - visibleContent.length);
   const emptyLines = Array(paddingNeeded).fill('');
 
-  // Calculate position info based on LAST visible line
-  // This ensures progress shows 100% when all content is visible
-  // Example: Viewing lines 1-11 of 11 shows "Line 11/11 (100%)"
+  // Calculate position info
   const lastVisibleLine = Math.min(
     scrollOffset + visibleLines,
     contentLines.length
   );
   const progress = calculateProgress(lastVisibleLine, contentLines.length);
 
-  return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
-    >
-      {/* Logo */}
-      <LogoCompact />
-
-      <Divider />
-
-      {/* Header - date and position info */}
-      <Box justifyContent="space-between">
-        <Text bold color="cyan">
-          # {formatDateHeader(date)}
-        </Text>
-        <Text dimColor>
-          Line {lastVisibleLine}/{contentLines.length} ({progress}%)
-        </Text>
-      </Box>
-
-      <Divider />
-
-      {/* Content Area - scrollable viewport */}
-      <Box flexDirection="column" flexGrow={1}>
-        {visibleContent.map((line, idx) => {
-          // Calculate actual line number in the full content
-          const lineNumber = scrollOffset + idx + 1;
-          const lineNumberStr = lineNumber.toString().padStart(4, ' ');
-
-          // Slice line horizontally based on horizontal offset
-          // This implements horizontal panning (no text wrapping)
-          const visiblePortion = line.substring(
-            horizontalOffset,
-            horizontalOffset + contentWidth
-          );
-
-          // CRITICAL: Use lineNumber as React key (unique, stable identifier)
-          // DO NOT use idx or scrollOffset + idx (causes stale content bug)
-          // Note: We use a non-breaking space (U+00A0) for empty lines to prevent Ink
-          // from collapsing the line entirely. Regular space might get optimized away.
-          const displayContent = visiblePortion || '\u00A0'; // Non-breaking space
-
-          return (
-            <Box key={lineNumber} flexDirection="row" minHeight={1}>
-              <Text dimColor>{lineNumberStr} │ </Text>
-              <Text>{displayContent}</Text>
-            </Box>
-          );
-        })}
-        {/* Fill remaining space with empty lines to use full terminal height */}
-        {emptyLines.map((_, idx) => (
-          <Box key={`empty-${idx}`} flexDirection="row" minHeight={1}>
-            <Text dimColor> │ </Text>
-            <Text>{'\u00A0'}</Text>
-          </Box>
-        ))}
-      </Box>
-
-      <Divider />
-
-      {/* Footer - keyboard shortcuts */}
+  // Header content: date and position
+  const headerContent = (
+    <Box justifyContent="space-between">
+      <Text bold color="cyan">
+        {formatDateHeader(date)}
+      </Text>
       <Text dimColor>
-        ↑↓/jk Scroll • ←→/hl Pan • 0 Home • PgUp/PgDn Page • g/G Top/Bot • q
-        Quit
-        {horizontalOffset > 0 && ` • Col ${horizontalOffset + 1}+`}
+        Line {lastVisibleLine}/{contentLines.length} ({progress}%)
       </Text>
     </Box>
+  );
+
+  // Footer content: keyboard shortcuts
+  const footerContent = (
+    <Text dimColor>
+      ↑↓/jk Scroll • ←→/hl Pan • 0 Home • PgUp/PgDn Page • g/G Top/Bot • q Quit
+      {horizontalOffset > 0 && ` • Col ${horizontalOffset + 1}+`}
+    </Text>
+  );
+
+  // Format empty line number column (matches width of actual line numbers)
+  const emptyLineNumberColumn =
+    ''.padStart(LINE_NUMBER_WIDTH, ' ') + LINE_NUMBER_SEPARATOR;
+
+  // Content area: scrollable journal lines
+  const contentArea = (
+    <Box flexDirection="column" flexGrow={1}>
+      {visibleContent.map((line, idx) => {
+        const lineNumber = scrollOffset + idx + 1;
+        const lineNumberStr = lineNumber
+          .toString()
+          .padStart(LINE_NUMBER_WIDTH, ' ');
+        const visiblePortion = line.substring(
+          horizontalOffset,
+          horizontalOffset + contentWidth
+        );
+        const displayContent = visiblePortion || NBSP;
+
+        return (
+          <Box key={lineNumber} flexDirection="row" minHeight={1}>
+            <Text dimColor>{lineNumberStr + LINE_NUMBER_SEPARATOR}</Text>
+            <Text>{displayContent}</Text>
+          </Box>
+        );
+      })}
+      {/* Fill remaining space with empty lines */}
+      {emptyLines.map((_, idx) => (
+        <Box key={`empty-${idx}`} flexDirection="row" minHeight={1}>
+          <Text dimColor>{emptyLineNumberColumn}</Text>
+          <Text>{NBSP}</Text>
+        </Box>
+      ))}
+    </Box>
+  );
+
+  return (
+    <AppLayout headerContent={headerContent} footerContent={footerContent}>
+      {contentArea}
+    </AppLayout>
   );
 };
 
 /**
  * Calculate percentage through content.
- *
- * @param currentLine - Current line number (1-indexed)
- * @param totalLines - Total number of lines
- * @returns Percentage (0-100)
  */
 function calculateProgress(currentLine: number, totalLines: number): number {
   if (totalLines === 0) return 0;

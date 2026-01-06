@@ -5,26 +5,24 @@ import { journalStore } from '../lib/storage/index.js';
 import { type JournalFileInfo } from '../lib/storage/journal-storage.js';
 import { getTodayDate } from '../utils/date.js';
 
-import { AppLayoutGeneric } from './AppLayoutGeneric.js';
-import { JournalListViewSimple } from './JournalListViewSimple.js';
-import { JournalViewerScreen } from './JournalViewerScreen.js';
+import { AppLayout } from './AppLayout.js';
+import { JournalList } from './JournalList.js';
+import { JournalViewer } from './JournalViewer.js';
 
-interface JournalListScreenProps {
+interface JournalBrowserProps {
   journals: JournalFileInfo[];
 }
 
 type ViewMode = 'list' | 'viewer';
 
 /**
- * Journal list screen - shows all journals with navigation.
+ * Journal browser - shows all journals with navigation.
  *
- * Uses AppLayoutGeneric for consistent layout structure.
- * Handles list-specific navigation and state.
+ * Uses AppLayout for consistent layout structure.
+ * Handles list navigation and state management.
  * Can switch to viewer mode when opening a journal.
  */
-export const JournalListScreen: React.FC<JournalListScreenProps> = ({
-  journals,
-}) => {
+export const JournalBrowser: React.FC<JournalBrowserProps> = ({ journals }) => {
   const { exit } = useApp();
   const { stdout } = useStdout();
 
@@ -115,7 +113,7 @@ export const JournalListScreen: React.FC<JournalListScreenProps> = ({
   // Viewer mode - show journal content
   if (viewMode === 'viewer' && viewerDate && viewerContent) {
     return (
-      <JournalViewerScreen
+      <JournalViewer
         date={viewerDate}
         content={viewerContent}
         onExit={handleBackToList}
@@ -138,16 +136,13 @@ export const JournalListScreen: React.FC<JournalListScreenProps> = ({
   );
 
   return (
-    <AppLayoutGeneric
-      headerContent={headerContent}
-      footerContent={footerContent}
-    >
-      <JournalListViewSimple
+    <AppLayout headerContent={headerContent} footerContent={footerContent}>
+      <JournalList
         journals={journals}
         selectedIndex={selectedIndex}
         todayDate={today}
         availableHeight={availableHeight}
       />
-    </AppLayoutGeneric>
+    </AppLayout>
   );
 };

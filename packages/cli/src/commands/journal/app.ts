@@ -2,7 +2,7 @@
 import { render } from 'ink';
 import React from 'react';
 
-import { JournalListScreen } from '../../components/JournalListScreen.js';
+import { JournalBrowser } from '../../components/JournalBrowser.js';
 import { journalStore } from '../../lib/storage/index.js';
 import { withAlternateScreen } from '../../utils/alternate-screen.js';
 import * as msg from '../../utils/messages.js';
@@ -12,10 +12,10 @@ export async function launchApp(): Promise<void> {
     // Load all journal entries
     const journals = journalStore.list();
 
-    // Render the journal list screen in alternate screen
+    // Render the journal browser in alternate screen
     await withAlternateScreen(async () => {
       const { waitUntilExit } = render(
-        React.createElement(JournalListScreen, { journals })
+        React.createElement(JournalBrowser, { journals })
       );
       await waitUntilExit();
     });
