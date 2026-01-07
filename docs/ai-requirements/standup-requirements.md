@@ -32,28 +32,31 @@
 
 ## Functional Requirements
 
-### FR-1: Default Behavior (Yesterday's Standup)
+### FR-1: Default Behavior (Last Available Journal)
 
 **Command:** `papyrus ai standup`
 
 **Input:**
 
-- Implicit: Yesterday's journal entry
+- Implicit: Most recent journal entry from backend
 - Auth token from config
 
 **Process:**
 
-1. Load yesterday's journal from local storage
-2. Send journal content to API with auth token
-3. API validates user, checks usage limit (10/month for free tier)
-4. API generates standup notes via AI provider
-5. API increments usage counter
-6. Return formatted standup notes to CLI
-7. Display in terminal
+1. CLI sends request to API with auth token (no date = use latest)
+2. API validates user, checks usage limit (10/month for free tier)
+3. API loads user's most recent journal from database
+4. If no journals found in backend, return error suggesting sync
+5. API generates standup notes via AI provider
+6. API increments usage counter
+7. Return formatted standup notes with journal date to CLI
+8. Display in terminal with date header
 
 **Output Format:**
 
 ```
+Standup Notes for 2025-01-06
+
 Yesterday:
 - Fixed authentication bug in user service
 - Reviewed 3 PRs from team members
@@ -68,12 +71,16 @@ Blockers:
 - Waiting on design approval for feature X
 ```
 
+**Note:** Date header shows which journal was used for generation
+
 **Success Criteria:**
 
 - Takes <5 seconds end-to-end
 - Output is concise (3-5 items per section)
 - Uses past tense for "Yesterday", future/present for "Today"
 - Identifies blockers from journal context
+- Clearly shows which date was used for generation
+- Works with most recent journal if no date specified
 
 ---
 
@@ -170,23 +177,53 @@ Or wait until Feb 1, 2025 for monthly reset.
 
 ---
 
-### FR-5: No Journal Entry Handling
+### FR-5: No Journal in Backend Handling
 
-**Scenario:** User has no journal for requested date
+**Scenario:** User has no journals synced to backend
+
+**Output:**
+
+```
+No journals found in your account.
+
+Your journals need to be synced to the server before generating standup notes.
+
+Sync your local journals:
+  papyrus sync
+
+Or create a new journal:
+  papyrus add
+```
+
+**Success Criteria:**
+
+- Clear explanation of why it failed
+- Suggests sync command
+- Doesn't consume usage quota
+
+---
+
+**Scenario:** User specifies date with no journal
 
 **Output:**
 
 ```
 No journal entry found for 2025-01-05.
 
-Create one first:
+Available journals:
+- 2025-01-06 (most recent)
+- 2025-01-04
+- 2025-01-03
+
+Create journal for 2025-01-05:
   papyrus add --date 2025-01-05
+  papyrus sync
 ```
 
 **Success Criteria:**
 
-- Helpful error message
-- Suggests next action
+- Shows available journal dates
+- Helps user understand what's available
 - Doesn't consume usage quota
 
 ---
@@ -224,18 +261,28 @@ papyrus ai standup --format json
 
 ### Endpoint: `POST /ai/standup`
 
-**Request:**
+**Request (Default - Latest Journal):**
 
 ```json
 {
-  "from": "2025-01-05",
-  "to": "2025-01-05",
-  "journals": [
-    {
-      "date": "2025-01-05",
-      "content": "Fixed auth bug. Reviewed PRs. Paired with Alice."
-    }
-  ]
+  // Empty body = use most recent journal
+}
+```
+
+**Request (Specific Date):**
+
+```json
+{
+  "date": "2025-01-05"
+}
+```
+
+**Request (Date Range):**
+
+```json
+{
+  "from": "2025-01-01",
+  "to": "2025-01-05"
 }
 ```
 
@@ -251,11 +298,22 @@ Content-Type: application/json
 ```json
 {
   "content": "Yesterday:\n- Fixed authentication bug...",
+  "journal_date": "2025-01-06",
   "usage": {
     "used": 3,
     "limit": 10,
     "resets_at": "2025-02-01T00:00:00Z"
   }
+}
+```
+
+**Response (No Journals Found):**
+
+```json
+{
+  "error": "No journals found",
+  "message": "No journals found in your account. Sync your local journals first.",
+  "suggestion": "papyrus sync"
 }
 ```
 
@@ -294,15 +352,15 @@ CLI checks: Is user logged in?
   ├─ No → Show "papyrus login" message
   └─ Yes → Continue
   ↓
-CLI loads yesterday's journal from local storage
-  ↓
-CLI checks: Does journal exist?
-  ├─ No → Show "No journal found" message
-  └─ Yes → Continue
-  ↓
-CLI sends POST to /ai/standup with journal + auth token
+CLI sends POST to /ai/standup (no date = latest) with auth token
   ↓
 API validates auth token
+  ↓
+API loads most recent journal from database
+  ↓
+API checks: Does journal exist?
+  ├─ No → Return 404 with "sync your journals" message
+  └─ Yes → Continue
   ↓
 API checks usage limit
   ├─ Exceeded → Return 429 with upgrade message
@@ -312,9 +370,9 @@ API generates standup via AI provider
   ↓
 API increments usage counter
   ↓
-API returns standup content + usage info
+API returns standup content + journal date + usage info
   ↓
-CLI displays formatted output
+CLI displays formatted output with date header
   ↓
 CLI shows usage count: "Used 3/10 this month"
 ```
@@ -323,27 +381,54 @@ CLI shows usage count: "Used 3/10 this month"
 
 ## Edge Cases
 
-### EC-1: Multiple Journals in One Day
+### EC-1: Multiple Journals on Same Date
 
-**Scenario:** User wrote 2+ journals on same day
+**Scenario:** User wrote 2+ journals on same date (updated throughout the day)
 
-**Behavior:** Combine all entries for that day
+**Behavior:**
+
+- Backend returns the most recent version for that date
+- If date range includes multiple dates with journals, combine all journals in chronological order
+
+**Note:** Backend journal API uses date as primary key, so only one journal per date exists
 
 ---
 
 ### EC-2: Empty Journal
 
-**Scenario:** Journal exists but has no content
+**Scenario:** Journal exists but has no content (or only whitespace)
 
-**Behavior:** Return message "Journal is empty, nothing to generate"
+**Behavior:**
+
+```
+Journal for 2025-01-06 is empty.
+
+No content available to generate standup notes.
+
+Update your journal:
+  papyrus add --date 2025-01-06
+  papyrus sync
+```
+
+**Success Criteria:**
+
+- Clear error message
+- Doesn't consume usage quota
+- Suggests action to fix
 
 ---
 
 ### EC-3: Very Long Journal
 
-**Scenario:** Journal is 50K+ characters (exceeds token limit)
+**Scenario:** Journal exceeds 10K characters (backend limit)
 
-**Behavior:** Truncate to last 10K characters, show warning
+**Behavior:**
+
+- Backend already enforces 10K character limit on journal creation
+- If journal is close to 10K, truncate to 9K characters (leave safety margin)
+- Show warning: "Journal was truncated to fit AI context window"
+
+**Note:** Since backend enforces 10K limit on journal posts, this edge case is rare
 
 ---
 
