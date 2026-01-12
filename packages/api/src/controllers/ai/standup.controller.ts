@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Response } from 'express';
 
+import { AnthropicProvider, buildStandupPrompt } from '../../lib/ai/index.js';
 import { RequestWithUser } from '../../middleware/auth.js';
 import { asyncHandler } from '../../middleware/handlers.js';
 
@@ -20,43 +21,33 @@ export const StandupController = {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
-    // Helper to delay execution
-    const sleep = (ms: number) =>
-      new Promise((resolve) => setTimeout(resolve, ms));
-
     try {
-      // Event 1: thinking (shows progress immediately)
+      const testJournal = {
+        date: '2025-01-07',
+        content: `Today was productive. Fixed the authentication bug that was causing 30% error rate during peak hours. Took about 90 minutes to diagnose using metrics and logs. Found it was a connection pool leak in the database client. Deployed hotfix and monitored for recurrence.
+
+Also reviewed 3 PRs from the team - two frontend changes and one backend API update. Provided feedback on error handling and code structure.
+
+Had a great pairing session with Alice on the database migration. We're moving from MySQL to PostgreSQL and discussed the schema changes needed. Planning to complete migration next week.
+
+Tomorrow: Need to deploy the hotfix to production first thing. Then team planning meeting at 2pm to discuss Q1 roadmap. Want to start work on the new feature X if I have time.
+
+Blocker: Still waiting on design team to approve mockups for feature X. Been waiting 3 days now, might affect timeline.`,
+      };
+
       writeEvent('thinking', { message: 'Analyzing journals...' });
-      await sleep(500);
 
-      // Event 2-4: Content chunks (simulate streaming AI response)
-      writeEvent('Content', {
-        text: 'Yesterday:\n- Fixed authenciation bug in user service',
-      });
-      await sleep(500);
+      const prompt = buildStandupPrompt(testJournal);
 
-      writeEvent('Content', {
-        text: '\n- REviewed 3 PRs from team members\n\n',
-      });
-      await sleep(500);
+      const aiProvider = new AnthropicProvider();
 
-      writeEvent('Content', {
-        text: 'Today:\n- Deploy hotfix to production',
-      });
-      await sleep(500);
-
-      writeEvent('Content', {
-        text: '\n- Attend team planning meatting\n\n',
-      });
-      await sleep(500);
-
-      writeEvent('Content', {
-        text: 'Blockers:\n- Waiting on design approval for feature x',
-      });
-      await sleep(300);
+      // Stream AI response
+      for await (const chunk of aiProvider.stream(prompt)) {
+        writeEvent('content', { text: chunk });
+      }
 
       writeEvent('done', {
-        journal_date: '2025-01-08',
+        journal_date: testJournal.date,
         usage: {
           used: 3,
           limit: 20,
