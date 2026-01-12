@@ -41,6 +41,12 @@ export const envSchema = z
     SMTP_USER: z.string().min(1, 'SMTP_USER is required'),
     SMTP_PASSWORD: z.string().min(1, 'SMTP_PASSWORD is required'),
     SMTP_FROM: z.email('SMTP_FROM must be a valid email'),
+
+    // AI Provider
+    ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required'),
+    AI_MODEL: z.string().default('claude-sonnet-4-5-20250929'),
+    AI_MAX_TOKEN: z.coerce.number().default(1024),
+    AI_TEMPERATURE: z.coerce.number().min(0).max(1).default(0.7),
   })
   .refine(
     (data) => {

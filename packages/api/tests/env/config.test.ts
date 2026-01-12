@@ -18,6 +18,7 @@ describe('Environment Configuration', () => {
     SMTP_USER: 'user@example.com',
     SMTP_PASSWORD: 'password',
     SMTP_FROM: 'noreply@example.com',
+    ANTHROPIC_API_KEY: 'sk-ant-test-key',
   };
 
   describe('Valid configurations', () => {
@@ -41,6 +42,7 @@ describe('Environment Configuration', () => {
         SMTP_USER: 'user@example.com',
         SMTP_PASSWORD: 'password',
         SMTP_FROM: 'noreply@example.com',
+        ANTHROPIC_API_KEY: 'sk-ant-test-key',
       };
 
       const result = envSchema.safeParse(minimal);
@@ -133,6 +135,38 @@ describe('Environment Configuration', () => {
       if (result.success) {
         expect(result.data.SMTP_PORT).toBe(465);
         expect(typeof result.data.SMTP_PORT).toBe('number');
+      }
+    });
+  });
+
+  describe('AI_TEMPERATURE validation', () => {
+    it('should reject AI_TEMPERATURE outside valid range (0-1)', () => {
+      // Test value below minimum (0)
+      const envBelowMin = { ...validEnv, AI_TEMPERATURE: '-0.1' };
+      const resultBelowMin = envSchema.safeParse(envBelowMin);
+      expect(resultBelowMin.success).toBe(false);
+
+      // Test value above maximum (1)
+      const envAboveMax = { ...validEnv, AI_TEMPERATURE: '1.5' };
+      const resultAboveMax = envSchema.safeParse(envAboveMax);
+      expect(resultAboveMax.success).toBe(false);
+    });
+
+    it('should use default value 0.7 when AI_TEMPERATURE is not provided', () => {
+      const result = envSchema.safeParse(validEnv);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.AI_TEMPERATURE).toBe(0.7);
+      }
+    });
+
+    it('should coerce AI_TEMPERATURE string to number', () => {
+      const env = { ...validEnv, AI_TEMPERATURE: '0.5' };
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.AI_TEMPERATURE).toBe(0.5);
+        expect(typeof result.data.AI_TEMPERATURE).toBe('number');
       }
     });
   });
@@ -230,6 +264,7 @@ describe('Environment Configuration', () => {
         SMTP_USER: 'user@example.com',
         SMTP_PASSWORD: 'password',
         SMTP_FROM: 'noreply@example.com',
+        ANTHROPIC_API_KEY: 'sk-ant-test-key',
       };
 
       const result = envSchema.safeParse(minimal);

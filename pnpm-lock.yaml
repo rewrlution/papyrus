@@ -47,6 +47,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.71.2
+        version: 0.71.2(zod@4.2.1)
       '@asteasolutions/zod-to-openapi':
         specifier: ^8.2.0
         version: 8.2.0(zod@4.2.1)
@@ -206,6 +209,15 @@ packages:
     resolution: {integrity: sha512-mkOh+Wwawzuf5wa30bvc4nA+Qb6DIrGWgBhRR/Pw4T9nsgYait8izvXkNyU78D6Wcu3Z+KUdwCmLCxlWjEotYA==}
     engines: {node: '>=18'}
 
+  '@anthropic-ai/sdk@0.71.2':
+    resolution: {integrity: sha512-TGNDEUuEstk/DKu0/TflXAEt+p+p/WhTlFzEnoosvbaDU2LTjm42igSdlL0VijrKpWejtOKxX0b8A7uc+XiSAQ==}
+    hasBin: true
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
   '@asteasolutions/zod-to-openapi@8.2.0':
     resolution: {integrity: sha512-u05zNUirlukJAf9oEHmxSF31L1XQhz9XdpVILt7+xhrz65oQqBpiOWFkGvRWL0IpjOUJ878idKoNmYPxrFnkeg==}
     peerDependencies:
@@ -339,6 +351,10 @@ packages:
   '@aws/lambda-invoke-store@0.2.2':
     resolution: {integrity: sha512-C0NBLsIqzDIae8HFw9YIrIBsbc0xTiOtt7fAukGPnqQ/+zZNaq+4jhuccltK0QuWHBnNm/a6kLIRA6GFiM10eg==}
     engines: {node: '>=18.0.0'}
+
+  '@babel/runtime@7.28.6':
+    resolution: {integrity: sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==}
+    engines: {node: '>=6.9.0'}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -2068,6 +2084,10 @@ packages:
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
 
+  json-schema-to-ts@3.1.1:
+    resolution: {integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==}
+    engines: {node: '>=16'}
+
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
 
@@ -2810,6 +2830,9 @@ packages:
     resolution: {integrity: sha512-aZbgViZrg1QNcG+LULa7nhZpJTZSLm/mXnHXnbAbjmN5aSa0y7V+wvv6+4WaBtpISJzThKy+PIPxc1Nq1EJ9mg==}
     engines: {node: '>= 14.0.0'}
 
+  ts-algebra@2.0.0:
+    resolution: {integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==}
+
   ts-api-utils@2.1.0:
     resolution: {integrity: sha512-CUgTZL1irw8u29bzrOD/nH85jqyc74D6SshFgujOIA7osm2Rz7dYH77agkx7H4FBNxDq7Cjf+IjaX/8zwFW+ZQ==}
     engines: {node: '>=18.12'}
@@ -3117,6 +3140,12 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
+
+  '@anthropic-ai/sdk@0.71.2(zod@4.2.1)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+    optionalDependencies:
+      zod: 4.2.1
 
   '@asteasolutions/zod-to-openapi@8.2.0(zod@4.2.1)':
     dependencies:
@@ -3520,6 +3549,8 @@ snapshots:
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.2.2': {}
+
+  '@babel/runtime@7.28.6': {}
 
   '@colors/colors@1.6.0': {}
 
@@ -5440,6 +5471,11 @@ snapshots:
 
   json-buffer@3.0.1: {}
 
+  json-schema-to-ts@3.1.1:
+    dependencies:
+      '@babel/runtime': 7.28.6
+      ts-algebra: 2.0.0
+
   json-schema-traverse@0.4.1: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
@@ -6232,6 +6268,8 @@ snapshots:
   toidentifier@1.0.1: {}
 
   triple-beam@1.4.1: {}
+
+  ts-algebra@2.0.0: {}
 
   ts-api-utils@2.1.0(typescript@5.9.3):
     dependencies:
