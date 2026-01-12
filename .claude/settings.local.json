@@ -17,7 +17,8 @@
       "Bash(npm view:*)",
       "Bash(pnpm install:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(test:*)"
     ]
   }
 }

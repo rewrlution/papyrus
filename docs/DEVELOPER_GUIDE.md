@@ -24,6 +24,37 @@ pnpm build
 
 # Verify everything works
 pnpm test
+
+# Init husky
+pnpm exec husky init
+
+# Generate a .env file by following instructions on .env.example
+```
+
+### VS Code Setup
+
+This project includes recommended VS Code extensions for the best development experience.
+
+**Install Recommended Extensions:**
+
+1. Open VS Code Extensions panel: `Cmd+Shift+X` (Mac) or `Ctrl+Shift+X` (Windows/Linux)
+2. Type `@recommended` in the search box
+3. Click "Install" on all **Workspace Recommendations**
+
+**Recommended extensions include:**
+
+- ESLint - Code linting
+- Prettier - Code formatting
+- Tailwind CSS IntelliSense - Tailwind autocompletion
+- Prisma - Database schema support
+
+**Alternative: Install via CLI**
+
+```bash
+code --install-extension dbaeumer.vscode-eslint
+code --install-extension esbenp.prettier-vscode
+code --install-extension bradlc.vscode-tailwindcss
+code --install-extension prisma.prisma
 ```
 
 ## 📦 Project Structure
