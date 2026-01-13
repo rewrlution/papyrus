@@ -322,6 +322,44 @@ Start simple, add complexity only when needed.
 - Not overwhelmed by advanced features upfront
 - Clear progression of complexity
 
+**Apply to Dependencies:**
+
+Install packages ONLY when you need them, not upfront. Each installation should be motivated by a concrete need.
+
+**Good - Progressive installation:**
+
+```markdown
+## Step 1: Create Basic Page
+Install: next, react, react-dom
+[Build basic page]
+
+## Step 2: Add Styling
+Now we need styling. Install: tailwindcss
+[Add Tailwind config and styles]
+
+## Step 3: Add Icons
+Now we need icons. Install: lucide-react
+[Use icons in components]
+```
+
+**Bad - Install everything upfront:**
+
+```markdown
+## Step 1: Install All Dependencies
+Install: next, react, tailwindcss, framer-motion, lucide-react, axios, zod, ...
+[100 packages installed but not explained why]
+
+## Step 2: Use Some of Them
+[Only use 3 packages, rest sit unused]
+```
+
+**Why this matters:**
+
+- Understand WHY each dependency is needed
+- Avoid unused dependencies
+- Smaller package.json until you need more
+- Learn the purpose of each tool
+
 ### 8. Provide Context
 
 Show how pieces fit into the larger system.

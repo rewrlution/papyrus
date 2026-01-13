@@ -1,22 +1,21 @@
 # Phase 0: Foundation & Deploy Pipeline
 
-Building the infrastructure for the Papyrus CLI marketing website.
+Building the minimal infrastructure to get a Next.js website live.
 
 ## What We're Building
 
-**Goal:** Set up a Next.js 15 marketing website with Tailwind CSS, shadcn/ui, and automated Vercel deployment.
+**Goal:** Get a basic Next.js 15 website running and deployed to Vercel with automated CI/CD.
 
 **What problem does this solve?**
-- Establish a solid foundation for rapid feature development
-- Enable continuous deployment for fast iteration
-- Set up design system and styling infrastructure
-- Get something live immediately to validate the pipeline
+- Establish a working deployment pipeline immediately
+- Validate that our setup works end-to-end
+- Create a foundation to build upon in Phase 1
 
 **Expected outcome:**
-- Live URL with a basic landing page
+- Live URL with a basic "Hello World" page
 - Working CI/CD pipeline (GitHub → Vercel)
-- Dark theme with terminal aesthetic
-- Ready to add content (Phase 1)
+- Next.js 15 app integrated into the monorepo
+- Ready to add styling and content (Phase 1)
 
 ---
 
@@ -34,7 +33,7 @@ Building the infrastructure for the Papyrus CLI marketing website.
 │                    Vercel Platform                       │
 │  ┌───────────────────────────────────────────────────┐  │
 │  │  Build Process                                    │  │
-│  │  1. npm install                                   │  │
+│  │  1. pnpm install                                  │  │
 │  │  2. pnpm build --filter=@rewrlution/papyrus-web  │  │
 │  │  3. Static export (.next folder)                 │  │
 │  └───────────────────────────────────────────────────┘  │
@@ -59,30 +58,21 @@ Monorepo Structure:
 │   └── web/              # NEW: Marketing website
 │       ├── app/
 │       │   ├── layout.tsx       # Root layout
-│       │   ├── page.tsx         # Home page
-│       │   └── globals.css      # Global styles
-│       ├── components/
-│       │   ├── ui/              # shadcn components
-│       │   └── shared/          # Reusable components
-│       ├── lib/
-│       │   └── utils.ts         # Utility functions
+│       │   └── page.tsx         # Home page
 │       ├── public/              # Static assets
 │       ├── package.json
 │       ├── tsconfig.json
-│       ├── tailwind.config.ts
 │       └── next.config.js
 ```
 
 **Why this architecture:**
 - **Next.js App Router** - Modern React framework with static export
-- **Monorepo integration** - Shares types/utils with CLI and API
-- **shadcn/ui** - Copy-paste components (no library bloat)
+- **Monorepo integration** - Will share types/utils with CLI and API in future
 - **Vercel deployment** - Zero-config, fast CDN, preview URLs
 - **Static export** - Fast, cheap, secure (no server needed)
 
 **Trade-offs considered:**
 - Static vs SSR: Static is faster and cheaper (good for marketing site)
-- shadcn/ui vs custom: shadcn provides accessible primitives we can customize
 - Vercel vs Cloudflare Pages: Vercel has better Next.js integration
 
 ---
@@ -110,59 +100,36 @@ Monorepo Structure:
 
 ## Implementation
 
-### Step 1: Create the Web Package Structure
+### Step 1: Create the Web Package Directory
 
-**Goal:** Set up the basic directory structure for the new web package in the monorepo.
+**Goal:** Set up the basic directory structure for the new web package.
 
-First, create the directory structure:
+From monorepo root:
 
 ```bash
-# From monorepo root
-cd /home/user/papyrus
+# Navigate to packages directory
+cd packages
 
-# Create the web package directory
-mkdir -p packages/web
+# Create web package directory
+mkdir web
 
 # Navigate into it
-cd packages/web
-```
+cd web
 
-Now create the foundational files and directories:
-
-```bash
-# Create directory structure
-mkdir -p app
-mkdir -p components/ui
-mkdir -p components/shared
-mkdir -p lib
-mkdir -p public/assets
-
-# Create placeholder files
-touch app/layout.tsx
-touch app/page.tsx
-touch app/globals.css
-touch lib/utils.ts
-touch next.config.js
-touch tsconfig.json
-touch tailwind.config.ts
-touch postcss.config.js
-touch .eslintrc.json
-touch package.json
-touch README.md
+# Create basic structure
+mkdir app public
 ```
 
 **Why this structure:**
-- `app/` - Next.js App Router directory
-- `components/ui/` - shadcn components (will be auto-generated)
-- `components/shared/` - Custom reusable components
-- `lib/` - Utility functions
+- `app/` - Next.js App Router directory (Next.js 15 standard)
 - `public/` - Static assets (images, fonts, etc.)
+- Lives in `packages/` alongside cli, api, shared (monorepo pattern)
 
 ---
 
-### Step 2: Configure package.json
+### Step 2: Create Minimal package.json
 
-**Goal:** Define the package dependencies and scripts.
+**Goal:** Define only the essential dependencies to get Next.js working.
 
 Create `packages/web/package.json`:
 
@@ -174,47 +141,38 @@ Create `packages/web/package.json`:
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "type-check": "tsc --noEmit"
+    "start": "next start"
   },
   "dependencies": {
     "next": "^15.1.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0",
-    "lucide-react": "^0.468.0",
-    "@rewrlution/papyrus-shared": "workspace:*"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.6",
     "@types/react-dom": "^19.0.2",
-    "typescript": "^5.7.3",
-    "tailwindcss": "^4.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^15.1.4",
-    "prettier": "^3.4.2"
+    "typescript": "^5.7.3"
   }
 }
 ```
 
 **Why these dependencies:**
-- **next, react, react-dom** - Core framework
-- **class-variance-authority, clsx, tailwind-merge** - For shadcn/ui
-- **lucide-react** - Icon library (tree-shakeable)
-- **@rewrlution/papyrus-shared** - Shared types from monorepo
+- **next, react, react-dom** - Core framework (minimum required)
+- **TypeScript types** - For type checking
+- **That's it!** No styling, no UI libraries, no extras yet
+
+**Why NOT include:**
+- ❌ Tailwind CSS - Don't need styling yet
+- ❌ ESLint/Prettier - Already configured at monorepo root
+- ❌ UI libraries - Will add in Phase 1 when needed
+- ❌ Format/lint scripts - Use monorepo scripts instead
 
 ---
 
 ### Step 3: Configure TypeScript
 
-**Goal:** Set up TypeScript with proper monorepo integration.
+**Goal:** Extend the monorepo TypeScript config with Next.js-specific settings.
 
 Create `packages/web/tsconfig.json`:
 
@@ -245,26 +203,25 @@ Create `packages/web/tsconfig.json`:
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"],
-  "references": [
-    {
-      "path": "../shared"
-    }
-  ]
+  "exclude": ["node_modules"]
 }
 ```
 
 **Why this configuration:**
-- Extends base TypeScript config from monorepo root
-- References `shared` package for type checking
-- Path alias `@/*` for cleaner imports
-- Next.js plugin for better type inference
+- **Extends monorepo base** - Inherits shared TypeScript settings
+- **Next.js plugin** - Better type inference for Next.js features
+- **Path alias `@/*`** - Cleaner imports (`@/app/...` instead of `../../app/...`)
+- **Minimal overrides** - Only what Next.js requires
+
+**Why NOT include:**
+- ❌ Project references to `shared` - Will add when we actually use shared types
+- ❌ Complex path mappings - Keep it simple for now
 
 ---
 
 ### Step 4: Configure Next.js
 
-**Goal:** Set up Next.js for static export and proper monorepo paths.
+**Goal:** Set up Next.js for static export and monorepo compatibility.
 
 Create `packages/web/next.config.js`:
 
@@ -273,7 +230,6 @@ Create `packages/web/next.config.js`:
 const nextConfig = {
   output: 'export',
   reactStrictMode: true,
-  transpilePackages: ['@rewrlution/papyrus-shared'],
   images: {
     unoptimized: true, // Required for static export
   },
@@ -283,216 +239,30 @@ module.exports = nextConfig
 ```
 
 **Why this configuration:**
-- `output: 'export'` - Generate static HTML/CSS/JS (no server needed)
-- `transpilePackages` - Compile TypeScript from shared package
-- `images.unoptimized` - Required for static export (no server for image optimization)
+- **`output: 'export'`** - Generate static HTML/CSS/JS (no server needed)
+- **`reactStrictMode`** - Catch common bugs during development
+- **`images.unoptimized`** - Required for static export (no server for image optimization)
+- **Minimal** - Only what we need right now
+
+**Why NOT include:**
+- ❌ `transpilePackages` - Will add when we use shared package
+- ❌ Environment variables - None needed yet
+- ❌ Redirects/rewrites - No routing yet
 
 ---
 
-### Step 5: Configure Tailwind CSS v4
+### Step 5: Create Root Layout
 
-**Goal:** Set up Tailwind with a terminal-inspired color palette.
-
-Create `packages/web/tailwind.config.ts`:
-
-```typescript
-import type { Config } from "tailwindcss";
-
-const config: Config = {
-  darkMode: ["class"],
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        terminal: {
-          black: "#0a0a0a",
-          darkgray: "#1a1a1a",
-          gray: "#2a2a2a",
-          lightgray: "#666666",
-          text: "#e0e0e0",
-          green: "#00ff00",
-          cyan: "#00d9ff",
-          yellow: "#ffdd00",
-          red: "#ff4444",
-        },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-      },
-      fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
-      },
-    },
-  },
-  plugins: [require("tailwindcss-animate")],
-};
-
-export default config;
-```
-
-Create `packages/web/postcss.config.js`:
-
-```javascript
-module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
-```
-
-**Why this configuration:**
-- **Terminal colors** - Custom palette for dev tool aesthetic
-- **shadcn/ui tokens** - CSS variables for theming
-- **Font families** - Geist Sans for UI, Geist Mono for code
-- **tailwindcss-animate** - For smooth animations (shadcn/ui requirement)
-
----
-
-### Step 6: Create Global Styles
-
-**Goal:** Set up CSS variables and base styles for the dark terminal theme.
-
-Create `packages/web/app/globals.css`:
-
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 4%; /* #0a0a0a */
-    --foreground: 0 0% 88%; /* #e0e0e0 */
-
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 88%;
-
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 88%;
-
-    --primary: 180 100% 44%; /* cyan #00d9ff */
-    --primary-foreground: 0 0% 4%;
-
-    --secondary: 0 0% 16%;
-    --secondary-foreground: 0 0% 88%;
-
-    --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 60%;
-
-    --accent: 60 100% 56%; /* yellow #ffdd00 */
-    --accent-foreground: 0 0% 4%;
-
-    --destructive: 0 100% 63%; /* red #ff4444 */
-    --destructive-foreground: 0 0% 88%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 180 100% 44%;
-
-    --radius: 0.5rem;
-  }
-
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-```
-
-**Why these styles:**
-- Dark terminal background (#0a0a0a)
-- Cyan primary color (terminal aesthetic)
-- Yellow accent (like terminal warnings)
-- CSS variables for easy theming
-
----
-
-### Step 7: Create Root Layout
-
-**Goal:** Set up the root layout with fonts and metadata.
+**Goal:** Set up the root layout (required by Next.js App Router).
 
 Create `packages/web/app/layout.tsx`:
 
 ```typescript
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
-import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Papyrus - AI-Powered Journaling for Developers",
-  description: "Journal like you code. Capture your thoughts, track your progress, and reflect on your journey—right in your terminal.",
-  keywords: ["journaling", "CLI", "terminal", "developer tools", "markdown", "local-first"],
-  authors: [{ name: "Rewrlution", email: "rewrlution@gmail.com" }],
-  openGraph: {
-    title: "Papyrus - AI-Powered Journaling for Developers",
-    description: "Journal like you code. Capture your thoughts directly from the terminal.",
-    type: "website",
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Papyrus - AI-Powered Journaling for Developers",
-    description: "Journal like you code. Capture your thoughts directly from the terminal.",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  description: "Journal like you code. Capture your thoughts right in your terminal.",
 };
 
 export default function RootLayout({
@@ -501,24 +271,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
-        {children}
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }
 ```
 
 **Why this approach:**
-- **Geist fonts** - Modern, optimized fonts from Vercel
-- **SEO metadata** - Open Graph and Twitter cards
-- **Dark mode** - Always dark (terminal aesthetic)
-- **Font variables** - CSS variables for font families
+- **Metadata** - Basic SEO (title and description)
+- **Minimal HTML** - Just html, body, and children
+- **No styling** - Will add in Phase 1
+
+**Why NOT include:**
+- ❌ Custom fonts - Don't need yet
+- ❌ CSS imports - No styles yet
+- ❌ Dark mode classes - Will add with Tailwind in Phase 1
 
 ---
 
-### Step 8: Create Basic Home Page
+### Step 6: Create Basic Home Page
 
 **Goal:** Create a simple landing page to verify the setup works.
 
@@ -527,190 +299,37 @@ Create `packages/web/app/page.tsx`:
 ```typescript
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="text-center">
-        <pre className="text-terminal-cyan text-6xl font-bold mb-8 font-mono">
-{`██████╗  █████╗ ██████╗ ██╗   ██╗██████╗ ██╗   ██╗███████╗
-██╔══██╗██╔══██╗██╔══██╗╚██╗ ██╔╝██╔══██╗██║   ██║██╔════╝
-██████╔╝███████║██████╔╝ ╚████╔╝ ██████╔╝██║   ██║███████╗
-██╔═══╝ ██╔══██║██╔═══╝   ╚██╔╝  ██╔══██╗██║   ██║╚════██║
-██║     ██║  ██║██║        ██║   ██║  ██║╚██████╔╝███████║
-╚═╝     ╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝`}
-        </pre>
-
-        <h1 className="text-4xl font-bold mb-4 text-terminal-text">
-          AI-Powered Journaling for Developers
-        </h1>
-
-        <p className="text-xl text-terminal-lightgray mb-8">
-          Journal like you code. Right in your terminal.
-        </p>
-
-        <div className="bg-terminal-darkgray border border-terminal-gray rounded-lg p-6 max-w-2xl mx-auto">
-          <code className="text-terminal-green font-mono">
-            $ npm install -g @rewrlution/papyrus-cli
-          </code>
-        </div>
-
-        <p className="text-sm text-terminal-lightgray mt-8">
-          Phase 0 Complete: Foundation & Deploy Pipeline ✓
-        </p>
-      </div>
+    <main>
+      <h1>PAPYRUS</h1>
+      <p>AI-Powered Journaling for Developers</p>
+      <p>Journal like you code. Right in your terminal.</p>
+      <code>npm install -g @rewrlution/papyrus-cli</code>
     </main>
   );
 }
 ```
 
 **Why this page:**
-- Shows the Papyrus ASCII logo (brand identity)
-- Simple, clear value proposition
-- Install command (primary CTA)
-- Verifies Tailwind colors work
-- Verifies fonts load correctly
+- **Simple HTML** - No fancy styling yet
+- **Key message** - Value proposition clearly stated
+- **Install command** - Primary call-to-action
+- **Verifies setup** - If this loads, Next.js is working
+
+**Why NOT include:**
+- ❌ Complex layout - Keep it simple
+- ❌ ASCII art logo - Will add in Phase 1
+- ❌ Styled components - No styling yet
 
 ---
 
-### Step 9: Create Utility Functions
+### Step 7: Install Dependencies
 
-**Goal:** Set up the `cn()` utility for merging Tailwind classes.
+**Goal:** Install npm packages for the entire monorepo.
 
-Create `packages/web/lib/utils.ts`:
-
-```typescript
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-/**
- * Merges class names with Tailwind-aware deduplication
- * Used by shadcn/ui components
- */
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-```
-
-**Why this utility:**
-- Required by shadcn/ui components
-- Merges Tailwind classes intelligently (no duplicates)
-- Example: `cn("text-red-500", "text-blue-500")` → `"text-blue-500"` (last wins)
-
----
-
-### Step 10: Configure ESLint
-
-**Goal:** Set up linting rules for Next.js and TypeScript.
-
-Create `packages/web/.eslintrc.json`:
-
-```json
-{
-  "extends": ["next/core-web-vitals", "next/typescript"],
-  "rules": {
-    "@typescript-eslint/no-unused-vars": [
-      "warn",
-      {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
-      }
-    ],
-    "react/no-unescaped-entities": "off"
-  }
-}
-```
-
----
-
-### Step 11: Create Package README
-
-**Goal:** Document the web package for future developers.
-
-Create `packages/web/README.md`:
-
-```markdown
-# @rewrlution/papyrus-web
-
-Marketing website for Papyrus CLI - An AI-powered journaling tool built for developers.
-
-## Tech Stack
-
-- **Framework:** Next.js 15 (App Router, Static Export)
-- **Styling:** Tailwind CSS v4
-- **Components:** shadcn/ui
-- **Fonts:** Geist Sans + Geist Mono
-- **Deployment:** Vercel
-
-## Development
-
-\`\`\`bash
-# Install dependencies (from monorepo root)
-pnpm install
-
-# Start dev server
-pnpm dev
-
-# Open http://localhost:3000
-\`\`\`
-
-## Build
-
-\`\`\`bash
-# Build for production
-pnpm build
-
-# Preview production build
-pnpm start
-\`\`\`
-
-## Deployment
-
-Automatically deployed to Vercel on push to main branch.
-
-- **Production:** [URL will be here after deployment]
-- **Preview:** Auto-generated for each PR
-
-## Project Structure
-
-\`\`\`
-packages/web/
-├── app/
-│   ├── layout.tsx       # Root layout
-│   ├── page.tsx         # Home page
-│   └── globals.css      # Global styles
-├── components/
-│   ├── ui/              # shadcn components
-│   └── shared/          # Custom components
-├── lib/
-│   └── utils.ts         # Utilities
-└── public/              # Static assets
-\`\`\`
-
-## Adding shadcn/ui Components
-
-\`\`\`bash
-# Install shadcn CLI (first time only)
-npx shadcn@latest init
-
-# Add components
-npx shadcn@latest add button
-npx shadcn@latest add card
-\`\`\`
-
-## Learn More
-
-- See development plan: `/docs/WEB_DEVELOPMENT_PLAN.md`
-- See tutorials: `/docs/tutorials/`
-```
-
----
-
-### Step 12: Install Dependencies
-
-**Goal:** Install all npm packages.
-
-From the monorepo root, run:
+From the monorepo root:
 
 ```bash
-cd /home/user/papyrus
+cd /path/to/papyrus
 
 # Install dependencies for entire monorepo
 pnpm install
@@ -718,48 +337,22 @@ pnpm install
 
 **Why from root:**
 - pnpm workspaces handles all packages together
-- Links `@rewrlution/papyrus-shared` automatically
+- Links packages automatically (cli, api, shared, web)
 - Installs all dependencies efficiently
 
----
-
-### Step 13: Initialize shadcn/ui
-
-**Goal:** Set up shadcn/ui CLI and install first component.
-
-```bash
-cd packages/web
-
-# Initialize shadcn/ui (interactive)
-npx shadcn@latest init
-
-# Answer prompts:
-# - TypeScript: Yes
-# - Style: Default
-# - Base color: Slate
-# - CSS variables: Yes
-# - tailwind.config: Yes
-# - components directory: ./components
-# - utils import alias: @/lib/utils
-# - React Server Components: Yes
-
-# Install button component (test)
-npx shadcn@latest add button
+**Expected output:**
+```
+Progress: resolved X, reused Y, downloaded Z, added N
+Done in Xs
 ```
 
-This creates `components/ui/button.tsx` - a fully accessible button component.
-
-**Why shadcn/ui:**
-- Components are copied to your codebase (no library dependency)
-- Built on Radix UI (accessible by default)
-- Fully customizable
-- Tailwind-based styling
-
 ---
 
-### Step 14: Test Local Development
+### Step 8: Test Local Development
 
 **Goal:** Verify the dev server works.
+
+From the web package:
 
 ```bash
 cd packages/web
@@ -768,54 +361,125 @@ pnpm dev
 
 Open your browser to `http://localhost:3000`
 
-You should see:
-- Papyrus ASCII logo in cyan
-- "AI-Powered Journaling for Developers" headline
-- Install command in a terminal-style box
-- Dark background with terminal colors
+**You should see:**
+- "PAPYRUS" heading
+- "AI-Powered Journaling for Developers" text
+- Install command
+- Plain HTML (no styling)
 
 **Test checklist:**
 - [ ] Page loads without errors
-- [ ] Fonts render correctly (Geist Sans/Mono)
-- [ ] Colors match terminal palette
+- [ ] Text is visible
+- [ ] No console errors in browser DevTools
 - [ ] Fast page load
-- [ ] No console errors
+
+**If it fails:**
+- Check that all files are created in correct locations
+- Verify package.json syntax is valid JSON
+- Run `pnpm install` again from root
+- Check Node.js version is 20+
 
 Press `Ctrl+C` to stop the dev server.
 
 ---
 
-### Step 15: Build for Production
+### Step 9: Build for Production
 
 **Goal:** Verify static export works.
+
+From the web package:
 
 ```bash
 cd packages/web
 pnpm build
 ```
 
-This should:
-1. Compile TypeScript
-2. Generate static HTML/CSS/JS
-3. Output to `.next` directory
-4. Show build statistics
-
-Expected output:
+**Expected output:**
 ```
+   ▲ Next.js 15.1.4
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+ ✓ Linting and checking validity of types
+ ✓ Collecting page data
+ ✓ Generating static pages (2/2)
+ ✓ Finalizing page optimization
+
 Route (app)                              Size     First Load JS
 ┌ ○ /                                    137 B          87.2 kB
 └ ○ /_not-found                          871 B          86.9 kB
-○ (Static) prerendered as static content
+○  (Static) prerendered as static content
+
+✓ Built in Xs
 ```
 
+**What this does:**
+1. Compiles TypeScript to JavaScript
+2. Bundles React components
+3. Generates static HTML files
+4. Outputs to `.next` directory
+
 **If build fails:**
-- Check for TypeScript errors: `pnpm type-check`
-- Check for linting errors: `pnpm lint`
-- Check imports are correct (all files exist)
+- Check for TypeScript errors: `npx tsc --noEmit`
+- Verify all imports are correct
+- Check that files exist at specified paths
 
 ---
 
-### Step 16: Deploy to Vercel
+### Step 10: Update Monorepo Configuration
+
+**Goal:** Integrate web package into the monorepo build system.
+
+Update `turbo.json` at monorepo root to include `.next/**` in build outputs:
+
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["build"]
+    }
+  }
+}
+```
+
+**Why this change:**
+- Turborepo caches the `.next` build output
+- Skips rebuilding if nothing changed
+- Faster CI/CD builds
+
+Update root `package.json` to add web shortcuts (optional):
+
+```json
+{
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "test": "turbo run test",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "web:dev": "pnpm --filter=@rewrlution/papyrus-web dev",
+    "web:build": "pnpm --filter=@rewrlution/papyrus-web build"
+  }
+}
+```
+
+**Why add shortcuts:**
+- `pnpm web:dev` is easier than `cd packages/web && pnpm dev`
+- Consistent with monorepo patterns
+- Optional convenience
+
+---
+
+### Step 11: Deploy to Vercel
 
 **Goal:** Get the site live with automated deployments.
 
@@ -844,87 +508,65 @@ Vercel will:
 
 First deploy takes 2-3 minutes.
 
+**Watch the build logs:**
+- Check for errors
+- Verify build completes successfully
+- Note the preview URL
+
 #### C. Verify Deployment
 
 Once deployed:
-- Click the URL
+- Click the deployment URL
 - Verify the page loads
 - Check that it matches your local build
-- Test on mobile (responsive design)
+- Test on mobile (should be responsive by default)
+
+**Deployment checklist:**
+- [ ] Site loads successfully
+- [ ] All text is visible
+- [ ] No errors in browser console
+- [ ] Page loads fast (<2 seconds)
 
 #### D. Configure Custom Domain (Optional)
 
 If you have a domain:
 1. Go to Project Settings → Domains
 2. Add your domain (e.g., `papyrus.dev`)
-3. Follow DNS instructions
-4. Wait for SSL certificate (automatic)
+3. Follow DNS instructions from Vercel
+4. Wait for SSL certificate (automatic, ~30 seconds)
 
 ---
 
-### Step 17: Set Up Auto-Deploy
+### Step 12: Verify Auto-Deploy Works
 
-**Goal:** Enable continuous deployment on every push.
+**Goal:** Ensure continuous deployment is working.
 
-Good news: **This is already configured!** Vercel automatically:
+**Good news:** This is already configured! Vercel automatically:
 - Deploys `main` branch to production
 - Deploys other branches to preview URLs
 - Deploys PRs to preview URLs
 - Shows build status in GitHub
 
-**To test:**
-1. Make a small change to `packages/web/app/page.tsx`
-2. Commit and push to your branch
-3. Check Vercel dashboard - new deployment starts
-4. Click preview URL when ready
+**To test auto-deploy:**
 
----
+1. Make a small change to `packages/web/app/page.tsx`:
+   ```typescript
+   <p>Phase 0 Complete ✓</p>
+   ```
 
-### Step 18: Update Monorepo Root Scripts
+2. Commit and push:
+   ```bash
+   git add packages/web
+   git commit -m "feat(web): verify auto-deploy"
+   git push
+   ```
 
-**Goal:** Add web package to monorepo build scripts.
+3. Check Vercel dashboard:
+   - New deployment should start automatically
+   - Watch build logs
+   - Click preview URL when ready
 
-Update `/home/user/papyrus/package.json` to include web package:
-
-```json
-{
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev --parallel",
-    "test": "turbo run test",
-    "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "web:dev": "pnpm --filter=@rewrlution/papyrus-web dev",
-    "web:build": "pnpm --filter=@rewrlution/papyrus-web build"
-  }
-}
-```
-
-Update `/home/user/papyrus/turbo.json` to include web package:
-
-```json
-{
-  "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "test": {
-      "dependsOn": ["build"]
-    }
-  }
-}
-```
-
-**Why these changes:**
-- `turbo.json` includes `.next/**` in build outputs
-- Root scripts can run web commands easily
-- `pnpm web:dev` is a shortcut for running the dev server
+4. Verify the change is live
 
 ---
 
@@ -932,121 +574,67 @@ Update `/home/user/papyrus/turbo.json` to include web package:
 
 ### Manual Testing Checklist
 
-After completing all steps, verify:
-
 **Local Development:**
 - [ ] `pnpm dev` starts server without errors
 - [ ] `http://localhost:3000` loads the page
-- [ ] Papyrus ASCII logo displays in cyan
-- [ ] Fonts load correctly (Geist Sans/Mono)
-- [ ] Terminal color palette is visible
+- [ ] Text is readable
 - [ ] No console errors in browser DevTools
 
 **Build:**
 - [ ] `pnpm build` completes successfully
 - [ ] No TypeScript errors
-- [ ] No lint errors
 - [ ] `.next` directory is created
+- [ ] Build output shows static pages generated
 
 **Deployment:**
 - [ ] Vercel dashboard shows successful deploy
 - [ ] Production URL loads correctly
-- [ ] Mobile responsive (test on phone)
-- [ ] Fast page load (<2 seconds)
-- [ ] Preview deployments work for new commits
+- [ ] Page loads fast (<2 seconds)
+- [ ] Auto-deploy works (push triggers new deployment)
 
 **Monorepo:**
 - [ ] `pnpm install` from root installs all packages
-- [ ] `pnpm web:dev` shortcut works
-- [ ] No conflicts with other packages
+- [ ] `pnpm web:dev` shortcut works (if added)
+- [ ] No conflicts with other packages (cli, api, shared)
 
 ---
 
 ## Common Issues
 
-### Issue: "Cannot find module '@rewrlution/papyrus-shared'"
+### Issue: "Cannot find module 'next'"
 
 **Why it happens:**
-TypeScript can't resolve the shared package.
+Dependencies not installed or pnpm workspace not recognized.
 
 **Solution:**
 ```bash
-# Build shared package first
-cd packages/shared
-pnpm build
-
-# Then try again
-cd ../web
-pnpm dev
-```
-
----
-
-### Issue: "Error: Failed to load SWC binary"
-
-**Why it happens:**
-Next.js compiler issue, usually on first install.
-
-**Solution:**
-```bash
-# Clear cache and reinstall
-rm -rf node_modules .next
+# From monorepo root
 pnpm install
-pnpm dev
+
+# Verify web package has node_modules
+ls packages/web/node_modules/next
 ```
 
 ---
 
-### Issue: Fonts not loading
+### Issue: "Module not found: Can't resolve '@/...'"
 
 **Why it happens:**
-Geist fonts not installed or imported incorrectly.
+TypeScript path alias not configured correctly.
 
 **Solution:**
-```bash
-# Install geist package
-pnpm add geist
-
-# Verify import in app/layout.tsx
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+Verify `tsconfig.json` has:
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
 ```
 
----
-
-### Issue: Tailwind styles not applying
-
-**Why it happens:**
-PostCSS or Tailwind config issue.
-
-**Solution:**
-```bash
-# Verify tailwind.config.ts content paths are correct
-content: [
-  "./app/**/*.{ts,tsx}",
-  "./components/**/*.{ts,tsx}",
-],
-
-# Restart dev server
-pnpm dev
-```
-
----
-
-### Issue: Vercel build fails with "Command not found: pnpm"
-
-**Why it happens:**
-Vercel needs to know to use pnpm.
-
-**Solution:**
-Add to project root (if not exists): `.npmrc`
-```
-package-manager=pnpm
-```
-
-Or in Vercel dashboard:
-- Settings → General → Build & Development Settings
-- Install Command: `pnpm install`
+Restart dev server after changing tsconfig.
 
 ---
 
@@ -1057,43 +645,71 @@ Different Node.js version or missing environment variables.
 
 **Solution:**
 1. Check Vercel build logs for specific error
-2. Match Node.js version (add `engines` in package.json):
-```json
-"engines": {
-  "node": ">=20.0.0"
-}
+2. Match Node.js version (add to `package.json`):
+   ```json
+   "engines": {
+     "node": ">=20.0.0"
+   }
+   ```
+3. Verify build command is correct in Vercel settings
+4. Check that all file paths are case-sensitive (Linux vs Windows)
+
+---
+
+### Issue: "Module build failed" or TypeScript errors during build
+
+**Why it happens:**
+TypeScript configuration mismatch or missing types.
+
+**Solution:**
+```bash
+# Check TypeScript errors
+npx tsc --noEmit
+
+# Verify extends path is correct
+cat tsconfig.json | grep extends
+
+# Should show: "extends": "../../tsconfig.base.json"
 ```
-3. Check that all imports are correct (case-sensitive on Vercel)
+
+---
+
+## What We Accomplished
+
+Phase 0 is complete! You now have:
+- ✅ Minimal Next.js 15 app with App Router
+- ✅ TypeScript configured (extends monorepo base)
+- ✅ Working CI/CD pipeline (GitHub → Vercel)
+- ✅ Live production URL
+- ✅ No unnecessary dependencies
+- ✅ Clean, simple foundation
+
+**What's NOT included yet (by design):**
+- ❌ Tailwind CSS or any styling (Phase 1)
+- ❌ UI component libraries (Phase 1)
+- ❌ Custom fonts (Phase 1)
+- ❌ Icons (Phase 1)
+- ❌ Complex layouts (Phase 1)
 
 ---
 
 ## Next Steps
 
-Phase 0 is complete! You now have:
-- ✅ Next.js 15 app with App Router
-- ✅ Tailwind CSS with terminal color palette
-- ✅ shadcn/ui configured
-- ✅ Dark theme
-- ✅ Working CI/CD pipeline
-- ✅ Live production URL
+**Phase 1: MVP Content** - Add styling and marketing content progressively
 
-**What's next:**
+In Phase 1, we'll add features one at a time:
+1. Install Tailwind CSS (when we need styling)
+2. Add terminal color palette (when we want dark theme)
+3. Install Geist fonts (when we want nice typography)
+4. Add shadcn/ui components (when we need specific UI elements)
+5. Build Hero section
+6. Build Features grid
+7. Build Quick Start guide
+8. Build Footer
 
-1. **Phase 1: MVP Content** - Build the actual marketing content
-   - Hero section with value proposition
-   - Features grid (6 feature cards)
-   - Quick start section
-   - Footer with links
-   - See tutorial: `docs/tutorials/web-phase-1-mvp-content.md`
+Each addition is motivated by a specific need!
 
-2. **Share for Feedback** - Get early feedback on the foundation
-   - Share Vercel preview URL with team
-   - Verify design direction before building content
-
-3. **Plan Phase 2** - Start thinking about:
-   - Terminal recordings you'll need
-   - Animation ideas
-   - Screenshot preparation
+See tutorial: `docs/tutorials/web-phase-1-mvp-content.md`
 
 ---
 
@@ -1101,23 +717,17 @@ Phase 0 is complete! You now have:
 
 ### Official Documentation
 - [Next.js 15 Docs](https://nextjs.org/docs)
-- [Tailwind CSS v4](https://tailwindcss.com/docs)
-- [shadcn/ui](https://ui.shadcn.com/)
+- [Next.js App Router](https://nextjs.org/docs/app)
 - [Vercel Deployment](https://vercel.com/docs)
 - [pnpm Workspaces](https://pnpm.io/workspaces)
-
-### Design Inspiration
-- [Linear.app](https://linear.app) - Clean dark design
-- [Vercel.com](https://vercel.com) - Modern layout
-- [Supabase.com](https://supabase.com) - Developer-focused
 
 ### Related Papyrus Docs
 - Main README: `/CLAUDE.md`
 - Development plan: `/docs/WEB_DEVELOPMENT_PLAN.md`
-- CLI docs: `/packages/cli/CLAUDE.md`
+- Tutor principles: `/docs/TUTOR-PRINCIPLES.md`
 
 ---
 
-**Congratulations!** You've completed Phase 0. The foundation is solid and ready for content.
+**Congratulations!** You've completed Phase 0. The foundation is minimal, clean, and deployed.
 
-Move on to **Phase 1** to build the actual marketing pages.
+Move on to **Phase 1** to add styling and marketing content progressively.

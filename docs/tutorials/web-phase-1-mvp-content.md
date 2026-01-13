@@ -1,10 +1,10 @@
 # Phase 1: MVP Content
 
-Building the core marketing content for the Papyrus CLI website.
+Building the core marketing content for the Papyrus CLI website - progressively adding features as needed.
 
 ## What We're Building
 
-**Goal:** Create a launchable marketing website with complete messaging, features showcase, and clear calls-to-action.
+**Goal:** Create a launchable marketing website with complete messaging, features showcase, and clear calls-to-action - adding styling and components progressively.
 
 **What problem does this solve?**
 - Communicate value proposition clearly to developers
@@ -21,15 +21,17 @@ Building the core marketing content for the Papyrus CLI website.
 - Mobile responsive design
 - Basic SEO optimization
 
+**What makes this different from Phase 0:**
+- We'll install packages ONLY when we need them
+- Each dependency is motivated by a concrete requirement
+- You'll understand WHY each tool is necessary
+
 ---
 
 ## Architecture
 
 ```
 Home Page Structure:
-┌─────────────────────────────────────────────────────────┐
-│                       Header (Future)                    │
-└─────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │                      Hero Section                        │
 │  - ASCII Logo                                            │
@@ -61,190 +63,638 @@ Home Page Structure:
 │  - Copyright & License                                   │
 └─────────────────────────────────────────────────────────┘
 
-Component Architecture:
+Component Architecture (built progressively):
 app/
 └── page.tsx (orchestrates sections)
 
 components/
 ├── sections/
-│   ├── hero.tsx           # Hero with CTAs
-│   ├── features.tsx       # 6 feature cards
-│   ├── quick-start.tsx    # Install guide
-│   └── site-footer.tsx    # Footer links
+│   ├── hero.tsx           # Step 5
+│   ├── features.tsx       # Step 8
+│   ├── quick-start.tsx    # Step 10
+│   └── site-footer.tsx    # Step 11
 └── shared/
-    ├── copy-button.tsx    # Copy-to-clipboard
-    └── code-block.tsx     # Syntax highlighted code
+    ├── copy-button.tsx    # Step 9
+    └── code-block.tsx     # Step 10
+
+(shadcn/ui components installed as needed)
 ```
-
-**Why this architecture:**
-- **Section-based** - Each section is isolated and reusable
-- **Component separation** - Shared components in `shared/`
-- **Mobile-first** - Responsive grid and stacking
-- **Progressive disclosure** - Hero → Features → How to start
-- **Clear CTAs** - Multiple paths to install
-
-**Trade-offs considered:**
-- Static content vs CMS: Static is simpler for MVP
-- Single page vs multi-page: Single page for marketing simplicity
-- Animations: Deferred to Phase 2 for faster MVP
 
 ---
 
 ## Prerequisites
 
 **Required:**
-- Phase 0 completed (foundation setup)
-- Dev server running: `pnpm dev`
-- shadcn/ui initialized
-- Tailwind configured
+- Phase 0 completed (basic Next.js app running and deployed)
+- Dev server can start: `pnpm dev` (from `packages/web`)
+- Understanding of React functional components
+- Basic Tailwind CSS knowledge
 
 **Assumed knowledge:**
 - React functional components
-- Tailwind CSS classes
 - TypeScript interfaces
-- Next.js App Router
-
-**Nice to have:**
-- Figma/design tools (for visual planning)
-- Content writing skills
-- Basic accessibility knowledge
+- Next.js App Router basics
 
 ---
 
 ## Implementation
 
-### Step 1: Install Required shadcn/ui Components
+### Step 1: Add Tailwind CSS
 
-**Goal:** Add the UI primitives we'll need for the content sections.
+**Goal:** Install Tailwind CSS for styling.
+
+**Why now?** We're about to build actual UI components. We need a styling solution.
+
+#### A. Install Tailwind and Dependencies
+
+From `packages/web`:
 
 ```bash
-cd packages/web
+pnpm add tailwindcss postcss autoprefixer
+```
 
-# Install components we'll use
-npx shadcn@latest add card
-npx shadcn@latest add button
-npx shadcn@latest add separator
+**What these packages do:**
+- **tailwindcss** - Utility-first CSS framework
+- **postcss** - CSS processor (Tailwind requires it)
+- **autoprefixer** - Adds vendor prefixes automatically
+
+#### B. Initialize Tailwind Config
+
+```bash
+npx tailwindcss init -p
 ```
 
 This creates:
-- `components/ui/card.tsx` - For feature cards
-- `components/ui/button.tsx` - For CTAs
-- `components/ui/separator.tsx` - For visual dividers
+- `tailwind.config.js` - Tailwind configuration
+- `postcss.config.js` - PostCSS configuration
 
-**Why these components:**
-- Card: Accessible, styled containers for features
-- Button: Consistent button styling across site
-- Separator: Visual breaks between sections
+#### C. Configure Tailwind
 
----
+Update `packages/web/tailwind.config.js`:
 
-### Step 2: Create Copy Button Component
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
 
-**Goal:** Build a reusable copy-to-clipboard button for code snippets.
+**Why these settings:**
+- **content** - Tell Tailwind where to look for classes
+- **extend** - We'll add custom colors next step
+- **plugins** - None needed yet
 
-Create `packages/web/components/shared/copy-button.tsx`:
+#### D. Create Global CSS
+
+Create `packages/web/app/globals.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+**What this does:**
+- Imports Tailwind's base styles, component classes, and utilities
+
+#### E. Import Global CSS
+
+Update `packages/web/app/layout.tsx`:
 
 ```typescript
-"use client";
+import type { Metadata } from "next";
+import "./globals.css";
 
-import { useState } from "react";
-import { Check, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
+export const metadata: Metadata = {
+  title: "Papyrus - AI-Powered Journaling for Developers",
+  description: "Journal like you code. Capture your thoughts right in your terminal.",
+};
 
-interface CopyButtonProps {
-  text: string;
-  className?: string;
-}
-
-export function CopyButton({ text, className }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <Button
-      size="sm"
-      variant="ghost"
-      onClick={handleCopy}
-      className={className}
-      aria-label="Copy to clipboard"
-    >
-      {copied ? (
-        <>
-          <Check className="h-4 w-4 mr-2" />
-          Copied!
-        </>
-      ) : (
-        <>
-          <Copy className="h-4 w-4 mr-2" />
-          Copy
-        </>
-      )}
-    </Button>
+    <html lang="en">
+      <body>{children}</body>
+    </html>
   );
 }
 ```
 
-**Why this component:**
-- **Client-side** - Uses browser clipboard API
-- **Visual feedback** - Shows "Copied!" for 2 seconds
-- **Accessible** - Includes ARIA label
-- **Reusable** - Works for any text snippet
+**Test it:**
 
----
+```bash
+# From packages/web
+pnpm dev
+```
 
-### Step 3: Create Code Block Component
+The page should still load. Let's add some basic Tailwind classes to verify it works:
 
-**Goal:** Build a syntax-highlighted code block with copy button.
-
-Create `packages/web/components/shared/code-block.tsx`:
+Update `packages/web/app/page.tsx`:
 
 ```typescript
-import { CopyButton } from "./copy-button";
-
-interface CodeBlockProps {
-  code: string;
-  language?: string;
-  showLineNumbers?: boolean;
-}
-
-export function CodeBlock({ code, language = "bash", showLineNumbers = false }: CodeBlockProps) {
+export default function Home() {
   return (
-    <div className="relative group">
-      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <CopyButton text={code} />
-      </div>
-      <pre className="bg-terminal-darkgray border border-terminal-gray rounded-lg p-4 overflow-x-auto">
-        <code className={`language-${language} text-terminal-green font-mono text-sm`}>
-          {code}
-        </code>
-      </pre>
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <h1 className="text-4xl font-bold mb-4">PAPYRUS</h1>
+      <p className="text-xl mb-2">AI-Powered Journaling for Developers</p>
+      <p className="text-lg text-gray-600 mb-4">Journal like you code. Right in your terminal.</p>
+      <code className="bg-gray-100 px-4 py-2 rounded">npm install -g @rewrlution/papyrus-cli</code>
+    </main>
   );
 }
 ```
 
-**Why this component:**
-- **Terminal styling** - Matches CLI aesthetic
-- **Copy button** - Shows on hover
-- **Responsive** - Scrolls horizontally on mobile
-- **Simple** - No heavy syntax highlighter for MVP (Shiki in Phase 2)
+Open `http://localhost:3000` - you should see centered, styled text!
 
 ---
 
-### Step 4: Create Hero Section
+### Step 2: Add Terminal Color Palette
 
-**Goal:** Build the hero section with headline, CTAs, and ASCII logo.
+**Goal:** Configure dark terminal-inspired colors.
+
+**Why now?** We want a terminal aesthetic for our CLI marketing site.
+
+Update `packages/web/tailwind.config.js`:
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: "class",
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        terminal: {
+          black: "#0a0a0a",
+          darkgray: "#1a1a1a",
+          gray: "#2a2a2a",
+          lightgray: "#666666",
+          text: "#e0e0e0",
+          green: "#00ff00",
+          cyan: "#00d9ff",
+          yellow: "#ffdd00",
+          red: "#ff4444",
+        },
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+**Why these colors:**
+- Dark backgrounds (terminal black/gray)
+- Cyan primary color (terminal aesthetic)
+- High contrast for accessibility
+- Terminal green for success states
+
+Update `packages/web/app/globals.css` to add dark theme base styles:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-terminal-black text-terminal-text;
+  }
+}
+```
+
+Update `packages/web/app/page.tsx` to use terminal colors:
+
+```typescript
+export default function Home() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <h1 className="text-4xl font-bold mb-4 text-terminal-cyan">PAPYRUS</h1>
+      <p className="text-xl mb-2 text-terminal-text">AI-Powered Journaling for Developers</p>
+      <p className="text-lg text-terminal-lightgray mb-4">Journal like you code. Right in your terminal.</p>
+      <code className="bg-terminal-darkgray text-terminal-green px-4 py-2 rounded border border-terminal-gray">
+        npm install -g @rewrlution/papyrus-cli
+      </code>
+    </main>
+  );
+}
+```
+
+**Test it:** Reload `http://localhost:3000` - should now have dark background with terminal colors!
+
+---
+
+### Step 3: Add Geist Fonts
+
+**Goal:** Install Geist Sans and Geist Mono fonts.
+
+**Why now?** We want professional typography. Geist fonts are modern, optimized, and free from Vercel.
+
+Install the font package:
+
+```bash
+pnpm add geist
+```
+
+Update `packages/web/app/layout.tsx`:
+
+```typescript
+import type { Metadata } from "next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Papyrus - AI-Powered Journaling for Developers",
+  description: "Journal like you code. Capture your thoughts right in your terminal.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className="dark">
+      <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+Update `tailwind.config.js` to use the font variables:
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: "class",
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        terminal: {
+          black: "#0a0a0a",
+          darkgray: "#1a1a1a",
+          gray: "#2a2a2a",
+          lightgray: "#666666",
+          text: "#e0e0e0",
+          green: "#00ff00",
+          cyan: "#00d9ff",
+          yellow: "#ffdd00",
+          red: "#ff4444",
+        },
+      },
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "monospace"],
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+Update `packages/web/app/page.tsx` to use mono font for code:
+
+```typescript
+export default function Home() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <h1 className="text-4xl font-bold mb-4 text-terminal-cyan">PAPYRUS</h1>
+      <p className="text-xl mb-2 text-terminal-text">AI-Powered Journaling for Developers</p>
+      <p className="text-lg text-terminal-lightgray mb-4">Journal like you code. Right in your terminal.</p>
+      <code className="bg-terminal-darkgray text-terminal-green px-4 py-2 rounded border border-terminal-gray font-mono">
+        npm install -g @rewrlution/papyrus-cli
+      </code>
+    </main>
+  );
+}
+```
+
+**Test it:** Fonts should now look better and code should use monospace!
+
+---
+
+### Step 4: Add Utility Functions
+
+**Goal:** Create the `cn()` helper for merging Tailwind classes.
+
+**Why now?** We're about to build components that need conditional class merging.
+
+Install dependencies:
+
+```bash
+pnpm add clsx tailwind-merge
+```
+
+**What these do:**
+- **clsx** - Conditional class names helper
+- **tailwind-merge** - Intelligently merges Tailwind classes
+
+Create `packages/web/lib/utils.ts`:
+
+```typescript
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Merges class names with Tailwind-aware deduplication
+ * Example: cn("text-red-500", "text-blue-500") → "text-blue-500"
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+Update `tsconfig.json` to ensure the lib path alias works:
+
+The `@/*` path alias is already configured, so `@/lib/utils` will work!
+
+---
+
+### Step 5: Create Component Directories
+
+**Goal:** Set up the folder structure for sections and shared components.
+
+**Why now?** We're about to build our first section (Hero).
+
+From `packages/web`:
+
+```bash
+mkdir -p components/sections
+mkdir -p components/shared
+```
+
+---
+
+### Step 6: Install shadcn/ui and Button Component
+
+**Goal:** Set up shadcn/ui and install the Button component.
+
+**Why now?** The Hero section needs a GitHub button (CTA).
+
+#### A. Install Required Dependencies
+
+```bash
+pnpm add class-variance-authority
+```
+
+**What this does:**
+- **class-variance-authority** - Type-safe component variants (required by shadcn)
+
+#### B. Create shadcn UI Config
+
+Create `packages/web/components.json`:
+
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "app/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}
+```
+
+#### C. Add CSS Variables for shadcn
+
+Update `packages/web/app/globals.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 88%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 88%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 88%;
+    --primary: 180 100% 44%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 88%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 60 100% 56%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 0 100% 63%;
+    --destructive-foreground: 0 0% 88%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 44%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-terminal-black text-terminal-text;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+```
+
+Update `tailwind.config.js` to include shadcn colors:
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: "class",
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        terminal: {
+          black: "#0a0a0a",
+          darkgray: "#1a1a1a",
+          gray: "#2a2a2a",
+          lightgray: "#666666",
+          text: "#e0e0e0",
+          green: "#00ff00",
+          cyan: "#00d9ff",
+          yellow: "#ffdd00",
+          red: "#ff4444",
+        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "monospace"],
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+#### D. Install Button Component
+
+Create `packages/web/components/ui` directory:
+
+```bash
+mkdir -p components/ui
+```
+
+Create `packages/web/components/ui/button.tsx`:
+
+```typescript
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = "button"
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
+
+export { Button, buttonVariants }
+```
+
+**Why this approach:**
+- Copy-paste component (no library dependency)
+- Type-safe with TypeScript
+- Flexible variants (outline, ghost, sizes)
+- Accessible by default
+
+---
+
+### Step 7: Build Hero Section
+
+**Goal:** Create the hero section with ASCII logo and CTAs.
+
+**Why now?** This is the first thing visitors see - most important section.
+
+Install lucide-react for icons:
+
+```bash
+pnpm add lucide-react
+```
+
+**Why lucide-react:**
+- Tree-shakeable (only import icons you use)
+- Consistent terminal-friendly style
+- TypeScript support
 
 Create `packages/web/components/sections/hero.tsx`:
 
 ```typescript
 import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/shared/code-block";
 import { Github } from "lucide-react";
 
 export function Hero() {
@@ -273,7 +723,11 @@ export function Hero() {
 
         {/* Primary CTA: Install Command */}
         <div className="max-w-2xl mx-auto">
-          <CodeBlock code="npm install -g @rewrlution/papyrus-cli" />
+          <div className="bg-terminal-darkgray border border-terminal-gray rounded-lg p-6">
+            <code className="text-terminal-green font-mono">
+              npm install -g @rewrlution/papyrus-cli
+            </code>
+          </div>
         </div>
 
         {/* Secondary CTA: GitHub */}
@@ -300,19 +754,100 @@ export function Hero() {
 }
 ```
 
-**Why this design:**
-- **ASCII logo** - Recognizable brand identity
-- **Clear value prop** - "Journal Like You Code" is memorable
-- **Immediate action** - Install command front and center
-- **Social proof** - GitHub link for credibility
-- **Responsive** - Text scales on mobile
-- **Terminal aesthetic** - Cyan, dark background, mono font
+Update `packages/web/app/page.tsx` to use Hero:
+
+```typescript
+import { Hero } from "@/components/sections/hero";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen">
+      <Hero />
+    </main>
+  );
+}
+```
+
+**Test it:** The hero section should now display with ASCII logo, headline, install command, and GitHub button!
 
 ---
 
-### Step 5: Create Features Section
+### Step 8: Install Card Component and Build Features Section
 
-**Goal:** Build the features grid with 6 cards showcasing key capabilities.
+**Goal:** Build the features grid with 6 feature cards.
+
+**Why now?** Features showcase is core messaging.
+
+Create `packages/web/components/ui/card.tsx`:
+
+```typescript
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
+
+const CardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
+
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
+
+export { Card, CardHeader, CardTitle, CardDescription, CardContent }
+```
 
 Create `packages/web/components/sections/features.tsx`:
 
@@ -401,18 +936,116 @@ export function Features() {
 }
 ```
 
-**Why this design:**
-- **6 key features** - Not overwhelming, covers main value props
-- **Icons** - Visual anchors from lucide-react (terminal-friendly)
-- **Grid layout** - 3 cols desktop, 2 tablet, 1 mobile
-- **Hover effect** - Border changes to cyan (interactive feedback)
-- **Clear descriptions** - Benefits, not just features
+Update `packages/web/app/page.tsx`:
+
+```typescript
+import { Hero } from "@/components/sections/hero";
+import { Features } from "@/components/sections/features";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen">
+      <Hero />
+      <Features />
+    </main>
+  );
+}
+```
+
+**Test it:** Features grid should display with 6 cards, icons, and hover effects!
 
 ---
 
-### Step 6: Create Quick Start Section
+### Step 9: Create Copy Button Component
 
-**Goal:** Build the installation and onboarding guide.
+**Goal:** Build a reusable copy-to-clipboard button.
+
+**Why now?** Quick Start section needs copy functionality for code blocks.
+
+Create `packages/web/components/shared/copy-button.tsx`:
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface CopyButtonProps {
+  text: string;
+  className?: string;
+}
+
+export function CopyButton({ text, className }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={handleCopy}
+      className={className}
+      aria-label="Copy to clipboard"
+    >
+      {copied ? (
+        <>
+          <Check className="h-4 w-4 mr-2" />
+          Copied!
+        </>
+      ) : (
+        <>
+          <Copy className="h-4 w-4 mr-2" />
+          Copy
+        </>
+      )}
+    </Button>
+  );
+}
+```
+
+**Why "use client":**
+- Uses browser clipboard API (client-side only)
+- Uses React hooks (useState)
+
+---
+
+### Step 10: Create Code Block and Quick Start Section
+
+**Goal:** Build code blocks with copy buttons and the Quick Start guide.
+
+**Why now?** We need to show installation instructions.
+
+Create `packages/web/components/shared/code-block.tsx`:
+
+```typescript
+import { CopyButton } from "./copy-button";
+
+interface CodeBlockProps {
+  code: string;
+  language?: string;
+}
+
+export function CodeBlock({ code, language = "bash" }: CodeBlockProps) {
+  return (
+    <div className="relative group">
+      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton text={code} />
+      </div>
+      <pre className="bg-terminal-darkgray border border-terminal-gray rounded-lg p-4 overflow-x-auto">
+        <code className={`language-${language} text-terminal-green font-mono text-sm`}>
+          {code}
+        </code>
+      </pre>
+    </div>
+  );
+}
+```
 
 Create `packages/web/components/sections/quick-start.tsx`:
 
@@ -528,18 +1161,54 @@ export function QuickStart() {
 }
 ```
 
-**Why this design:**
-- **Multiple package managers** - Supports npm, pnpm, yarn
-- **Step-by-step guide** - 4 clear steps to get started
-- **Visual hierarchy** - Numbered steps with icons
-- **Code blocks** - Every command is copy-able
-- **System requirements** - Sets expectations
+Update `packages/web/app/page.tsx`:
+
+```typescript
+import { Hero } from "@/components/sections/hero";
+import { Features } from "@/components/sections/features";
+import { QuickStart } from "@/components/sections/quick-start";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen">
+      <Hero />
+      <Features />
+      <QuickStart />
+    </main>
+  );
+}
+```
+
+**Test it:** Quick Start section should display with copy buttons that work on hover!
 
 ---
 
-### Step 7: Create Footer Section
+### Step 11: Install Separator and Build Footer
 
-**Goal:** Build the footer with links, contact, and legal info.
+**Goal:** Create the site footer with links and copyright.
+
+**Why now?** Complete the page with footer links and legal info.
+
+Create `packages/web/components/ui/separator.tsx`:
+
+```typescript
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Separator = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("shrink-0 bg-border h-[1px] w-full", className)}
+    {...props}
+  />
+))
+Separator.displayName = "Separator"
+
+export { Separator }
+```
 
 Create `packages/web/components/sections/site-footer.tsx`:
 
@@ -653,19 +1322,6 @@ export function SiteFooter() {
 }
 ```
 
-**Why this design:**
-- **Organized links** - Product and Resources sections
-- **Social icons** - GitHub and email
-- **Brand identity** - Papyrus logo and tagline
-- **Legal info** - Copyright and license
-- **Hover effects** - Links change to cyan
-
----
-
-### Step 8: Update Home Page
-
-**Goal:** Compose all sections into the main page.
-
 Update `packages/web/app/page.tsx`:
 
 ```typescript
@@ -686,19 +1342,17 @@ export default function Home() {
 }
 ```
 
-**Why this structure:**
-- **Clean composition** - Each section is self-contained
-- **Easy to reorder** - Just swap import order
-- **Easy to test** - Each section can be tested independently
-- **Easy to extend** - Add new sections without touching others
+**Test it:** Complete page should now display with footer!
 
 ---
 
-### Step 9: Update SEO Metadata
+### Step 12: Enhance SEO Metadata
 
-**Goal:** Enhance the metadata in the root layout for better SEO.
+**Goal:** Improve metadata for better search engine optimization.
 
-Update `packages/web/app/layout.tsx` to improve the metadata:
+**Why now?** We're ready to launch - need good SEO.
+
+Update `packages/web/app/layout.tsx`:
 
 ```typescript
 import type { Metadata } from "next";
@@ -731,16 +1385,13 @@ export const metadata: Metadata = {
       "Journal like you code. Terminal-based journaling with vim-style navigation, cloud sync, and local markdown storage.",
     type: "website",
     locale: "en_US",
-    url: "https://papyrus.dev", // Update with actual domain
+    url: "https://papyrus.dev",
     siteName: "Papyrus",
   },
   twitter: {
     card: "summary_large_image",
     title: "Papyrus - AI-Powered Journaling for Developers",
     description: "Journal like you code. Terminal-based journaling tool for developers.",
-    // Add when available:
-    // images: ["/og-image.png"],
-    // creator: "@papyrusdev",
   },
   viewport: {
     width: "device-width",
@@ -756,11 +1407,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
-  },
-  icons: {
-    icon: "/favicon.ico",
-    // Add more when available:
-    // apple: "/apple-touch-icon.png",
   },
 };
 
@@ -781,257 +1427,69 @@ export default function RootLayout({
 }
 ```
 
-**Why these improvements:**
-- **Better description** - More keywords naturally integrated
-- **Open Graph** - Better social media previews
-- **Twitter Card** - Optimized for Twitter sharing
-- **Robots meta** - Explicit crawling instructions
-- **Rich keywords** - SEO-friendly terms
-
 ---
 
-### Step 10: Add Favicon
+### Step 13: Test Complete Site
 
-**Goal:** Create a simple favicon for browser tabs.
+**Goal:** Verify everything works together.
 
-For MVP, create a simple text-based favicon. Create `packages/web/app/favicon.ico`:
-
-Option 1: Use an online generator (quickest):
-1. Go to [favicon.io](https://favicon.io/favicon-generator/)
-2. Settings:
-   - Text: "P"
-   - Background: #0a0a0a (terminal black)
-   - Font Color: #00d9ff (terminal cyan)
-   - Font: Monospace
-   - Size: 64
-3. Download and place in `packages/web/app/favicon.ico`
-
-Option 2: Use existing CLI logo:
-- Take a screenshot of the ASCII logo
-- Crop to square
-- Resize to 64x64
-- Convert to .ico format
-
-**Why a favicon:**
-- Brand recognition in browser tabs
-- Professional appearance
-- Helps users find the tab
-
----
-
-### Step 11: Test Responsive Design
-
-**Goal:** Verify the site works on all screen sizes.
-
-Test on different viewports:
+From `packages/web`:
 
 ```bash
-# Start dev server
+# Test development
 pnpm dev
 ```
 
 Open `http://localhost:3000` and test:
 
-**Desktop (1920x1080):**
-- [ ] Features grid shows 3 columns
-- [ ] Text is readable (not too large)
-- [ ] Hero logo is appropriately sized
-- [ ] All sections have proper spacing
+**Visual checklist:**
+- [ ] Hero section displays with ASCII logo
+- [ ] Features grid shows 6 cards with icons
+- [ ] Quick Start shows installation commands
+- [ ] Footer displays with links
+- [ ] Dark theme throughout
+- [ ] Fonts render correctly (Geist Sans/Mono)
+- [ ] Colors match terminal palette
 
-**Tablet (768x1024):**
-- [ ] Features grid shows 2 columns
-- [ ] Quick start shows 2 columns
-- [ ] Font sizes scale down
-- [ ] No horizontal scroll
+**Functional checklist:**
+- [ ] Copy buttons work on hover
+- [ ] GitHub link opens in new tab
+- [ ] All sections are responsive (test mobile)
+- [ ] No console errors
 
-**Mobile (375x667):**
-- [ ] Features grid shows 1 column (stacked)
-- [ ] Quick start shows 1 column
-- [ ] ASCII logo scales or scrolls
-- [ ] Buttons are tap-friendly (44px min)
-- [ ] No text overflow
-
-Use browser DevTools:
-1. Open DevTools (F12)
-2. Click device toolbar icon
-3. Test on iPhone SE, iPhone 12, iPad, Desktop
-
-**Common fixes:**
-- Text too small on mobile: Increase base font size
-- Horizontal scroll: Check for fixed widths, use `max-w-*` instead
-- Buttons too small: Use `size="lg"` on mobile
-- ASCII logo breaks: Wrap in `overflow-x-auto`
-
----
-
-### Step 12: Accessibility Audit
-
-**Goal:** Ensure the site is accessible to all users.
-
-**Manual checks:**
-
-1. **Keyboard navigation:**
-   - Tab through all interactive elements
-   - Links and buttons should have visible focus
-   - No keyboard traps
-
-2. **Screen reader:**
-   - Install screen reader (NVDA on Windows, VoiceOver on Mac)
-   - Navigate with screen reader
-   - All images should have alt text (when added)
-   - Links should have descriptive text
-
-3. **Color contrast:**
-   - Use [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
-   - Text on background should be WCAG AA compliant (4.5:1 ratio)
-   - Our terminal colors should pass:
-     - #e0e0e0 on #0a0a0a: Pass ✓
-     - #00d9ff on #0a0a0a: Check manually
-
-**Automated checks:**
-
-Install Lighthouse:
-```bash
-# Lighthouse is built into Chrome DevTools
-# Or install CLI:
-npm install -g lighthouse
-
-# Run audit
-lighthouse http://localhost:3000 --view
-```
-
-Target scores:
-- Accessibility: 90+
-- Best Practices: 90+
-- SEO: 90+
-- Performance: 80+ (will improve in Phase 2)
-
-**Common accessibility issues:**
-- Missing alt text on images (add when images are added)
-- Insufficient color contrast (adjust if needed)
-- Missing ARIA labels (add to icon buttons)
-- Heading hierarchy skipped (ensure h1 → h2 → h3 order)
-
----
-
-### Step 13: Performance Check
-
-**Goal:** Ensure fast load times.
-
-**Test page load:**
+**Build test:**
 
 ```bash
-# Build for production
 pnpm build
-
-# Start production server
-pnpm start
-
-# Open http://localhost:3000
 ```
 
-**Metrics to check:**
-- **First Contentful Paint (FCP):** < 1.8s (good)
-- **Largest Contentful Paint (LCP):** < 2.5s (good)
-- **Time to Interactive (TTI):** < 3.8s (good)
-- **Cumulative Layout Shift (CLS):** < 0.1 (good)
-
-**Use Chrome DevTools:**
-1. Open DevTools → Performance tab
-2. Click Record
-3. Reload page
-4. Stop recording
-5. Review metrics
-
-**Common performance issues:**
-- Large JavaScript bundles: Check bundle size with `pnpm build`
-- Render-blocking resources: Ensure fonts are optimized
-- Large images: Optimize before adding (Phase 2)
-
-**For MVP:**
-- Bundle size should be < 200KB
-- Page should load in < 2 seconds
+Should build successfully with no errors.
 
 ---
 
-### Step 14: Build and Test Production
-
-**Goal:** Verify the production build works perfectly.
-
-```bash
-cd packages/web
-
-# Clean previous builds
-rm -rf .next
-
-# Build for production
-pnpm build
-
-# Check for errors
-# Should see:
-# ✓ Generating static pages
-# ✓ Finalizing page optimization
-
-# Preview production build
-pnpm start
-
-# Open http://localhost:3000
-```
-
-**Production checklist:**
-- [ ] No build errors
-- [ ] No TypeScript errors
-- [ ] No lint warnings
-- [ ] All pages generate successfully
-- [ ] Site loads fast
-- [ ] All links work
-- [ ] Copy buttons work
-- [ ] Styles render correctly
-- [ ] Fonts load
-
----
-
-### Step 15: Deploy to Vercel
+### Step 14: Deploy to Production
 
 **Goal:** Push to production.
 
+From monorepo root:
+
 ```bash
-# From monorepo root
-git add .
+git add packages/web
 git commit -m "feat(web): complete Phase 1 MVP content
 
-- Add Hero section with ASCII logo and CTAs
-- Add Features grid with 6 key features
-- Add Quick Start guide with install steps
-- Add Footer with links and contact
-- Implement copy-to-clipboard for code blocks
-- Add responsive design for mobile/tablet/desktop
-- Improve SEO metadata and Open Graph tags
-- Ensure accessibility (WCAG AA)"
+- Add Tailwind CSS with terminal color palette
+- Add Geist fonts for typography
+- Implement Hero section with ASCII logo and CTAs
+- Build Features grid with 6 key features
+- Create Quick Start guide with copy-to-clipboard
+- Add Footer with links and contact info
+- Enhance SEO metadata
+- All components built progressively"
 
 git push origin your-branch-name
 ```
 
-Vercel will automatically:
-1. Detect the push
-2. Start a new deployment
-3. Build the site
-4. Deploy to preview URL
-5. Show status in GitHub (if connected)
-
-**Check deployment:**
-1. Go to Vercel dashboard
-2. Find your project
-3. Click latest deployment
-4. Check build logs
-5. Visit preview URL
-6. Test all functionality
-
-**If deployment fails:**
-- Check build logs for errors
-- Verify `next.config.js` is correct
-- Ensure all imports are correct
-- Check environment variables (if any)
+Vercel will automatically deploy. Check the dashboard for deployment status and URL.
 
 ---
 
@@ -1039,283 +1497,89 @@ Vercel will automatically:
 
 ### Manual Testing Checklist
 
-**Visual Testing:**
+**Visual:**
 - [ ] Hero section renders correctly
-- [ ] ASCII logo is cyan and centered
+- [ ] ASCII logo is cyan and visible
 - [ ] Features grid shows all 6 cards
 - [ ] Icons render correctly
-- [ ] Quick start shows all 4 steps
+- [ ] Quick start shows all steps
 - [ ] Footer has all links
-- [ ] Colors match terminal palette
-- [ ] Fonts are Geist Sans/Mono
+- [ ] Terminal colors throughout
 
-**Functional Testing:**
-- [ ] Copy buttons work (install commands)
+**Functional:**
+- [ ] Copy buttons work
 - [ ] Copy shows "Copied!" feedback
 - [ ] GitHub link opens in new tab
-- [ ] All footer links work
-- [ ] External links have rel="noopener"
+- [ ] All links work
 - [ ] No console errors
 
-**Responsive Testing:**
-- [ ] Desktop (1920x1080): 3-column grid
+**Responsive:**
+- [ ] Desktop (1920x1080): 3-column features grid
 - [ ] Tablet (768x1024): 2-column grid
 - [ ] Mobile (375x667): 1-column stack
-- [ ] ASCII logo responsive
 - [ ] No horizontal scroll
 - [ ] Touch targets ≥ 44px
 
-**Cross-Browser Testing:**
-- [ ] Chrome/Edge (latest)
-- [ ] Firefox (latest)
-- [ ] Safari (latest)
-- [ ] Mobile Safari (iOS)
-- [ ] Chrome Android
-
-**Performance Testing:**
-- [ ] Lighthouse score ≥ 80
+**Performance:**
 - [ ] Page loads < 2 seconds
-- [ ] Bundle size < 200KB
+- [ ] Lighthouse score ≥ 80
 - [ ] No render-blocking resources
 
-**SEO Testing:**
-- [ ] Meta title correct
-- [ ] Meta description correct
-- [ ] Open Graph tags present
-- [ ] Twitter Card tags present
-- [ ] Favicon displays
-
 ---
 
-## Common Issues
+## What We Accomplished
 
-### Issue: Copy button doesn't work
+Phase 1 is complete! You now have:
+- ✅ Complete marketing website
+- ✅ Tailwind CSS with terminal color palette
+- ✅ Geist fonts for typography
+- ✅ shadcn/ui components (Button, Card, Separator)
+- ✅ lucide-react icons
+- ✅ Hero with clear value proposition
+- ✅ Features showcase (6 cards)
+- ✅ Quick start guide with copy-to-clipboard
+- ✅ Professional footer
+- ✅ Responsive design
+- ✅ Enhanced SEO
+- ✅ Live on Vercel
 
-**Why it happens:**
-Browser clipboard API not available (HTTP instead of HTTPS, or old browser).
-
-**Solution:**
-- Test on HTTPS (production)
-- Or test localhost (clipboard API works on localhost)
-- Add fallback for old browsers:
-
-```typescript
-const handleCopy = async () => {
-  try {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-  } catch (err) {
-    // Fallback: select text
-    console.error("Copy failed", err);
-  }
-};
-```
-
----
-
-### Issue: Features grid not responsive
-
-**Why it happens:**
-Tailwind responsive classes not applying correctly.
-
-**Solution:**
-Check Tailwind config `content` paths:
-```typescript
-content: [
-  "./app/**/*.{ts,tsx}",
-  "./components/**/*.{ts,tsx}",
-],
-```
-
-Restart dev server after changing config.
-
----
-
-### Issue: Fonts not loading
-
-**Why it happens:**
-Geist fonts not installed or imported incorrectly.
-
-**Solution:**
-```bash
-# Install geist package
-pnpm add geist
-
-# Verify import in layout.tsx
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
-
-# Verify CSS variables in tailwind.config.ts
-fontFamily: {
-  sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-  mono: ["var(--font-geist-mono)", "monospace"],
-},
-```
-
----
-
-### Issue: Build fails with "Cannot find module"
-
-**Why it happens:**
-Import path is wrong or file doesn't exist.
-
-**Solution:**
-- Check file path is correct (case-sensitive)
-- Ensure `@/` alias is configured in tsconfig.json
-- Verify all files are created
-- Restart TypeScript server in IDE
-
----
-
-### Issue: ASCII logo overflows on mobile
-
-**Why it happens:**
-Fixed font size too large for small screens.
-
-**Solution:**
-Add responsive font sizes and horizontal scroll:
-```typescript
-<pre className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl overflow-x-auto">
-```
-
-Or simplify logo on mobile:
-```typescript
-{/* Mobile: Short version */}
-<div className="block sm:hidden">
-  <div className="text-4xl font-bold font-mono text-terminal-cyan">
-    PAPYRUS
-  </div>
-</div>
-
-{/* Desktop: Full ASCII */}
-<pre className="hidden sm:block text-6xl ...">
-  {/* Full ASCII art */}
-</pre>
-```
-
----
-
-### Issue: Links not working after build
-
-**Why it happens:**
-Static export doesn't support `<Link>` for external URLs.
-
-**Solution:**
-Use `<a>` tags for external links:
-```typescript
-// External link: use <a>
-<a href="https://github.com/..." target="_blank" rel="noopener noreferrer">
-  GitHub
-</a>
-
-// Internal link: use Next.js <Link>
-import Link from "next/link";
-<Link href="/about">About</Link>
-```
-
----
-
-## Enhancements (Optional)
-
-These can be added later if needed:
-
-1. **Smooth Scroll:**
-   ```typescript
-   // Add to globals.css
-   html {
-     scroll-behavior: smooth;
-   }
-   ```
-
-2. **Who's It For Section:**
-   - Add 3 persona cards (Terminal Devotee, Privacy-Conscious, Reflective Engineer)
-   - Similar structure to features grid
-
-3. **Comparison Table:**
-   - Papyrus vs Notion/Obsidian/Day One
-   - Shows competitive advantages
-
-4. **Stats Section:**
-   - npm downloads
-   - GitHub stars
-   - Number of journals created
-   - (Requires API integration)
-
-5. **Newsletter Signup:**
-   - Email capture form
-   - Mailchimp/ConvertKit integration
-
-6. **Blog Section:**
-   - Add `/blog` route
-   - Use MDX for blog posts
-   - RSS feed
+**More importantly, you learned:**
+- ✅ WHY each dependency is needed
+- ✅ WHEN to install packages (progressive disclosure)
+- ✅ HOW each tool contributes to the final product
 
 ---
 
 ## Next Steps
 
-Phase 1 is complete! You now have:
-- ✅ Complete marketing website
-- ✅ Hero with clear value proposition
-- ✅ Features showcase (6 cards)
-- ✅ Quick start guide
-- ✅ Professional footer
-- ✅ Copy-to-clipboard functionality
-- ✅ Responsive design
-- ✅ Basic SEO
-- ✅ Live on Vercel
+**Phase 2: Visual Polish & Motion** - Add animations and terminal recordings
 
-**What's next:**
+In Phase 2, we'll add:
+1. Terminal recordings (asciinema)
+2. Animations (Framer Motion)
+3. Enhanced visuals
+4. Performance optimizations
 
-1. **Share for Feedback:**
-   - Share Vercel URL with users
-   - Post on Twitter/Reddit/HN
-   - Gather feedback on messaging
-
-2. **Phase 2: Visual Polish & Motion:**
-   - Create terminal recordings (asciinema)
-   - Add animations (Framer Motion)
-   - Integrate terminal demos
-   - Enhanced visuals
-
-3. **Phase 3: Growth & Optimization:**
-   - Advanced SEO (sitemap, structured data)
-   - Analytics setup
-   - Additional content sections
-   - Performance optimizations
-
-4. **Iterate Based on Feedback:**
-   - Adjust messaging if needed
-   - Add FAQ if users have questions
-   - Add comparison table if users ask "vs X"
+See plan: `docs/WEB_DEVELOPMENT_PLAN.md`
 
 ---
 
 ## References
 
 ### Official Documentation
-- [Next.js App Router](https://nextjs.org/docs/app)
-- [shadcn/ui Components](https://ui.shadcn.com/docs/components)
 - [Tailwind CSS](https://tailwindcss.com/docs)
-- [Lucide Icons](https://lucide.dev/)
-
-### Design Resources
-- [Terminal Color Palettes](https://terminal.sexy/)
-- [Web Accessibility](https://webaim.org/resources/)
-- [Open Graph Protocol](https://ogp.me/)
-
-### Tools
-- [Lighthouse](https://developers.google.com/web/tools/lighthouse)
-- [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
-- [Favicon Generator](https://favicon.io/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [lucide-react](https://lucide.dev/)
+- [Geist Fonts](https://vercel.com/font)
 
 ### Related Papyrus Docs
-- Development plan: `/docs/WEB_DEVELOPMENT_PLAN.md`
-- Phase 0 tutorial: `/docs/tutorials/web-phase-0-foundation.md`
 - Main README: `/CLAUDE.md`
+- Development plan: `/docs/WEB_DEVELOPMENT_PLAN.md`
+- Tutor principles: `/docs/TUTOR-PRINCIPLES.md`
+- Phase 0 tutorial: `/docs/tutorials/web-phase-0-foundation.md`
 
 ---
 
-**Congratulations!** You've built a complete, launchable marketing website for Papyrus CLI.
+**Congratulations!** You've built a complete marketing website using progressive disclosure.
 
-The site is ready to share with the world. Time to get feedback and start Phase 2! 🚀
+Each dependency was added ONLY when needed, and you understand WHY it's there! 🚀
