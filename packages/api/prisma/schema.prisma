@@ -34,9 +34,10 @@ model User {
   verificationExpiry DateTime? @map("verification_expiry")
 
   // Relations
-  journals    Journal[] @relation("UserJournal")
-  aiUsage     AiUsage[] @relation("UserAiUsage")
-  aiPurchase  AiPurchase[] @relation("UserAiPurchases")
+  journals      Journal[] @relation("UserJournal")
+  aiUsage       AiUsage[] @relation("UserAiUsage")
+  aiTrialUsage  AiTrialUsage[] @relation("UserAiTrialUsage")
+  aiPurchase    AiPurchase[] @relation("UserAiPurchases")
 
   // Indexes
   @@index([email]) // Login queries
@@ -90,8 +91,8 @@ model AiUsage {
   // Primary fields
   id      String @id @default(cuid())
   userId  String @map("user_id")
-  feature String // Feature name: 'standup' | 'promotion' | 'resume' | 'interview'
-  month   String // Month in 'YYYY-MM' format for standup, 'lifetime' for career features
+  feature String // Feature name: 'standup'
+  month   String // Month in 'YYYY-MM' format (e.g., '2026-01')
   count   Int    @default(0) // Number of times feature was used this month
 
   // Relations
@@ -104,15 +105,35 @@ model AiUsage {
 }
 
 // ============================================================================
+// AI Triage Usage Model
+// ============================================================================
+// Tracks lifetime trial usage per user
+// Table: ai_trial_usage
+model AiTrialUsage {
+  id      String  @id @default(cuid())
+  userId  String  @map("user_id")
+  feature String  // 'promotion'
+  usedAt  DateTime  @default(now()) @map("used_at")
+
+  // Relation to User
+  user User @relation("UserAiTrialUsage", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Composite unique constraint (one row per user/feature)
+  @@unique([userId, feature])
+
+  @@map("ai_trial_usage")
+}
+
+// ============================================================================
 // AiPurchase Model
 // ============================================================================
-// Tracks purchase history
+// Tracks premium purchases
 // Table: ai_purchase
 
 model AiPurchase {
   id      String  @id @default(cuid())
   userId  String  @map("user_id")
-  product String  // 'standup-pro' | 'promotion-pro' | 'resume-interview-pro'
+  product String  // 'standup-pro' | 'promotion-pro' | 'interview-pro'
 
   // Purchase metadata
   purchasedAt DateTime  @default(now()) @map("purchased_at")
