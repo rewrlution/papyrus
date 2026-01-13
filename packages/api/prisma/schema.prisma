@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,46 +12,92 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String @id @default(cuid())
-  email         String @unique
-  passwordHash  String // bycrypt hash, which includes SALT
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+// ============================================================================
+// User Model
+// ============================================================================
+// Represents registered users in the system
+// Table: users
 
-  /**
-   * Email verification token is unique
-   * It is an industry practice to just use token to verify emails
-   * In this way, hackers won't be able to probe registered users
-   */
-  verified            Boolean @default(false)
-  verificationToken   String? @unique
-  verificationExpiry  DateTime?
+model User {
+  // Primary fields
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash") // bcrypt hash, which includes SALT
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Email verification fields
+  // Email verification token is unique - industry practice to just use token
+  // This prevents hackers from probing registered users
+  verified           Boolean   @default(false)
+  verificationToken  String?   @unique @map("verification_token")
+  verificationExpiry DateTime? @map("verification_expiry")
 
   // Relations
-  journals  Journal[]
+  journals Journal[] @relation("UserJournal")
+  aiUsage  AiUsage[] @relation("UserAiUsage")
 
-  @@index([email])
-  @@index([verificationToken])
+  // Indexes
+  @@index([email]) // Login queries
+  @@index([verificationToken]) // Email verification queries
+  @@map("users")
 }
 
+// ============================================================================
+// Journal Model
+// ============================================================================
+// Represents daily journal entries (one per user per day)
+// All content is encrypted client-side using AES-256-GCM
+// Table: journals
+
 model Journal {
-  id          String @id @default(cuid())
-  date        String // YYYYMMDD
-  hash        String // sha256 hash of plaintext content
-  ciphertext  String // encrypted content
-  iv          String // init vector
-  authTag     String // auth tag for integrity check
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  // Primary fields
+  id   String @id @default(cuid())
+  date String // YYYYMMDD format
+
+  // Encryption fields (AES-256-GCM)
+  hash       String // SHA-256 hash of plaintext content (for change detection)
+  ciphertext String // Encrypted journal content
+  iv         String // Initialization vector (12 bytes, base64)
+  authTag    String @map("auth_tag") // Authentication tag for integrity check (16 bytes, base64)
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at") // Soft delete timestamp
 
   // Relations
-  userId      String
-  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation("UserJournal", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, date])      // one journal per day per user
-  @@index([userId, date])       // for efficient sort (date is more accurate than createdAt)
-  @@index([userId, updatedAt])  // for efficient sync queries
-  @@index([deletedAt])          // for filtering soft deleted records
+  // Constraints & Indexes
+  @@unique([userId, date]) // One journal per day per user
+  @@index([userId, date]) // Efficient queries for user's journals sorted by date
+  @@index([userId, updatedAt]) // Efficient sync queries (get journals updated after timestamp)
+  @@index([deletedAt]) // Filter out soft-deleted records efficiently
+  @@map("journals")
+}
+
+// ============================================================================
+// AI Usage Model
+// ============================================================================
+// Tracks AI feature usage per user per month
+// Used for rate limiting and analytics
+// Table: ai_usage
+
+model AiUsage {
+  // Primary fields
+  id      String @id @default(cuid())
+  feature String // Feature name: 'standup' | 'promotion' | 'resume' | 'interview'
+  month   String // Month in 'YYYY-MM' format
+  count   Int    @default(0) // Number of times feature was used this month
+
+  // Relations
+  userId String @map("user_id")
+  user   User   @relation("UserAiUsage", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Constraints & Indexes
+  @@unique([userId, feature, month]) // One row per user/feature/month combination
+  @@index([userId, feature, month]) // Fast lookups for rate limiting checks
+  @@map("ai_usage")
 }
