@@ -47,6 +47,10 @@ export const envSchema = z
     AI_MODEL: z.string().default('claude-sonnet-4-5-20250929'),
     AI_MAX_TOKEN: z.coerce.number().default(1024),
     AI_TEMPERATURE: z.coerce.number().min(0).max(1).default(0.7),
+
+    // AI Feature free-tier limits
+    AI_STANDUP_FREE_LIMIT: z.coerce.number().int().positive().default(10),
+    AI_PROMOTION_FREE_LIMIT: z.coerce.number().int().positive().default(1),
   })
   .refine(
     (data) => {
