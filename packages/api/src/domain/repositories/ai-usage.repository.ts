@@ -17,7 +17,7 @@ export const aiUsageRepository = {
   async findUsage(
     userId: string,
     feature: string,
-    month: string // 'YYYY-MM' format
+    month: string // 'YYYY-MM' or 'lifetime'
   ): Promise<AiUsage | null> {
     return prisma.aiUsage.findUnique({
       where: {
