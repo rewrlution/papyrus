@@ -44,13 +44,15 @@ Add database persistence and enforce usage limits for the AI standup feature. Af
 ┌─────────────────────────────────────────────────┐
 │  Phase 3: Database + Usage Limits               │
 ├─────────────────────────────────────────────────┤
-│  1. Prisma models (AiUsage, AiPurchase)         │
+│  1. Prisma models (AiUsage, AiTrialUsage,       │
+│     AiPurchase)                                 │
 │  2. Database migration                          │
 │  3. Repository layer (data access)              │
 │  4. Environment variables for limits            │
-│  5. Usage limiter utility (free first logic)    │
-│  6. Wire usage checks into controller           │
-│  7. Test usage limit enforcement                │
+│  5. Feature config with discriminated unions    │
+│  6. Usage limiter utility (free first logic)    │
+│  7. Wire usage checks into controller           │
+│  8. Test usage limit enforcement                │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -66,16 +68,20 @@ Add database persistence and enforce usage limits for the AI standup feature. Af
 │ UsageLimiter │
 └──────┬───────┘
        │
-       ├─→ 2. Check FREE TIER first (AiUsage)
-       │      └─ Standup: count < 10 this month?
-       │      └─ Career: ever used? (count = 0?)
+       ├─→ 2. Check FREE TIER first
+       │      ├─ Monthly (Standup): Check AiUsage table
+       │      │  └─ count < limit this month?
+       │      ├─ Trial (Promotion): Check AiTrialUsage table
+       │      │  └─ Row exists? (hasUsedTrial)
+       │      └─ None (Resume/Interview): Skip to purchase
        │
        ├─→ 3. If free exhausted, check PURCHASE (AiPurchase)
        │      └─ Has active purchase? (expiresAt > now)
        │
        └─→ 4. Increment usage (only on success)
-              └─ Free tier: increment AiUsage.count
-              └─ Premium: no increment needed (time-based)
+              ├─ Monthly: Increment AiUsage.count
+              ├─ Trial: Create AiTrialUsage record
+              └─ Premium: No increment (time-based)
 ```
 
 ---
@@ -592,9 +598,11 @@ export const env = envSchema.parse(process.env);
 Check Usage Limit
        │
        ├─→ 1. Check FREE TIER first
-       │   ├─→ Standup: count < limit this month?
-       │   ├─→ Career: ever used before? (lifetime count = 0?)
-       │   └─→ If free available: ALLOW (free tier)
+       │   ├─→ Monthly (Standup): Check AiUsage table
+       │   │   └─→ count < limit this month? → ALLOW
+       │   ├─→ Trial (Promotion): Check AiTrialUsage table
+       │   │   └─→ Row exists? If no → ALLOW
+       │   └─→ None (Resume/Interview): Skip to purchase
        │
        └─→ 2. Free exhausted? Check PURCHASE
            ├─→ Active purchase? (expiresAt > now)
@@ -1011,7 +1019,7 @@ Tomorrow: Work on API rate limiting feature. Need to design the Redis caching la
 1. **Check usage before streaming** - Return 429 if limit exceeded
 2. **Increment after success only** - Pass `usageInfo` to know if free or premium
 3. **Updated usage response** - Shows tier, used, limit, and reset/expiry info
-4. **Better error messages** - Different messages for monthly vs lifetime features
+4. **Better error messages** - Different messages for monthly (with reset date) vs trial (no reset)
 
 ---
 
@@ -1220,12 +1228,18 @@ pnpm prisma migrate deploy
 Before moving to Phase 4, verify:
 
 - [x] **Database tables created**
-  - `ai_usage` and `ai_purchases` tables exist
+  - `ai_usage`, `ai_trial_usage`, and `ai_purchases` tables exist
   - Can insert/query rows via Prisma Studio
+
+- [x] **Feature config with discriminated unions**
+  - `FreeTierConfig` type defined with `monthly`, `trial`, `none`
+  - Each feature correctly configured
+  - TypeScript exhaustiveness checking works
 
 - [x] **Free tier first logic works**
   - Free tier is checked before premium
-  - Free tier usage increments correctly
+  - Monthly tracking uses `AiUsage` table
+  - Trial tracking uses `AiTrialUsage` table
   - Premium kicks in only when free is exhausted
 
 - [x] **Time-based premium works**
@@ -1235,11 +1249,12 @@ Before moving to Phase 4, verify:
 
 - [x] **Environment variables configured**
   - `AI_STANDUP_FREE_LIMIT=10` in `.env`
+  - `AI_PROMOTION_FREE_LIMIT=1` in `.env`
   - Zod validates on server startup
 
 - [x] **Controller enforces limits**
   - Checks usage before streaming
-  - Increments usage after success
+  - Increments usage after success (correct table)
   - Returns 429 when limit exceeded
 
 ---
@@ -1261,10 +1276,11 @@ Before moving to Phase 4, verify:
 
 **You now have:**
 
-- ✅ Database persistence
-- ✅ Free tier first usage logic
-- ✅ Time-based premium access
-- ✅ Configurable limits
+- ✅ Database persistence (3 tables: AiUsage, AiTrialUsage, AiPurchase)
+- ✅ Type-safe feature configuration with discriminated unions
+- ✅ Free tier first usage logic (checks AiUsage/AiTrialUsage → AiPurchase)
+- ✅ Time-based premium access (no counting)
+- ✅ Configurable limits via environment variables
 
 **Ready to wire it all together!**
 
