@@ -245,11 +245,22 @@ AI_INTERVIEW_RATE_LIMIT=30
 ## Feature Configuration
 
 ```typescript
+/**
+ * Free tier configuration using discriminated unions
+ * Maps directly to database tables:
+ * - 'monthly': Uses AiUsage table (count per month)
+ * - 'trial': Uses AiTrialUsage table (one-time check)
+ * - 'none': No free tier (skip to purchase check)
+ */
+type FreeTierConfig =
+  | { type: "monthly"; limit: number }
+  | { type: "trial" } // Always one-time
+  | { type: "none" };
+
 type FeatureConfig = {
   name: string;
   productName: string;
-  freeLimit: number; // 0 = no free tier
-  resetPeriod: "monthly" | "lifetime" | "none";
+  freeTier: FreeTierConfig;
   rateLimit: number; // per day
   price: number; // in cents
   duration: number; // in days
@@ -259,8 +270,7 @@ const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   standup: {
     name: "standup",
     productName: "standup-pro",
-    freeLimit: 10,
-    resetPeriod: "monthly",
+    freeTier: { type: "monthly", limit: 10 },
     rateLimit: 20,
     price: 900, // $9
     duration: 90,
@@ -268,8 +278,7 @@ const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   promotion: {
     name: "promotion",
     productName: "promotion-pro",
-    freeLimit: 1,
-    resetPeriod: "lifetime",
+    freeTier: { type: "trial" }, // One-time trial
     rateLimit: 10,
     price: 1900, // $19
     duration: 30,
@@ -277,8 +286,7 @@ const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   resume: {
     name: "resume",
     productName: "resume-interview-pro", // Shared product
-    freeLimit: 0, // No free tier
-    resetPeriod: "none",
+    freeTier: { type: "none" }, // No free tier
     rateLimit: 20,
     price: 2900, // $29
     duration: 30,
@@ -286,14 +294,20 @@ const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   interview: {
     name: "interview",
     productName: "resume-interview-pro", // Shared product
-    freeLimit: 0, // No free tier
-    resetPeriod: "none",
+    freeTier: { type: "none" }, // No free tier
     rateLimit: 30,
     price: 2900, // $29
     duration: 30,
   },
 };
 ```
+
+**Design benefits:**
+
+- **Discriminated unions:** Type-safe configuration with compile-time checks
+- **Clear mapping:** `freeTier.type` directly maps to AiUsage table (monthly) or AiTrialUsage table (trial)
+- **No semantic confusion:** No "resetPeriod: 'lifetime'" weirdness
+- **Exhaustiveness checking:** TypeScript ensures all free tier types are handled
 
 **Note:** Both `resume` and `interview` features share the same `productName` (`resume-interview-pro`). A single purchase unlocks both features.
 

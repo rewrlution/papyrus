@@ -618,46 +618,68 @@ Check Usage Limit
 import { env } from '../../env/config.js';
 
 /**
+ * Free tier configuration using discriminated unions
+ * Maps directly to database tables:
+ * - 'monthly': Uses AiUsage table (count per month)
+ * - 'trial': Uses AiTrialUsage table (one-time check)
+ * - 'none': No free tier (skip to purchase check)
+ */
+export type FreeTierConfig =
+  | { type: 'monthly'; limit: number }
+  | { type: 'trial' } // Always one-time, no limit needed
+  | { type: 'none' };
+
+/**
  * Configuration for each AI feature
  */
 export type FeatureConfig = {
   name: string;
   productName: string;
-  freeLimit: number; // 0 = no free tier
-  resetPeriod: 'monthly' | 'lifetime' | 'none';
+  freeTier: FreeTierConfig;
+  rateLimit: number;
+  price: number; // in cents
+  duration: number; // in days
 };
 
 /**
  * Feature configuration map
  *
- * - standup: Monthly reset (daily habit feature)
- * - promotion: Lifetime trial (one-time trial per account)
+ * - standup: Monthly free tier (daily habit feature)
+ * - promotion: One-time trial (one-time trial per account)
  * - resume & interview: No free tier, shared product
  */
 export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   standup: {
     name: 'standup',
     productName: 'standup-pro',
-    freeLimit: env.AI_STANDUP_FREE_LIMIT,
-    resetPeriod: 'monthly',
+    freeTier: { type: 'monthly', limit: env.AI_STANDUP_FREE_LIMIT },
+    rateLimit: 20,
+    price: 900, // $9
+    duration: 90,
   },
   promotion: {
     name: 'promotion',
     productName: 'promotion-pro',
-    freeLimit: env.AI_PROMOTION_FREE_LIMIT,
-    resetPeriod: 'lifetime',
+    freeTier: { type: 'trial' }, // One-time trial
+    rateLimit: 10,
+    price: 1900, // $19
+    duration: 30,
   },
   resume: {
     name: 'resume',
     productName: 'resume-interview-pro', // Shared product
-    freeLimit: 0, // No free tier
-    resetPeriod: 'none',
+    freeTier: { type: 'none' }, // No free tier
+    rateLimit: 20,
+    price: 2900, // $29
+    duration: 30,
   },
   interview: {
     name: 'interview',
     productName: 'resume-interview-pro', // Shared product
-    freeLimit: 0, // No free tier
-    resetPeriod: 'none',
+    freeTier: { type: 'none' }, // No free tier
+    rateLimit: 30,
+    price: 2900, // $29
+    duration: 30,
   },
 };
 
@@ -673,6 +695,13 @@ export function getFeatureConfig(feature: string): FeatureConfig {
   return config;
 }
 ```
+
+**Why discriminated unions?**
+
+- **Type safety:** TypeScript enforces correct usage at compile time
+- **Clear mapping:** `type` directly maps to which table/logic to use
+- **Self-documenting:** Code is more readable without comments
+- **Exhaustive checking:** TypeScript ensures all cases are handled
 
 ### 4.3: Create Usage Limiter
 
@@ -745,17 +774,17 @@ export async function checkUsage(
 }
 
 /**
- * Check free tier availability
+ * Check free tier availability using discriminated unions
  */
 async function checkFreeTier(
   userId: string,
   feature: string,
   config: ReturnType<typeof getFeatureConfig>
 ): Promise<UsageInfo> {
-  const { freeLimit, resetPeriod } = config;
+  const { freeTier } = config;
 
-  // Features with no free tier (Resume & Interview Pro)
-  if (resetPeriod === 'none' || freeLimit === 0) {
+  // No free tier - skip to purchase check
+  if (freeTier.type === 'none') {
     return {
       allowed: false,
       reason: 'limit_exceeded',
@@ -765,38 +794,39 @@ async function checkFreeTier(
     };
   }
 
-  let used: number;
-  let resetsAt: string | null;
-
-  if (resetPeriod === 'monthly') {
-    // Monthly tracking (Standup): Check current month usage
+  // Monthly tracking (Standup) - uses AiUsage table
+  if (freeTier.type === 'monthly') {
     const month = getCurrentMonth();
-    used = await aiUsageRepository.getUsageCount(userId, feature, month);
-    resetsAt = getNextMonthStart().toISOString();
-  } else {
-    // Lifetime trial (Promotion): Check if trial has been used
-    const hasUsed = await aiTrialUsageRepository.hasUsedTrial(userId, feature);
-    used = hasUsed ? 1 : 0;
-    resetsAt = null; // Never resets
+    const used = await aiUsageRepository.getUsageCount(userId, feature, month);
+    const allowed = used < freeTier.limit;
+
+    return {
+      allowed,
+      reason: allowed ? 'free_tier' : 'limit_exceeded',
+      used,
+      limit: freeTier.limit,
+      resets_at: getNextMonthStart().toISOString(),
+    };
   }
 
-  if (used < freeLimit) {
+  // Lifetime trial (Promotion) - uses AiTrialUsage table
+  if (freeTier.type === 'trial') {
+    const hasUsed = await aiTrialUsageRepository.hasUsedTrial(userId, feature);
+    const used = hasUsed ? 1 : 0;
+    const allowed = !hasUsed;
+
     return {
-      allowed: true,
-      reason: 'free_tier',
+      allowed,
+      reason: allowed ? 'free_tier' : 'limit_exceeded',
       used,
-      limit: freeLimit,
-      resets_at: resetsAt,
-    };
-  } else {
-    return {
-      allowed: false,
-      reason: 'limit_exceeded',
-      used,
-      limit: freeLimit,
-      resets_at: resetsAt,
+      limit: 1, // Trials are always one-time
+      resets_at: null, // Never resets
     };
   }
+
+  // TypeScript exhaustiveness check ensures we handle all cases
+  const _exhaustive: never = freeTier;
+  throw new Error(`Unhandled free tier type: ${JSON.stringify(_exhaustive)}`);
 }
 
 /**
@@ -815,15 +845,17 @@ export async function incrementUsage(
   // Premium is time-based, no counting needed
   if (usageInfo.reason === 'free_tier') {
     const config = getFeatureConfig(feature);
+    const { freeTier } = config;
 
-    if (config.resetPeriod === 'monthly') {
+    if (freeTier.type === 'monthly') {
       // Monthly tracking: Increment count in AiUsage table
       const month = getCurrentMonth();
       await aiUsageRepository.upsertUsage(userId, feature, month);
-    } else if (config.resetPeriod === 'lifetime') {
+    } else if (freeTier.type === 'trial') {
       // Lifetime trial: Mark trial as used in AiTrialUsage table
       await aiTrialUsageRepository.markTrialUsed(userId, feature);
     }
+    // freeTier.type === 'none' won't reach here (caught in checkUsage)
   }
   // Premium users: No increment needed (time-based access)
 }
@@ -851,12 +883,14 @@ function getNextMonthStart(): Date {
 }
 ```
 
-**Key improvements with two-table approach:**
+**Key improvements with new design:**
 
-- **Clearer logic:** Monthly tracking uses AiUsage, lifetime trials use AiTrialUsage
+- **Two-table approach:** AiUsage for monthly, AiTrialUsage for trials
+- **Discriminated unions:** Type-safe free tier configuration
+- **Clear mapping:** `freeTier.type` directly maps to which table/logic to use
+- **Exhaustiveness checking:** TypeScript ensures all cases are handled
+- **No semantic confusion:** No more "resetPeriod: 'lifetime'" or "month: 'lifetime'"
 - **Simple boolean check:** `hasUsedTrial()` is more readable than aggregating counts
-- **No special cases:** No need to handle "lifetime" as a month value
-- **Correct semantics:** Each table's fields match their actual meaning
 
 ### 4.4: Create Index File
 
