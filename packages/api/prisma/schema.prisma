@@ -34,8 +34,9 @@ model User {
   verificationExpiry DateTime? @map("verification_expiry")
 
   // Relations
-  journals Journal[] @relation("UserJournal")
-  aiUsage  AiUsage[] @relation("UserAiUsage")
+  journals    Journal[] @relation("UserJournal")
+  aiUsage     AiUsage[] @relation("UserAiUsage")
+  aiPurchase  AiPurchase[] @relation("UserAiPurchases")
 
   // Indexes
   @@index([email]) // Login queries
@@ -100,4 +101,37 @@ model AiUsage {
   @@unique([userId, feature, month]) // One row per user/feature/month combination
   @@index([userId, feature, month]) // Fast lookups for rate limiting checks
   @@map("ai_usage")
+}
+
+// ============================================================================
+// AiPurchase Model
+// ============================================================================
+// Tracks purchase history
+// Table: ai_purchase
+
+model AiPurchase {
+  id      String  @id @default(cuid())
+  userId  String  @map("user_id")
+  product String  // 'standup-pro' | 'promotion-builder' | 'resume-generator' | 'interview-coach'
+
+  // Purchase metadata
+  purchasedAt DateTime  @default(now()) @map("purchased_at")
+  expiresAt   DateTime? @map("expires_at") // null = lifetime access
+
+  // Generation limits (for count-based limits)
+  generationsLimit  Int?  @map("generation_limit") // null = unlimited
+  generationsUsed   Int   @default(0) @map("generation_used")
+
+  // Payment metadata (optional, for Stripe integration later)
+  amount    Int?    // Amount in cents (e.g., 900 for $9.00)
+  currency  String? // 'usd', 'cad', 'eur', 'cny', etc.
+
+  // Relation to User
+  user User @relation("UserAiPurchases", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes for fast queries
+  @@index([userId, product])
+  @@index([userId, product, expiresAt])
+
+  @@map("ai_purchases")
 }
