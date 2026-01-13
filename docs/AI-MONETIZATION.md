@@ -122,24 +122,52 @@ Rate limits are for **abuse prevention**, not monetization. Normal users will ne
 
 ## Database Schema
 
-### AiUsage Table (Free Tier Tracking)
+### AiUsage Table (Monthly Free Tier Tracking)
+
+Tracks usage for features with monthly-resetting free tiers (e.g., Standup).
 
 ```prisma
 model AiUsage {
-  id      String @id @default(cuid())
-  userId  String @map("user_id")
-  feature String // 'standup' | 'promotion' | 'resume' | 'interview'
-  month   String // 'YYYY-MM' for standup, 'lifetime' for career features
-  count   Int    @default(0)
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  feature   String   // 'standup'
+  month     String   // 'YYYY-MM' format (e.g., '2025-01')
+  count     Int      @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserAiUsage", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, feature, month])
+  @@index([userId, feature, month])
+  @@map("ai_usage")
 }
 ```
 
-**Usage patterns:**
+### AiTrialUsage Table (Lifetime Trial Tracking)
 
-- **Standup:** `month = '2025-01'` (monthly tracking)
-- **Career:** `month = 'lifetime'` (lifetime tracking, count is 0 or 1)
+Tracks one-time free trials for features with lifetime limits (e.g., Promotion Builder).
+
+```prisma
+model AiTrialUsage {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  feature   String   // 'promotion'
+  usedAt    DateTime @default(now()) @map("used_at")
+
+  user User @relation("UserAiTrialUsage", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature])
+  @@map("ai_trial_usage")
+}
+```
+
+**Why two tables?**
+
+- **Semantic clarity:** Each table has a clear, single purpose
+- **Simpler queries:** No special case handling for "lifetime" values
+- **Better matches business logic:** Monthly tracking vs one-time check are fundamentally different operations
 
 ### AiPurchase Table (Premium Access)
 
@@ -165,6 +193,23 @@ model AiPurchase {
 
 - `resume-interview-pro` is a single product that grants access to both resume and interview features
 - `generationsLimit` and `generationsUsed` are kept for potential future use but set to `null`/`0` for all current purchases
+
+### User Model Relations
+
+```prisma
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+  // ... existing fields ...
+
+  // AI feature relations
+  aiUsage      AiUsage[]      @relation("UserAiUsage")
+  aiTrialUsage AiTrialUsage[] @relation("UserAiTrialUsage")
+  aiPurchases  AiPurchase[]   @relation("UserAiPurchases")
+
+  // ... rest of model ...
+}
+```
 
 ---
 
@@ -334,11 +379,14 @@ You're making requests too quickly. Please try again in a few minutes.
 
 ## Implementation Checklist
 
+- [ ] Create database migrations for `AiUsage` and `AiTrialUsage` tables
 - [ ] Update `config.ts` with free tier environment variables
-- [ ] Implement `checkFreeUsage()` with monthly vs lifetime logic
-- [ ] Implement `checkPremiumAccess()` (time-based only)
+- [ ] Implement `aiUsageRepository` for monthly tracking
+- [ ] Implement `aiTrialUsageRepository` for lifetime trial tracking
+- [ ] Implement `aiPurchaseRepository` for premium access
+- [ ] Implement `checkUsage()` with free tier first logic
+- [ ] Implement `incrementUsage()` to handle both monthly and trial features
 - [ ] Implement rate limiting middleware
-- [ ] Update repositories for lifetime tracking
 - [ ] Add upgrade prompts in error messages
 - [ ] Test free tier first flow
 

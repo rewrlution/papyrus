@@ -84,19 +84,32 @@ Add database persistence and enforce usage limits for the AI standup feature. Af
 
 ### 1.1: Understand the Data Models
 
-**AiUsage Table:**
+**AiUsage Table (Monthly Free Tier):**
 
-- Tracks how many times a user has used a feature
-- For standup: Composite key `(userId, feature, month)` with monthly reset
-- For career features: Composite key `(userId, feature, 'lifetime')` - one-time trial
+- Tracks usage for features with monthly-resetting free tiers (e.g., Standup)
+- Composite key: `(userId, feature, month)` where `month` is always 'YYYY-MM' format
+- Resets automatically each month (new month = new row)
 
-**AiPurchase Table:**
+**AiTrialUsage Table (Lifetime Trial):**
+
+- Tracks one-time free trials (e.g., Promotion Builder)
+- Composite key: `(userId, feature)` - if row exists, trial has been used
+- Simple boolean check: row exists = trial used, no row = trial available
+
+**AiPurchase Table (Premium Access):**
 
 - Tracks premium purchases for unlimited access
 - Time-based: `expiresAt` determines if purchase is active
 - No counting needed - if `expiresAt > now`, user has access
 
-**Why separate tables?**
+**Why separate tables for usage tracking?**
+
+- **Semantic clarity:** `month` field is always a month (not "lifetime")
+- **Simpler queries:** No special case handling needed
+- **Clear intent:** Each table's purpose is obvious at a glance
+- **Better architecture:** Tables match the actual business logic
+
+**Why separate from User table?**
 
 - Keeps `User` model clean (no AI-specific fields)
 - Easy to add new AI features (just add new feature strings)
@@ -107,16 +120,17 @@ Add database persistence and enforce usage limits for the AI standup feature. Af
 
 **File:** `prisma/schema.prisma`
 
-Find your existing `User` model and add these two new models below it:
+Find your existing `User` model and add these three new models below it:
 
 ```prisma
-// Add these two models to your schema.prisma
+// Add these three models to your schema.prisma
 
+// Monthly usage tracking (Standup)
 model AiUsage {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
-  feature   String   // 'standup' | 'promotion' | 'resume' | 'interview'
-  month     String   // 'YYYY-MM' for standup, 'lifetime' for career features
+  feature   String   // 'standup'
+  month     String   // 'YYYY-MM' format (e.g., '2025-01')
   count     Int      @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -134,6 +148,23 @@ model AiUsage {
   @@map("ai_usage")
 }
 
+// Lifetime trial tracking (Promotion Builder)
+model AiTrialUsage {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  feature   String   // 'promotion'
+  usedAt    DateTime @default(now()) @map("used_at")
+
+  // Relation to User
+  user User @relation("UserAiTrialUsage", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Composite unique constraint (one row per user/feature)
+  @@unique([userId, feature])
+
+  @@map("ai_trial_usage")
+}
+
+// Premium purchases
 model AiPurchase {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
@@ -172,9 +203,10 @@ model User {
   email String @unique
   // ... existing fields ...
 
-  // Add these two relation fields
-  aiUsage     AiUsage[]    @relation("UserAiUsage")
-  aiPurchases AiPurchase[] @relation("UserAiPurchases")
+  // Add these three relation fields
+  aiUsage      AiUsage[]      @relation("UserAiUsage")
+  aiTrialUsage AiTrialUsage[] @relation("UserAiTrialUsage")
+  aiPurchases  AiPurchase[]   @relation("UserAiPurchases")
 
   // ... rest of model ...
 }
@@ -182,10 +214,11 @@ model User {
 
 **Why these field choices?**
 
-- `month` as string: `'YYYY-MM'` for standup, `'lifetime'` for career features
-- `expiresAt` required (not nullable): All purchases are time-based
-- `generationsLimit` nullable: Set to `null` for time-based unlimited model
-- `onDelete: Cascade`: When user is deleted, usage/purchases are deleted too
+- **AiUsage.month:** Always 'YYYY-MM' format - no special cases
+- **AiTrialUsage.usedAt:** Timestamp when trial was used (useful for analytics)
+- **AiPurchase.expiresAt:** Required field - all purchases are time-based
+- **generationsLimit:** Nullable, set to `null` for time-based unlimited model
+- **onDelete: Cascade:** When user is deleted, all related records are deleted too
 
 ### 1.3: Generate and Run Migration
 
@@ -193,7 +226,7 @@ model User {
 cd packages/api
 
 # Generate migration
-pnpm prisma migrate dev --name ai_usage_and_purchases
+pnpm prisma migrate dev --name ai_usage_trial_and_purchases
 
 # This will:
 # 1. Create migration file in prisma/migrations/
@@ -208,7 +241,7 @@ pnpm prisma migrate dev --name ai_usage_and_purchases
 pnpm prisma studio
 ```
 
-You should see two new tables: `ai_usage` and `ai_purchases`.
+You should see three new tables: `ai_usage`, `ai_trial_usage`, and `ai_purchases`.
 
 ---
 
@@ -230,7 +263,7 @@ You should see two new tables: `ai_usage` and `ai_purchases`.
 - Handle database errors
 - NO business logic (that goes in services/utilities)
 
-### 2.2: Create AiUsage Repository
+### 2.2: Create AiUsage Repository (Monthly Tracking)
 
 **File:** `src/domain/repositories/ai-usage.repository.ts`
 
@@ -240,22 +273,19 @@ import type { AiUsage } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 
 /**
- * Repository for AiUsage table operations
+ * Repository for AiUsage table operations (monthly tracking)
  *
- * Handles:
- * - Finding usage records by user/feature/month
- * - Upserting (insert or update) usage counts
- * - Getting total lifetime usage for career features
+ * Handles features with monthly-resetting free tiers (e.g., Standup)
  */
 export const aiUsageRepository = {
   /**
    * Find usage record for a specific user/feature/month
-   * Returns null if no record exists (user hasn't used feature)
+   * Returns null if no record exists
    */
   async findUsage(
     userId: string,
     feature: string,
-    month: string // 'YYYY-MM' or 'lifetime'
+    month: string // 'YYYY-MM' format
   ): Promise<AiUsage | null> {
     return prisma.aiUsage.findUnique({
       where: {
@@ -312,29 +342,87 @@ export const aiUsageRepository = {
     const usage = await this.findUsage(userId, feature, month);
     return usage?.count ?? 0;
   },
-
-  /**
-   * Get total lifetime usage for a feature (across all months)
-   * Used for career features to check if user has ever used the trial
-   */
-  async getTotalUsageCount(userId: string, feature: string): Promise<number> {
-    const result = await prisma.aiUsage.aggregate({
-      where: { userId, feature },
-      _sum: { count: true },
-    });
-    return result._sum.count ?? 0;
-  },
 };
 ```
 
 **Why these methods?**
 
-- `findUsage`: Used by usage limiter to check current usage
+- `findUsage`: Check current month usage
 - `upsertUsage`: Atomic increment (no race conditions)
 - `getUsageCount`: Convenience method, returns 0 instead of null
-- `getTotalUsageCount`: For career features - check if user has EVER used
 
-### 2.3: Create AiPurchase Repository
+### 2.3: Create AiTrialUsage Repository (Lifetime Trial Tracking)
+
+**File:** `src/domain/repositories/ai-trial-usage.repository.ts`
+
+```typescript
+import type { AiTrialUsage } from '@prisma/client';
+
+import { prisma } from '../../lib/prisma.js';
+
+/**
+ * Repository for AiTrialUsage table operations (lifetime trial tracking)
+ *
+ * Handles features with one-time free trials (e.g., Promotion Builder)
+ */
+export const aiTrialUsageRepository = {
+  /**
+   * Check if a user has used their free trial for a feature
+   * Returns true if trial has been used, false if still available
+   */
+  async hasUsedTrial(userId: string, feature: string): Promise<boolean> {
+    const record = await prisma.aiTrialUsage.findUnique({
+      where: {
+        userId_feature: {
+          userId,
+          feature,
+        },
+      },
+    });
+    return !!record;
+  },
+
+  /**
+   * Mark a trial as used
+   * Creates a record indicating the user has used their free trial
+   */
+  async markTrialUsed(userId: string, feature: string): Promise<AiTrialUsage> {
+    return prisma.aiTrialUsage.create({
+      data: {
+        userId,
+        feature,
+      },
+    });
+  },
+
+  /**
+   * Get trial usage record (if exists)
+   * Returns null if trial hasn't been used yet
+   */
+  async findTrialUsage(
+    userId: string,
+    feature: string
+  ): Promise<AiTrialUsage | null> {
+    return prisma.aiTrialUsage.findUnique({
+      where: {
+        userId_feature: {
+          userId,
+          feature,
+        },
+      },
+    });
+  },
+};
+```
+
+**Why this approach?**
+
+- **Simple boolean check:** Row exists = trial used, no row = trial available
+- **No counters needed:** Just existence check via unique constraint
+- **Clear intent:** `hasUsedTrial()` and `markTrialUsed()` are self-documenting
+- **Immutable:** Once created, record never changes (audit trail)
+
+### 2.4: Create AiPurchase Repository
 
 **File:** `src/domain/repositories/ai-purchase.repository.ts`
 
@@ -424,12 +512,13 @@ export const aiPurchaseRepository = {
 - Just check `expiresAt > now`
 - No complex AND/OR conditions
 
-### 2.4: Update Repository Index
+### 2.5: Update Repository Index
 
 **File:** `src/domain/repositories/index.ts`
 
 ```typescript
 export * from './ai-usage.repository.js';
+export * from './ai-trial-usage.repository.js';
 export * from './ai-purchase.repository.js';
 // ... export other repositories ...
 ```
@@ -592,6 +681,7 @@ export function getFeatureConfig(feature: string): FeatureConfig {
 ```typescript
 import {
   aiUsageRepository,
+  aiTrialUsageRepository,
   aiPurchaseRepository,
 } from '../../domain/repositories/index.js';
 import { getFeatureConfig } from './feature-config.js';
@@ -679,13 +769,14 @@ async function checkFreeTier(
   let resetsAt: string | null;
 
   if (resetPeriod === 'monthly') {
-    // Standup: Check current month usage
+    // Monthly tracking (Standup): Check current month usage
     const month = getCurrentMonth();
     used = await aiUsageRepository.getUsageCount(userId, feature, month);
     resetsAt = getNextMonthStart().toISOString();
   } else {
-    // Promotion: Check lifetime usage
-    used = await aiUsageRepository.getTotalUsageCount(userId, feature);
+    // Lifetime trial (Promotion): Check if trial has been used
+    const hasUsed = await aiTrialUsageRepository.hasUsedTrial(userId, feature);
+    used = hasUsed ? 1 : 0;
     resetsAt = null; // Never resets
   }
 
@@ -724,10 +815,15 @@ export async function incrementUsage(
   // Premium is time-based, no counting needed
   if (usageInfo.reason === 'free_tier') {
     const config = getFeatureConfig(feature);
-    const month =
-      config.resetPeriod === 'monthly' ? getCurrentMonth() : 'lifetime';
 
-    await aiUsageRepository.upsertUsage(userId, feature, month);
+    if (config.resetPeriod === 'monthly') {
+      // Monthly tracking: Increment count in AiUsage table
+      const month = getCurrentMonth();
+      await aiUsageRepository.upsertUsage(userId, feature, month);
+    } else if (config.resetPeriod === 'lifetime') {
+      // Lifetime trial: Mark trial as used in AiTrialUsage table
+      await aiTrialUsageRepository.markTrialUsed(userId, feature);
+    }
   }
   // Premium users: No increment needed (time-based access)
 }
@@ -755,12 +851,12 @@ function getNextMonthStart(): Date {
 }
 ```
 
-**Key differences from previous version:**
+**Key improvements with two-table approach:**
 
-- **Free tier first** - Always check free before premium
-- **No generation counting for premium** - Time-based only
-- **Simpler UsageInfo** - No purchase_id needed
-- **Lifetime vs monthly** - Different tracking for different features
+- **Clearer logic:** Monthly tracking uses AiUsage, lifetime trials use AiTrialUsage
+- **Simple boolean check:** `hasUsedTrial()` is more readable than aggregating counts
+- **No special cases:** No need to handle "lifetime" as a month value
+- **Correct semantics:** Each table's fields match their actual meaning
 
 ### 4.4: Create Index File
 
@@ -1161,17 +1257,11 @@ await incrementUsage(userId, 'standup', usageInfo);
 
 ```typescript
 // For monthly features (standup)
-const count = await aiUsageRepository.getUsageCount(
-  userId,
-  'standup',
-  '2025-01'
-);
+const month = getCurrentMonth(); // '2025-01'
+const count = await aiUsageRepository.getUsageCount(userId, 'standup', month);
 
-// For lifetime features (career)
-const totalCount = await aiUsageRepository.getTotalUsageCount(
-  userId,
-  'promotion'
-);
+// For lifetime trial features (promotion)
+const hasUsed = await aiTrialUsageRepository.hasUsedTrial(userId, 'promotion');
 ```
 
 **Create test purchase:**

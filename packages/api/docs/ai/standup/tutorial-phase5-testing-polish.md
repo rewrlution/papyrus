@@ -190,10 +190,12 @@ import {
   incrementUsage,
 } from '../../../src/lib/ai/usage-limiter.js';
 import * as aiUsageRepo from '../../../src/domain/repositories/ai-usage.repository.js';
+import * as aiTrialUsageRepo from '../../../src/domain/repositories/ai-trial-usage.repository.js';
 import * as aiPurchaseRepo from '../../../src/domain/repositories/ai-purchase.repository.js';
 
 // Mock repositories
 vi.mock('../../../src/domain/repositories/ai-usage.repository.js');
+vi.mock('../../../src/domain/repositories/ai-trial-usage.repository.js');
 vi.mock('../../../src/domain/repositories/ai-purchase.repository.js');
 
 describe('Usage Limiter', () => {
@@ -505,6 +507,7 @@ describe('POST /api/ai/standup', () => {
     // Cleanup
     await prisma.journal.deleteMany({ where: { userId } });
     await prisma.aiUsage.deleteMany({ where: { userId } });
+    await prisma.aiTrialUsage.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
     await prisma.$disconnect();
   });
@@ -613,6 +616,7 @@ describe('POST /api/ai/standup', () => {
     afterEach(async () => {
       await prisma.journal.deleteMany({ where: { userId } });
       await prisma.aiUsage.deleteMany({ where: { userId } });
+      await prisma.aiTrialUsage.deleteMany({ where: { userId } });
     });
 
     it('should stream standup notes (latest journal)', async () => {
@@ -1178,8 +1182,7 @@ AI_TEMPERATURE=0.7
 # AI Usage Limits (Free Tier)
 AI_STANDUP_FREE_LIMIT=10
 AI_PROMOTION_FREE_LIMIT=1
-AI_RESUME_FREE_LIMIT=1
-AI_INTERVIEW_FREE_LIMIT=1
+# Note: Resume & Interview Pro has no free tier
 ```
 
 ### 8.2: Migration Checklist
