@@ -601,82 +601,26 @@ Recommendation:
 
 ## Monetization Model
 
-**DECISION (from discussion): One-Time Purchases + Request Limits**
+> **See [AI-MONETIZATION.md](./AI-MONETIZATION.md) for the complete pricing model.**
 
-### Why Not Tokens?
+### Quick Reference
 
-- ❌ Users don't understand tokens ("Is 50K a lot?")
-- ❌ Unpredictable costs create anxiety
-- ❌ Feels too technical, not value-focused
-- ❌ Weird margins (charge $9 for $0.20 of cost)
+| Product                    | Free Tier | Price | Duration |
+| -------------------------- | --------- | ----- | -------- |
+| **Standup Pro**            | 10/month  | $9    | 90 days  |
+| **Promotion Builder**      | 1/account | $19   | 30 days  |
+| **Resume & Interview Pro** | None      | $29   | 30 days  |
 
-### Why Not Subscription?
+**Note:** Resume & Interview Pro is a combined product covering both resume generation and interview preparation features.
 
-- ❌ Career events are infrequent (promotion 1x/year, resume 2-3x/year)
-- ❌ Subscription feels weird for occasional use
-- ❌ Users would pay monthly but not use monthly
+### Key Decisions
 
-### ✅ Request-Based Limits + One-Time Purchases
+- **Time-based unlimited access** (not count-based) - reduces user anxiety
+- **Free tier first** flow - users always get their free allocation before premium
+- **Rate limiting for cost control** - invisible to normal users, prevents abuse
+- **Lifetime trial for career features** - 1 per account (not monthly reset)
 
-**FREE TIER:**
-
-```
-- Standup notes: 10/month
-  (Enough to build habit, experience value)
-
-- Try career features: 1 generation each
-  (Promotion, Resume, Interview - taste of each)
-```
-
-**ONE-TIME PURCHASES:**
-
-```
-Promotion Builder: $29
-  - 3 full promotion document generations
-  - Valid for 90 days
-  - Rationale: 1-2 promotion cycles per year, multiple drafts
-
-Resume Refresh: $19
-  - 10 resume bullet generations
-  - Valid for 30 days
-  - Rationale: Job search period, iterate on bullets
-
-Interview Prep Pack: $19
-  - 20 interview story generations
-  - Valid for 30 days
-  - Rationale: Interview prep intensive, multiple stories needed
-
-Standup Pro: $9
-  - Unlimited standup notes
-  - Valid for 90 days (quarterly purchase)
-  - Rationale: Daily users who hit free limit
-```
-
-**INTERNAL CONTROLS:**
-
-- Track requests, not tokens (simpler UX)
-- Monitor token usage behind-the-scenes (cost control)
-- Soft-limit per request: ~10K tokens max
-- Anti-abuse: Flag if user generates 50+ in one day
-
-**USER-FACING:**
-
-- Show request counts: "You've used 3/10 standup notes this month"
-- Clear purchase prompts: "Upgrade to Standup Pro for unlimited" OR "Purchase Resume Refresh for $19"
-- Never show tokens to users
-
-**PRICING RATIONALE:**
-
-- Tokens are cheap (~$0.20/month for typical use)
-- Price based on **outcome value**, not cost
-- Promotion doc worth $29 because getting promoted is valuable
-- Resume bullets worth $19 because landing job is valuable
-- Margins: ~100x markup, but priced on value delivered
-
-**FUTURE CONSIDERATION:**
-
-- Could add "Career Pro Bundle" ($59/year) if users want all features
-- But start with one-time purchases to validate demand
+For full details on implementation, database schema, and user messaging, see [AI-MONETIZATION.md](./AI-MONETIZATION.md).
 
 ---
 

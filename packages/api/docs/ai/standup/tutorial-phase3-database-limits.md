@@ -2,15 +2,39 @@
 
 ## Goal
 
-Add database persistence and enforce usage limits/guardrails for the AI standup feature. After this phase, you'll have:
+Add database persistence and enforce usage limits for the AI standup feature. After this phase, you'll have:
 
 - ✅ Database tables for tracking usage and purchases
 - ✅ Repositories for database operations
 - ✅ Configurable usage limits via environment variables
-- ✅ Usage limiter utility that checks free tier and premium purchases
+- ✅ Usage limiter utility with **free tier first** logic
+- ✅ Time-based unlimited premium access (no counting anxiety)
 - ✅ Usage enforcement integrated into the standup endpoint
 
 **Why this phase?** Before loading real user journals and wiring everything together, we need the foundational database layer and business logic for limiting AI usage. This ensures we won't accidentally rack up API costs during development.
+
+---
+
+## Monetization Model Overview
+
+> **Full details:** See [AI-MONETIZATION.md](/docs/AI-MONETIZATION.md)
+
+### Pricing Table
+
+| Product                    | Free Tier | Price | Duration | Access    |
+| -------------------------- | --------- | ----- | -------- | --------- |
+| **Standup Pro**            | 10/month  | $9    | 90 days  | Unlimited |
+| **Promotion Builder**      | 1/account | $19   | 30 days  | Unlimited |
+| **Resume & Interview Pro** | None      | $29   | 30 days  | Unlimited |
+
+**Note:** Resume & Interview Pro is a single purchase that unlocks both resume generation and interview preparation features. There is no free tier for these features.
+
+### Key Design Decisions
+
+1. **Time-based unlimited access** - Users don't count generations, just check expiration
+2. **Free tier first** - Users always get their free allocation before premium kicks in (for features that have a free tier)
+3. **Monthly vs Lifetime** - Standup resets monthly; Promotion is one-time trial per account; Resume & Interview has no free tier
+4. **Rate limiting for cost control** - Invisible to normal users, prevents abuse
 
 ---
 
@@ -24,7 +48,7 @@ Add database persistence and enforce usage limits/guardrails for the AI standup 
 │  2. Database migration                          │
 │  3. Repository layer (data access)              │
 │  4. Environment variables for limits            │
-│  5. Usage limiter utility (business logic)      │
+│  5. Usage limiter utility (free first logic)    │
 │  6. Wire usage checks into controller           │
 │  7. Test usage limit enforcement                │
 └─────────────────────────────────────────────────┘
@@ -39,20 +63,19 @@ Add database persistence and enforce usage limits/guardrails for the AI standup 
        │ 1. Check usage limit
        ▼
 ┌──────────────┐
-│ UsageLimiter │───┐ 2. Query purchases
-└──────────────┘   │
-       │           ▼
-       │    ┌─────────────────┐
-       │    │ AiPurchase Repo │
-       │    └─────────────────┘
-       │ 3. Query usage (if no purchase)
-       ▼
-┌─────────────────┐
-│  AiUsage Repo   │
-└─────────────────┘
-       │ 4. Increment usage
-       ▼
-   [Database]
+│ UsageLimiter │
+└──────┬───────┘
+       │
+       ├─→ 2. Check FREE TIER first (AiUsage)
+       │      └─ Standup: count < 10 this month?
+       │      └─ Career: ever used? (count = 0?)
+       │
+       ├─→ 3. If free exhausted, check PURCHASE (AiPurchase)
+       │      └─ Has active purchase? (expiresAt > now)
+       │
+       └─→ 4. Increment usage (only on success)
+              └─ Free tier: increment AiUsage.count
+              └─ Premium: no increment needed (time-based)
 ```
 
 ---
@@ -63,21 +86,22 @@ Add database persistence and enforce usage limits/guardrails for the AI standup 
 
 **AiUsage Table:**
 
-- Tracks how many times a user has used a feature in a given month
-- Composite unique key: `(userId, feature, month)`
-- Automatically resets each month (new month = new row)
+- Tracks how many times a user has used a feature
+- For standup: Composite key `(userId, feature, month)` with monthly reset
+- For career features: Composite key `(userId, feature, 'lifetime')` - one-time trial
 
 **AiPurchase Table:**
 
 - Tracks premium purchases for unlimited access
-- Supports time-based limits (`expiresAt`) and count-based limits (`generationsLimit`)
-- Flexible: can have lifetime purchases (expiresAt = null) or limited purchases
+- Time-based: `expiresAt` determines if purchase is active
+- No counting needed - if `expiresAt > now`, user has access
 
 **Why separate tables?**
 
 - Keeps `User` model clean (no AI-specific fields)
 - Easy to add new AI features (just add new feature strings)
 - Purchase history preserved (not just boolean flags)
+- Free tier and premium tracked independently
 
 ### 1.2: Add Models to Prisma Schema
 
@@ -92,7 +116,7 @@ model AiUsage {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
   feature   String   // 'standup' | 'promotion' | 'resume' | 'interview'
-  month     String   // 'YYYY-MM' format (e.g., '2025-01')
+  month     String   // 'YYYY-MM' for standup, 'lifetime' for career features
   count     Int      @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -113,17 +137,17 @@ model AiUsage {
 model AiPurchase {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
-  product   String   // 'standup-pro' | 'promotion-builder' | 'resume-generator' | 'interview-coach'
+  product   String   // 'standup-pro' | 'promotion-pro' | 'resume-interview-pro'
 
   // Purchase metadata
   purchasedAt DateTime @default(now()) @map("purchased_at")
-  expiresAt   DateTime? @map("expires_at")  // null = lifetime access
+  expiresAt   DateTime @map("expires_at")  // When access expires
 
-  // Generation limits (for count-based limits)
-  generationsLimit Int? @map("generations_limit")  // null = unlimited
-  generationsUsed  Int @default(0) @map("generations_used")
+  // Legacy fields (kept for flexibility, set to null for time-based model)
+  generationsLimit Int? @map("generations_limit")  // null = time-based unlimited
+  generationsUsed  Int  @default(0) @map("generations_used")  // Not used for time-based
 
-  // Payment metadata (optional, for Stripe integration later)
+  // Payment metadata (for Stripe integration later)
   amount      Int?     // Amount in cents (e.g., 900 for $9.00)
   currency    String?  // 'usd', 'eur', etc.
 
@@ -158,12 +182,10 @@ model User {
 
 **Why these field choices?**
 
-- `month` as string (`'YYYY-MM'`): Easy to query, human-readable, SQL-friendly
-- `expiresAt` nullable: Supports both lifetime and time-limited purchases
-- `generationsLimit` nullable: Supports both unlimited and count-limited purchases
+- `month` as string: `'YYYY-MM'` for standup, `'lifetime'` for career features
+- `expiresAt` required (not nullable): All purchases are time-based
+- `generationsLimit` nullable: Set to `null` for time-based unlimited model
 - `onDelete: Cascade`: When user is deleted, usage/purchases are deleted too
-- `@@unique([userId, feature, month])`: Ensures one usage row per user/feature/month
-- `@@index([...])`: Fast queries for usage checks
 
 ### 1.3: Generate and Run Migration
 
@@ -177,26 +199,6 @@ pnpm prisma migrate dev --name ai_usage_and_purchases
 # 1. Create migration file in prisma/migrations/
 # 2. Apply migration to your database
 # 3. Regenerate Prisma Client
-```
-
-**Expected output:**
-
-```
-Environment variables loaded from .env
-Prisma schema loaded from prisma/schema.prisma
-Datasource "db": PostgreSQL database "papyrus" at "..."
-
-Applying migration `20250107120000_ai_usage_and_purchases`
-
-The following migration(s) have been created and applied from new schema changes:
-
-migrations/
-  └─ 20250107120000_ai_usage_and_purchases/
-    └─ migration.sql
-
-Your database is now in sync with your schema.
-
-✔ Generated Prisma Client (5.9.1) to ./node_modules/@prisma/client
 ```
 
 **Verify migration:**
@@ -219,7 +221,7 @@ You should see two new tables: `ai_usage` and `ai_purchases`.
 - Encapsulate database queries (controller doesn't talk to Prisma directly)
 - Easy to test (mock repositories in tests)
 - Consistent data access patterns across the API
-- Follows existing codebase conventions (you likely already have `journalRepository`, `userRepository`, etc.)
+- Follows existing codebase conventions
 
 **Repository responsibilities:**
 
@@ -233,8 +235,9 @@ You should see two new tables: `ai_usage` and `ai_purchases`.
 **File:** `src/domain/repositories/ai-usage.repository.ts`
 
 ```typescript
-import { prisma } from '../../lib/prisma.js';
 import type { AiUsage } from '@prisma/client';
+
+import { prisma } from '../../lib/prisma.js';
 
 /**
  * Repository for AiUsage table operations
@@ -242,16 +245,17 @@ import type { AiUsage } from '@prisma/client';
  * Handles:
  * - Finding usage records by user/feature/month
  * - Upserting (insert or update) usage counts
+ * - Getting total lifetime usage for career features
  */
 export const aiUsageRepository = {
   /**
    * Find usage record for a specific user/feature/month
-   * Returns null if no record exists (user hasn't used feature this month)
+   * Returns null if no record exists (user hasn't used feature)
    */
   async findUsage(
     userId: string,
     feature: string,
-    month: string // 'YYYY-MM' format
+    month: string // 'YYYY-MM' or 'lifetime'
   ): Promise<AiUsage | null> {
     return prisma.aiUsage.findUnique({
       where: {
@@ -308,6 +312,18 @@ export const aiUsageRepository = {
     const usage = await this.findUsage(userId, feature, month);
     return usage?.count ?? 0;
   },
+
+  /**
+   * Get total lifetime usage for a feature (across all months)
+   * Used for career features to check if user has ever used the trial
+   */
+  async getTotalUsageCount(userId: string, feature: string): Promise<number> {
+    const result = await prisma.aiUsage.aggregate({
+      where: { userId, feature },
+      _sum: { count: true },
+    });
+    return result._sum.count ?? 0;
+  },
 };
 ```
 
@@ -316,30 +332,31 @@ export const aiUsageRepository = {
 - `findUsage`: Used by usage limiter to check current usage
 - `upsertUsage`: Atomic increment (no race conditions)
 - `getUsageCount`: Convenience method, returns 0 instead of null
+- `getTotalUsageCount`: For career features - check if user has EVER used
 
 ### 2.3: Create AiPurchase Repository
 
 **File:** `src/domain/repositories/ai-purchase.repository.ts`
 
 ```typescript
-import { prisma } from '../../lib/prisma.js';
 import type { AiPurchase } from '@prisma/client';
+
+import { prisma } from '../../lib/prisma.js';
 
 /**
  * Repository for AiPurchase table operations
  *
  * Handles:
- * - Finding active purchases (not expired, within limits)
+ * - Finding active purchases (not expired)
  * - Recording new purchases
- * - Incrementing generation usage
  */
 export const aiPurchaseRepository = {
   /**
    * Find an active purchase for a user/product
    *
-   * Active means:
-   * - Not expired (expiresAt is null OR in the future)
-   * - Within generation limit (generationsLimit is null OR generationsUsed < generationsLimit)
+   * Active means: expiresAt > now
+   *
+   * Time-based model: We only check expiration, not generation counts
    */
   async findActivePurchase(
     userId: string,
@@ -351,69 +368,63 @@ export const aiPurchaseRepository = {
       where: {
         userId,
         product,
-        // Not expired
-        OR: [
-          { expiresAt: null }, // Lifetime purchase
-          { expiresAt: { gt: now } }, // Future expiration
-        ],
-        // Within generation limit
-        OR: [
-          { generationsLimit: null }, // Unlimited generations
-          {
-            generationsLimit: { not: null },
-            generationsUsed: {
-              lt: prisma.aiPurchase.fields.generationsLimit, // Used < limit
-            },
-          },
-        ],
+        expiresAt: { gt: now }, // Not expired
       },
       orderBy: {
-        purchasedAt: 'desc', // Most recent purchase first
-      },
-    });
-  },
-
-  /**
-   * Increment the generationsUsed counter for a purchase
-   * Used after successfully generating AI content
-   */
-  async incrementGenerationsUsed(purchaseId: string): Promise<AiPurchase> {
-    return prisma.aiPurchase.update({
-      where: { id: purchaseId },
-      data: {
-        generationsUsed: {
-          increment: 1,
-        },
+        expiresAt: 'desc', // Latest expiration first
       },
     });
   },
 
   /**
    * Create a new purchase record
-   * (For future payment integration)
+   *
+   * @param data - Purchase data
+   * @param data.userId - User ID
+   * @param data.product - Product name (e.g., 'standup-pro')
+   * @param data.expiresAt - When the purchase expires
+   * @param data.amount - Optional amount in cents
+   * @param data.currency - Optional currency code
    */
   async createPurchase(data: {
     userId: string;
     product: string;
-    expiresAt?: Date | null;
-    generationsLimit?: number | null;
+    expiresAt: Date;
     amount?: number;
     currency?: string;
   }): Promise<AiPurchase> {
     return prisma.aiPurchase.create({
-      data,
+      data: {
+        userId: data.userId,
+        product: data.product,
+        expiresAt: data.expiresAt,
+        amount: data.amount,
+        currency: data.currency,
+        generationsLimit: null, // Time-based model
+        generationsUsed: 0,
+      },
+    });
+  },
+
+  /**
+   * Get all purchases for a user (for account page)
+   */
+  async findAllByUser(userId: string): Promise<AiPurchase[]> {
+    return prisma.aiPurchase.findMany({
+      where: { userId },
+      orderBy: { purchasedAt: 'desc' },
     });
   },
 };
 ```
 
-**Why these methods?**
+**Why this is simpler than before:**
 
-- `findActivePurchase`: Complex query with time/count checks encapsulated
-- `incrementGenerationsUsed`: Track usage for count-limited purchases
-- `createPurchase`: Placeholder for future Stripe integration
+- No `generationsUsed` tracking needed
+- Just check `expiresAt > now`
+- No complex AND/OR conditions
 
-### 2.4: Create Index Files
+### 2.4: Update Repository Index
 
 **File:** `src/domain/repositories/index.ts`
 
@@ -435,10 +446,9 @@ Add these lines:
 
 ```env
 # AI Feature Usage Limits (Free Tier)
-AI_STANDUP_FREE_LIMIT=20
+AI_STANDUP_FREE_LIMIT=10
 AI_PROMOTION_FREE_LIMIT=1
-AI_RESUME_FREE_LIMIT=1
-AI_INTERVIEW_FREE_LIMIT=1
+# Note: Resume & Interview Pro has no free tier
 ```
 
 **Why configurable?**
@@ -447,6 +457,8 @@ AI_INTERVIEW_FREE_LIMIT=1
 - Different limits per environment (dev vs prod)
 - A/B testing different limits
 - Emergency limit adjustments (if costs spike)
+
+**Note:** Resume and Interview features share a single product (`resume-interview-pro`) with no free tier, so no environment variables are needed for their free limits.
 
 ### 3.2: Update Zod Schema
 
@@ -462,15 +474,15 @@ export const envSchema = z.object({
 
   // Anthropic API (from Phase 2)
   ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required'),
-  AI_MODEL: z.string().default('claude-3-5-sonnet-20241022'),
+  AI_MODEL: z.string().default('claude-sonnet-4-5-20250929'),
   AI_MAX_TOKENS: z.coerce.number().int().positive().default(2048),
   AI_TEMPERATURE: z.coerce.number().min(0).max(1).default(0.7),
 
   // AI Feature Limits (NEW)
-  AI_STANDUP_FREE_LIMIT: z.coerce.number().int().positive().default(20),
+  // Only features with free tiers need limits
+  AI_STANDUP_FREE_LIMIT: z.coerce.number().int().positive().default(10),
   AI_PROMOTION_FREE_LIMIT: z.coerce.number().int().positive().default(1),
-  AI_RESUME_FREE_LIMIT: z.coerce.number().int().positive().default(1),
-  AI_INTERVIEW_FREE_LIMIT: z.coerce.number().int().positive().default(1),
+  // Note: Resume & Interview Pro has no free tier, so no limit env vars needed
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -479,55 +491,101 @@ export type Env = z.infer<typeof envSchema>;
 export const env = envSchema.parse(process.env);
 ```
 
-**Why Zod validation?**
-
-- Type-safe access to env vars: `env.AI_STANDUP_FREE_LIMIT` (TypeScript knows it's a number)
-- Startup validation: App crashes early if required vars missing
-- Default values: Fallback if var not set
-- Coercion: Converts string '20' to number 20
-
-**Test validation:**
-
-```bash
-# Remove AI_STANDUP_FREE_LIMIT from .env temporarily
-# Then start the server
-pnpm dev
-
-# Should use default value (20)
-# No error because we set .default(20)
-```
-
 ---
 
 ## Step 4: Create Usage Limiter Utility
 
 ### 4.1: Understand Usage Limiter Logic
 
-**Flow:**
+**Flow: Free Tier First**
 
 ```
 Check Usage Limit
        │
-       ├─→ 1. Query active purchase for user/feature
-       │   ├─→ Found purchase?
-       │   │   ├─→ Time-based: Check expiresAt
-       │   │   ├─→ Count-based: Check generationsUsed < generationsLimit
-       │   │   └─→ If valid: ALLOW (premium tier)
-       │   └─→ No purchase: Fall back to free tier
+       ├─→ 1. Check FREE TIER first
+       │   ├─→ Standup: count < limit this month?
+       │   ├─→ Career: ever used before? (lifetime count = 0?)
+       │   └─→ If free available: ALLOW (free tier)
        │
-       └─→ 2. Query usage for current month
-           ├─→ Usage count < free tier limit?
-           │   └─→ ALLOW (free tier)
-           └─→ Usage count >= limit?
+       └─→ 2. Free exhausted? Check PURCHASE
+           ├─→ Active purchase? (expiresAt > now)
+           │   └─→ If yes: ALLOW (premium tier)
+           └─→ No purchase?
                └─→ DENY (limit exceeded)
 ```
 
-**Why check purchases first?**
+**Why free tier first?**
 
-- Premium users get better experience (no usage tracking needed)
-- Simpler logic (one query instead of two)
+- Users always get their full free allowance
+- Premium feels like "extra" on top
+- Impossible to be "worse off" after purchasing
+- Simpler mental model for users
 
-### 4.2: Create Usage Limiter
+### 4.2: Define Feature Configuration
+
+**File:** `src/lib/ai/feature-config.ts`
+
+```typescript
+import { env } from '../../env/config.js';
+
+/**
+ * Configuration for each AI feature
+ */
+export type FeatureConfig = {
+  name: string;
+  productName: string;
+  freeLimit: number; // 0 = no free tier
+  resetPeriod: 'monthly' | 'lifetime' | 'none';
+};
+
+/**
+ * Feature configuration map
+ *
+ * - standup: Monthly reset (daily habit feature)
+ * - promotion: Lifetime trial (one-time trial per account)
+ * - resume & interview: No free tier, shared product
+ */
+export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
+  standup: {
+    name: 'standup',
+    productName: 'standup-pro',
+    freeLimit: env.AI_STANDUP_FREE_LIMIT,
+    resetPeriod: 'monthly',
+  },
+  promotion: {
+    name: 'promotion',
+    productName: 'promotion-pro',
+    freeLimit: env.AI_PROMOTION_FREE_LIMIT,
+    resetPeriod: 'lifetime',
+  },
+  resume: {
+    name: 'resume',
+    productName: 'resume-interview-pro', // Shared product
+    freeLimit: 0, // No free tier
+    resetPeriod: 'none',
+  },
+  interview: {
+    name: 'interview',
+    productName: 'resume-interview-pro', // Shared product
+    freeLimit: 0, // No free tier
+    resetPeriod: 'none',
+  },
+};
+
+/**
+ * Get feature configuration by name
+ * Throws if feature not found
+ */
+export function getFeatureConfig(feature: string): FeatureConfig {
+  const config = FEATURE_CONFIG[feature];
+  if (!config) {
+    throw new Error(`Unknown feature: ${feature}`);
+  }
+  return config;
+}
+```
+
+### 4.3: Create Usage Limiter
 
 **File:** `src/lib/ai/usage-limiter.ts`
 
@@ -536,37 +594,30 @@ import {
   aiUsageRepository,
   aiPurchaseRepository,
 } from '../../domain/repositories/index.js';
-import { env } from '../../env/config.js';
+import { getFeatureConfig } from './feature-config.js';
 
 /**
  * Usage information returned by checkUsage()
  */
 export interface UsageInfo {
   allowed: boolean;
-  reason:
-    | 'premium_unlimited'
-    | 'premium_limited'
-    | 'free_tier'
-    | 'limit_exceeded';
+  reason: 'free_tier' | 'premium' | 'limit_exceeded';
 
   // For free tier
   used?: number;
   limit?: number;
-  resets_at?: string; // ISO date string
+  resets_at?: string | null; // ISO date string (null for lifetime)
 
   // For premium tier
-  purchase_id?: string;
-  expires_at?: string | null;
-  generations_used?: number;
-  generations_limit?: number | null;
+  expires_at?: string; // ISO date string
 }
 
 /**
  * Check if a user is allowed to use an AI feature
  *
- * Logic:
- * 1. Check for active premium purchase (unlimited or count-based)
- * 2. If no purchase, check free tier usage against monthly limit
+ * Logic: FREE TIER FIRST
+ * 1. Check free tier availability
+ * 2. If free exhausted, check for active premium purchase
  *
  * @param userId - User ID
  * @param feature - Feature name ('standup', 'promotion', 'resume', 'interview')
@@ -576,71 +627,83 @@ export async function checkUsage(
   userId: string,
   feature: string
 ): Promise<UsageInfo> {
-  // Step 1: Check for active premium purchase
-  const productName = `${feature}-pro`; // 'standup-pro', 'promotion-pro', etc.
+  const config = getFeatureConfig(feature);
 
+  // Step 1: Check FREE TIER first
+  const freeUsage = await checkFreeTier(userId, feature, config);
+
+  if (freeUsage.allowed) {
+    return freeUsage;
+  }
+
+  // Step 2: Free tier exhausted - check for premium purchase
   const activePurchase = await aiPurchaseRepository.findActivePurchase(
     userId,
-    productName
+    config.productName
   );
 
   if (activePurchase) {
-    // Premium user - check if unlimited or within count limit
-    if (activePurchase.generationsLimit === null) {
-      // Unlimited generations
-      return {
-        allowed: true,
-        reason: 'premium_unlimited',
-        purchase_id: activePurchase.id,
-        expires_at: activePurchase.expiresAt?.toISOString() ?? null,
-      };
-    } else {
-      // Count-limited generations
-      const remaining =
-        activePurchase.generationsLimit - activePurchase.generationsUsed;
-
-      if (remaining > 0) {
-        return {
-          allowed: true,
-          reason: 'premium_limited',
-          purchase_id: activePurchase.id,
-          generations_used: activePurchase.generationsUsed,
-          generations_limit: activePurchase.generationsLimit,
-          expires_at: activePurchase.expiresAt?.toISOString() ?? null,
-        };
-      } else {
-        // Count limit exceeded
-        return {
-          allowed: false,
-          reason: 'limit_exceeded',
-          purchase_id: activePurchase.id,
-          generations_used: activePurchase.generationsUsed,
-          generations_limit: activePurchase.generationsLimit,
-        };
-      }
-    }
+    return {
+      allowed: true,
+      reason: 'premium',
+      expires_at: activePurchase.expiresAt.toISOString(),
+    };
   }
 
-  // Step 2: No active purchase - check free tier
-  const month = getCurrentMonth(); // 'YYYY-MM'
-  const used = await aiUsageRepository.getUsageCount(userId, feature, month);
-  const limit = getFreeLimit(feature);
+  // Step 3: No free tier, no premium - denied
+  return freeUsage; // Contains limit_exceeded info
+}
 
-  if (used < limit) {
+/**
+ * Check free tier availability
+ */
+async function checkFreeTier(
+  userId: string,
+  feature: string,
+  config: ReturnType<typeof getFeatureConfig>
+): Promise<UsageInfo> {
+  const { freeLimit, resetPeriod } = config;
+
+  // Features with no free tier (Resume & Interview Pro)
+  if (resetPeriod === 'none' || freeLimit === 0) {
+    return {
+      allowed: false,
+      reason: 'limit_exceeded',
+      used: 0,
+      limit: 0,
+      resets_at: null,
+    };
+  }
+
+  let used: number;
+  let resetsAt: string | null;
+
+  if (resetPeriod === 'monthly') {
+    // Standup: Check current month usage
+    const month = getCurrentMonth();
+    used = await aiUsageRepository.getUsageCount(userId, feature, month);
+    resetsAt = getNextMonthStart().toISOString();
+  } else {
+    // Promotion: Check lifetime usage
+    used = await aiUsageRepository.getTotalUsageCount(userId, feature);
+    resetsAt = null; // Never resets
+  }
+
+  if (used < freeLimit) {
     return {
       allowed: true,
       reason: 'free_tier',
       used,
-      limit,
-      resets_at: getNextMonthStart().toISOString(),
+      limit: freeLimit,
+      resets_at: resetsAt,
     };
   } else {
     return {
       allowed: false,
       reason: 'limit_exceeded',
       used,
-      limit,
-      resets_at: getNextMonthStart().toISOString(),
+      limit: freeLimit,
+      resets_at: resetsAt,
     };
   }
 }
@@ -650,35 +713,23 @@ export async function checkUsage(
  *
  * @param userId - User ID
  * @param feature - Feature name
- * @param purchaseId - Optional purchase ID (if premium user)
+ * @param usageInfo - Usage info from checkUsage (to determine if free or premium)
  */
 export async function incrementUsage(
   userId: string,
   feature: string,
-  purchaseId?: string
+  usageInfo: UsageInfo
 ): Promise<void> {
-  if (purchaseId) {
-    // Premium user - increment purchase usage
-    await aiPurchaseRepository.incrementGenerationsUsed(purchaseId);
-  } else {
-    // Free tier user - increment monthly usage
-    const month = getCurrentMonth();
+  // Only increment for free tier usage
+  // Premium is time-based, no counting needed
+  if (usageInfo.reason === 'free_tier') {
+    const config = getFeatureConfig(feature);
+    const month =
+      config.resetPeriod === 'monthly' ? getCurrentMonth() : 'lifetime';
+
     await aiUsageRepository.upsertUsage(userId, feature, month);
   }
-}
-
-/**
- * Get free tier limit for a feature from environment config
- */
-function getFreeLimit(feature: string): number {
-  const limits: Record<string, number> = {
-    standup: env.AI_STANDUP_FREE_LIMIT,
-    promotion: env.AI_PROMOTION_FREE_LIMIT,
-    resume: env.AI_RESUME_FREE_LIMIT,
-    interview: env.AI_INTERVIEW_FREE_LIMIT,
-  };
-
-  return limits[feature] ?? 0;
+  // Premium users: No increment needed (time-based access)
 }
 
 /**
@@ -704,14 +755,14 @@ function getNextMonthStart(): Date {
 }
 ```
 
-**Why this design?**
+**Key differences from previous version:**
 
-- **Single function**: `checkUsage()` handles all logic (purchase + free tier)
-- **Rich metadata**: Returns all info needed for error messages
-- **Atomic increment**: `incrementUsage()` uses upsert (no race conditions)
-- **Testable**: Pure logic, easy to mock repositories
+- **Free tier first** - Always check free before premium
+- **No generation counting for premium** - Time-based only
+- **Simpler UsageInfo** - No purchase_id needed
+- **Lifetime vs monthly** - Different tracking for different features
 
-### 4.3: Create Index File
+### 4.4: Create Index File
 
 **File:** `src/lib/ai/index.ts`
 
@@ -719,6 +770,7 @@ function getNextMonthStart(): Date {
 export * from './anthropic-provider.js';
 export * from './prompts/standup.js';
 export * from './usage-limiter.js';
+export * from './feature-config.js';
 ```
 
 ---
@@ -736,24 +788,26 @@ import { asyncHandler } from '../../middleware/async-handler.js';
 import { AnthropicProvider } from '../../lib/ai/anthropic-provider.js';
 import { buildStandupPrompt } from '../../lib/ai/prompts/standup.js';
 import { checkUsage, incrementUsage } from '../../lib/ai/usage-limiter.js';
+import { getFeatureConfig } from '../../lib/ai/feature-config.js';
 
 export const StandupController = {
   generate: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!.id; // Set by requireAuthentication middleware
 
     // ========================================
-    // NEW: Check usage limit BEFORE streaming
+    // Check usage limit BEFORE streaming
     // ========================================
     const usageInfo = await checkUsage(userId, 'standup');
 
     if (!usageInfo.allowed) {
       // Usage limit exceeded - return 429 error
+      const config = getFeatureConfig('standup');
+
       res.status(429).json({
         error: 'Usage limit exceeded',
-        message:
-          usageInfo.reason === 'limit_exceeded' && usageInfo.limit
-            ? `You've used ${usageInfo.used}/${usageInfo.limit} free requests this month. Resets on ${usageInfo.resets_at}.`
-            : 'You have reached your usage limit for this feature.',
+        message: usageInfo.resets_at
+          ? `You've used ${usageInfo.used}/${usageInfo.limit} free requests this month. Resets on ${new Date(usageInfo.resets_at).toLocaleDateString()}.`
+          : `You've used your free trial. Purchase ${config.productName} to continue.`,
         reason: usageInfo.reason,
         usage: usageInfo,
       });
@@ -791,13 +845,9 @@ Tomorrow: Work on API rate limiting feature. Need to design the Redis caching la
       }
 
       // ========================================
-      // NEW: Increment usage counter after success
+      // Increment usage counter after success
       // ========================================
-      await incrementUsage(
-        userId,
-        'standup',
-        usageInfo.purchase_id // Pass purchase ID if premium user
-      );
+      await incrementUsage(userId, 'standup', usageInfo);
 
       // Get updated usage for response
       const updatedUsage = await checkUsage(userId, 'standup');
@@ -806,10 +856,11 @@ Tomorrow: Work on API rate limiting feature. Need to design the Redis caching la
       writeEvent('done', {
         journal_date: testJournal.date,
         usage: {
-          used: updatedUsage.used ?? 0,
+          tier: updatedUsage.reason === 'premium' ? 'premium' : 'free',
+          used: updatedUsage.used ?? null,
           limit: updatedUsage.limit ?? null,
           resets_at: updatedUsage.resets_at ?? null,
-          tier: updatedUsage.reason === 'free_tier' ? 'free' : 'premium',
+          expires_at: updatedUsage.expires_at ?? null,
         },
       });
 
@@ -825,17 +876,12 @@ Tomorrow: Work on API rate limiting feature. Need to design the Redis caching la
 };
 ```
 
-**Key changes from Phase 2:**
+**Key changes:**
 
-1. **Check usage before streaming** - Return 429 error if limit exceeded
-2. **Increment usage after success** - Only count successful generations
-3. **Include usage in done event** - Client can show "X/20 requests used"
-4. **Error handling** - Don't increment usage if generation fails
-
-**Why check before AND increment after?**
-
-- **Check before**: Don't waste AI API calls if user is over limit
-- **Increment after**: Only count successful generations (not errors)
+1. **Check usage before streaming** - Return 429 if limit exceeded
+2. **Increment after success only** - Pass `usageInfo` to know if free or premium
+3. **Updated usage response** - Shows tier, used, limit, and reset/expiry info
+4. **Better error messages** - Different messages for monthly vs lifetime features
 
 ---
 
@@ -862,7 +908,7 @@ event: content
 data: {"text":"Yesterday:\n- Fixed authentication bug..."}
 
 event: done
-data: {"journal_date":"2025-01-07","usage":{"used":1,"limit":20,"resets_at":"2025-02-01T00:00:00.000Z","tier":"free"}}
+data: {"journal_date":"2025-01-07","usage":{"tier":"free","used":1,"limit":10,"resets_at":"2025-02-01T00:00:00.000Z","expires_at":null}}
 ```
 
 **Verify in database:**
@@ -875,7 +921,7 @@ Navigate to `ai_usage` table. You should see:
 
 - `userId`: Your user ID
 - `feature`: `'standup'`
-- `month`: `'2025-01'`
+- `month`: `'2025-01'` (current month)
 - `count`: `1`
 
 ### 6.2: Test Free Tier (Hit Limit)
@@ -887,7 +933,7 @@ Navigate to `ai_usage` table. You should see:
 pnpm prisma studio
 
 # Find your usage row in ai_usage table
-# Edit count to 20 (the limit)
+# Edit count to 10 (the limit)
 # Save
 ```
 
@@ -903,25 +949,19 @@ curl -N -H "Authorization: Bearer YOUR_TOKEN" \
 ```json
 {
   "error": "Usage limit exceeded",
-  "message": "You've used 20/20 free requests this month. Resets on 2025-02-01T00:00:00.000Z.",
+  "message": "You've used 10/10 free requests this month. Resets on 2/1/2025.",
   "reason": "limit_exceeded",
   "usage": {
     "allowed": false,
     "reason": "limit_exceeded",
-    "used": 20,
-    "limit": 20,
+    "used": 10,
+    "limit": 10,
     "resets_at": "2025-02-01T00:00:00.000Z"
   }
 }
 ```
 
-**Why 429 status code?**
-
-- Standard HTTP status for rate limiting
-- Clients can handle it specifically
-- Different from 403 Forbidden (not a permissions issue)
-
-### 6.3: Test Premium Tier (Unlimited)
+### 6.3: Test Premium Tier (Time-Based)
 
 **Create a premium purchase:**
 
@@ -935,13 +975,13 @@ pnpm prisma studio
 #   userId: <your user ID>
 #   product: 'standup-pro'
 #   purchasedAt: <current date>
-#   expiresAt: null (for lifetime)
-#   generationsLimit: null (for unlimited)
+#   expiresAt: <90 days from now>
+#   generationsLimit: null (leave empty)
 #   generationsUsed: 0
 # Save
 ```
 
-**Make a request:**
+**Make a request (with free tier exhausted):**
 
 ```bash
 curl -N -H "Authorization: Bearer YOUR_TOKEN" \
@@ -958,72 +998,39 @@ event: content
 data: {"text":"Yesterday:\n- Fixed..."}
 
 event: done
-data: {"journal_date":"2025-01-07","usage":{"used":0,"limit":null,"resets_at":null,"tier":"premium"}}
+data: {"journal_date":"2025-01-07","usage":{"tier":"premium","used":null,"limit":null,"resets_at":null,"expires_at":"2025-04-07T00:00:00.000Z"}}
 ```
 
-**Verify:**
+**Key observations:**
 
-- Even though `ai_usage.count` is 20, request succeeds
-- Premium purchase bypasses free tier limit
+- Request succeeds even though free tier is exhausted
 - `tier: 'premium'` in response
+- `expires_at` shows when premium access ends
+- `used` and `limit` are null (no counting for premium)
 
-### 6.4: Test Premium Tier (Count-Limited)
+### 6.4: Test Free Tier First (With Premium)
 
-**Update purchase to have count limit:**
+**Reset free tier usage:**
 
 ```bash
-# Open Prisma Studio
-# Edit your purchase record:
-#   generationsLimit: 5
-#   generationsUsed: 4
-# Save
+# In Prisma Studio, set ai_usage.count = 0
 ```
 
-**Make a request (should succeed):**
+**Make a request (should use free tier first):**
 
 ```bash
 curl -N -H "Authorization: Bearer YOUR_TOKEN" \
   -X POST http://localhost:3000/api/ai/standup
 ```
 
-Expected: Succeeds, `generationsUsed` increments to 5.
+**Expected:** Uses FREE tier first (not premium), because free tier is available.
 
-**Make another request (should fail):**
-
-```bash
-curl -N -H "Authorization: Bearer YOUR_TOKEN" \
-  -X POST http://localhost:3000/api/ai/standup
+```
+event: done
+data: {"journal_date":"2025-01-07","usage":{"tier":"free","used":1,"limit":10,"resets_at":"2025-02-01T00:00:00.000Z","expires_at":null}}
 ```
 
-Expected: 429 error (count limit reached).
-
-### 6.5: Test Environment Variable Changes
-
-**Change free tier limit:**
-
-```env
-# In .env, change:
-AI_STANDUP_FREE_LIMIT=5
-```
-
-**Restart server:**
-
-```bash
-# Ctrl+C to stop
-pnpm dev
-```
-
-**Reset usage count in database:**
-
-```bash
-# Prisma Studio: Set ai_usage.count = 0
-```
-
-**Make requests until limit hit:**
-
-```bash
-# Should fail on 6th request (5 is new limit)
-```
+This confirms **free tier first** logic is working correctly.
 
 ---
 
@@ -1044,8 +1051,6 @@ cat src/domain/repositories/index.ts
 # export * from './ai-purchase.repository.js';
 ```
 
-**Note the `.js` extension** - TypeScript requires it for ESM imports even though files are `.ts`.
-
 ### Issue: "Table 'ai_usage' does not exist"
 
 **Cause:** Migration not applied.
@@ -1058,75 +1063,24 @@ cd packages/api
 # Check migration status
 pnpm prisma migrate status
 
-# If migration is pending
+# Apply pending migrations
 pnpm prisma migrate deploy
-
-# If migration is broken
-pnpm prisma migrate reset  # WARNING: Deletes all data
-pnpm prisma migrate dev --name ai_usage_and_purchases
 ```
 
 ### Issue: Usage count not incrementing
 
-**Cause:** `incrementUsage()` not called or called before success.
+**Cause:** Premium user - no increment needed for time-based model.
 
-**Fix:**
-
-- Ensure `incrementUsage()` is called AFTER AI streaming completes
-- Check for early returns or exceptions that skip increment
-- Add logging:
-
-```typescript
-await incrementUsage(userId, 'standup', usageInfo.purchase_id);
-console.log(`[Usage] Incremented usage for user ${userId}, feature: standup`);
-```
+**Check:** If `usageInfo.reason === 'premium'`, we don't increment usage.
 
 ### Issue: Premium purchase not recognized
 
-**Cause:** Query logic error or wrong product name.
+**Cause:** `expiresAt` is in the past.
 
-**Fix:**
-
-- Verify product name matches: `'standup-pro'` (not `'standup'`)
-- Check `expiresAt` is null or in future
-- Check `generationsLimit` vs `generationsUsed`
-- Add logging in `findActivePurchase()`:
-
-```typescript
-console.log('[Purchase] Query:', { userId, product, now });
-console.log('[Purchase] Found:', activePurchase);
-```
-
-### Issue: 429 error immediately after server restart
-
-**Cause:** Usage count persisted in database from previous tests.
-
-**Fix:**
+**Fix:** Ensure `expiresAt` is a future date.
 
 ```bash
-# Reset usage count in Prisma Studio
-# OR delete the row entirely
-# New month will start fresh automatically
-```
-
-### Issue: Zod validation error on startup
-
-**Cause:** Environment variables not set or invalid.
-
-**Fix:**
-
-```bash
-# Check .env file has all required vars
-cat packages/api/.env | grep AI_
-
-# Should see:
-# AI_STANDUP_FREE_LIMIT=20
-# AI_PROMOTION_FREE_LIMIT=1
-# AI_RESUME_FREE_LIMIT=1
-# AI_INTERVIEW_FREE_LIMIT=1
-
-# Restart server
-pnpm dev
+# In Prisma Studio, verify expiresAt > now
 ```
 
 ---
@@ -1136,35 +1090,27 @@ pnpm dev
 Before moving to Phase 4, verify:
 
 - [x] **Database tables created**
-  - `ai_usage` and `ai_purchases` tables exist in database
+  - `ai_usage` and `ai_purchases` tables exist
   - Can insert/query rows via Prisma Studio
 
-- [x] **Repositories work**
-  - Can query usage: `aiUsageRepository.findUsage()`
-  - Can upsert usage: `aiUsageRepository.upsertUsage()`
-  - Can query purchases: `aiPurchaseRepository.findActivePurchase()`
+- [x] **Free tier first logic works**
+  - Free tier is checked before premium
+  - Free tier usage increments correctly
+  - Premium kicks in only when free is exhausted
+
+- [x] **Time-based premium works**
+  - Active purchase allows unlimited access
+  - No generation counting for premium
+  - Expired purchases are ignored
 
 - [x] **Environment variables configured**
-  - All `AI_*_FREE_LIMIT` vars in `.env`
+  - `AI_STANDUP_FREE_LIMIT=10` in `.env`
   - Zod validates on server startup
-  - Can change limits without code changes
-
-- [x] **Usage limiter works**
-  - Free tier: Allows requests under limit
-  - Free tier: Blocks requests over limit (429 error)
-  - Premium tier: Bypasses free tier limit
-  - Count-limited premium: Respects generation limits
 
 - [x] **Controller enforces limits**
   - Checks usage before streaming
   - Increments usage after success
-  - Returns usage metadata in `done` event
-  - Returns 429 error when limit exceeded
-
-- [x] **Testing verified**
-  - Manually tested all scenarios
-  - Database updates correctly
-  - Error messages are helpful
+  - Returns 429 when limit exceeded
 
 ---
 
@@ -1182,16 +1128,15 @@ Before moving to Phase 4, verify:
 5. **Add error handling:**
    - No journals found → 404 error
    - Invalid date format → 422 validation error
-6. **Implement journal date logic** (use last available journal, not hardcoded)
 
 **You now have:**
 
 - ✅ Database persistence
-- ✅ Usage limit enforcement
-- ✅ Premium tier support
+- ✅ Free tier first usage logic
+- ✅ Time-based premium access
 - ✅ Configurable limits
 
-**Ready to wire it all together!** 🚀
+**Ready to wire it all together!**
 
 ---
 
@@ -1206,36 +1151,43 @@ if (!usageInfo.allowed) {
 }
 ```
 
-**Increment usage:**
+**Increment usage (after success):**
 
 ```typescript
-await incrementUsage(userId, 'standup', purchaseId);
+await incrementUsage(userId, 'standup', usageInfo);
 ```
 
 **Query current usage:**
 
 ```typescript
+// For monthly features (standup)
 const count = await aiUsageRepository.getUsageCount(
   userId,
   'standup',
   '2025-01'
 );
+
+// For lifetime features (career)
+const totalCount = await aiUsageRepository.getTotalUsageCount(
+  userId,
+  'promotion'
+);
 ```
 
 **Create test purchase:**
 
-```bash
-# Via Prisma Studio or:
+```typescript
+// Standup Pro (90 days)
 await aiPurchaseRepository.createPurchase({
   userId: 'user_123',
   product: 'standup-pro',
-  expiresAt: null, // Lifetime
-  generationsLimit: null, // Unlimited
+  expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
 });
-```
 
-**Current month:**
-
-```typescript
-const month = getCurrentMonth(); // '2025-01'
+// Resume & Interview Pro (30 days) - unlocks both features
+await aiPurchaseRepository.createPurchase({
+  userId: 'user_123',
+  product: 'resume-interview-pro',
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+});
 ```

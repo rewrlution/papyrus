@@ -89,12 +89,12 @@ model Journal {
 model AiUsage {
   // Primary fields
   id      String @id @default(cuid())
+  userId  String @map("user_id")
   feature String // Feature name: 'standup' | 'promotion' | 'resume' | 'interview'
-  month   String // Month in 'YYYY-MM' format
+  month   String // Month in 'YYYY-MM' format for standup, 'lifetime' for career features
   count   Int    @default(0) // Number of times feature was used this month
 
   // Relations
-  userId String @map("user_id")
   user   User   @relation("UserAiUsage", fields: [userId], references: [id], onDelete: Cascade)
 
   // Constraints & Indexes
@@ -112,15 +112,11 @@ model AiUsage {
 model AiPurchase {
   id      String  @id @default(cuid())
   userId  String  @map("user_id")
-  product String  // 'standup-pro' | 'promotion-builder' | 'resume-generator' | 'interview-coach'
+  product String  // 'standup-pro' | 'promotion-pro' | 'resume-interview-pro'
 
   // Purchase metadata
   purchasedAt DateTime  @default(now()) @map("purchased_at")
-  expiresAt   DateTime? @map("expires_at") // null = lifetime access
-
-  // Generation limits (for count-based limits)
-  generationsLimit  Int?  @map("generation_limit") // null = unlimited
-  generationsUsed   Int   @default(0) @map("generation_used")
+  expiresAt   DateTime? @map("expires_at") // When access expires
 
   // Payment metadata (optional, for Stripe integration later)
   amount    Int?    // Amount in cents (e.g., 900 for $9.00)

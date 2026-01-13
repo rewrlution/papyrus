@@ -248,13 +248,18 @@ pnpm build
 ```typescript
 import type { Journal } from '@prisma/client';
 import { journalRepository } from '../../domain/repositories/journal.repository.js';
-import { checkUsage, incrementUsage } from '../../lib/ai/usage-limiter.js';
+import {
+  checkUsage,
+  incrementUsage,
+  type UsageInfo,
+} from '../../lib/ai/usage-limiter.js';
 import { AnthropicProvider } from '../../lib/ai/anthropic-provider.js';
 import {
   buildStandupPrompt,
   buildStandupPromptForRange,
 } from '../../lib/ai/prompts/standup.js';
 import { NotFoundError } from '../../lib/errors.js';
+import { getFeatureConfig } from '../../lib/ai/feature-config.js';
 
 /**
  * Options for generating standup notes
@@ -275,10 +280,11 @@ export type StandupEvent =
       type: 'done';
       journal_date: string;
       usage: {
-        used?: number;
+        tier: 'free' | 'premium';
+        used?: number | null;
         limit?: number | null;
         resets_at?: string | null;
-        tier: 'free' | 'premium';
+        expires_at?: string | null;
       };
     }
   | { type: 'error'; message: string };
@@ -302,15 +308,15 @@ export const StandupService = {
     userId: string,
     options: GenerateStandupOptions = {}
   ): AsyncGenerator<StandupEvent> {
-    // Step 1: Check usage limit
+    // Step 1: Check usage limit (free tier first, then premium)
     const usageInfo = await checkUsage(userId, 'standup');
 
     if (!usageInfo.allowed) {
       // Limit exceeded - yield error event and return
-      const message =
-        usageInfo.reason === 'limit_exceeded' && usageInfo.limit
-          ? `You've used ${usageInfo.used}/${usageInfo.limit} free requests this month. Resets on ${new Date(usageInfo.resets_at!).toLocaleDateString()}.`
-          : 'You have reached your usage limit for this feature.';
+      const config = getFeatureConfig('standup');
+      const message = usageInfo.resets_at
+        ? `You've used ${usageInfo.used}/${usageInfo.limit} free requests this month. Resets on ${new Date(usageInfo.resets_at).toLocaleDateString()}.`
+        : `You've used your free trial. Purchase ${config.productName} to continue.`;
 
       yield { type: 'error', message };
       return;
@@ -358,8 +364,8 @@ export const StandupService = {
       return;
     }
 
-    // Step 6: Increment usage counter (only on success)
-    await incrementUsage(userId, 'standup', usageInfo.purchase_id);
+    // Step 6: Increment usage counter (only on success, only for free tier)
+    await incrementUsage(userId, 'standup', usageInfo);
 
     // Step 7: Get updated usage and yield done event
     const updatedUsage = await checkUsage(userId, 'standup');
@@ -368,10 +374,11 @@ export const StandupService = {
       type: 'done',
       journal_date: dateRange,
       usage: {
-        used: updatedUsage.used ?? 0,
+        tier: updatedUsage.reason === 'premium' ? 'premium' : 'free',
+        used: updatedUsage.used ?? null,
         limit: updatedUsage.limit ?? null,
         resets_at: updatedUsage.resets_at ?? null,
-        tier: updatedUsage.reason === 'free_tier' ? 'free' : 'premium',
+        expires_at: updatedUsage.expires_at ?? null,
       },
     };
   },
@@ -678,7 +685,7 @@ event: content
 data: {"text":"Yesterday:\n- Implemented user authentication..."}
 
 event: done
-data: {"journal_date":"2025-01-07","usage":{"used":1,"limit":20,"resets_at":"2025-02-01T00:00:00.000Z","tier":"free"}}
+data: {"journal_date":"2025-01-07","usage":{"tier":"free","used":1,"limit":10,"resets_at":"2025-02-01T00:00:00.000Z","expires_at":null}}
 ```
 
 ### 4.2: Test Mode 2 - Specific Date

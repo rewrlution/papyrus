@@ -201,13 +201,9 @@ describe('Usage Limiter', () => {
     vi.clearAllMocks();
   });
 
-  describe('checkUsage - Free Tier', () => {
+  describe('checkUsage - Free Tier First', () => {
     it('should allow usage under free tier limit', async () => {
-      // Mock: No purchase, usage = 5, limit = 20
-      vi.spyOn(
-        aiPurchaseRepo.aiPurchaseRepository,
-        'findActivePurchase'
-      ).mockResolvedValue(null);
+      // Mock: usage = 5, limit = 10
       vi.spyOn(
         aiUsageRepo.aiUsageRepository,
         'getUsageCount'
@@ -218,33 +214,29 @@ describe('Usage Limiter', () => {
       expect(result.allowed).toBe(true);
       expect(result.reason).toBe('free_tier');
       expect(result.used).toBe(5);
-      expect(result.limit).toBe(20);
+      expect(result.limit).toBe(10);
     });
 
-    it('should deny usage at free tier limit', async () => {
-      // Mock: No purchase, usage = 20, limit = 20
+    it('should deny usage at free tier limit (no premium)', async () => {
+      // Mock: usage = 10, limit = 10, no purchase
+      vi.spyOn(
+        aiUsageRepo.aiUsageRepository,
+        'getUsageCount'
+      ).mockResolvedValue(10);
       vi.spyOn(
         aiPurchaseRepo.aiPurchaseRepository,
         'findActivePurchase'
       ).mockResolvedValue(null);
-      vi.spyOn(
-        aiUsageRepo.aiUsageRepository,
-        'getUsageCount'
-      ).mockResolvedValue(20);
 
       const result = await checkUsage('user1', 'standup');
 
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe('limit_exceeded');
-      expect(result.used).toBe(20);
-      expect(result.limit).toBe(20);
+      expect(result.used).toBe(10);
+      expect(result.limit).toBe(10);
     });
 
     it('should allow first usage (count = 0)', async () => {
-      vi.spyOn(
-        aiPurchaseRepo.aiPurchaseRepository,
-        'findActivePurchase'
-      ).mockResolvedValue(null);
       vi.spyOn(
         aiUsageRepo.aiUsageRepository,
         'getUsageCount'
@@ -253,22 +245,31 @@ describe('Usage Limiter', () => {
       const result = await checkUsage('user1', 'standup');
 
       expect(result.allowed).toBe(true);
+      expect(result.reason).toBe('free_tier');
       expect(result.used).toBe(0);
     });
   });
 
-  describe('checkUsage - Premium Tier', () => {
-    it('should allow usage with unlimited purchase', async () => {
+  describe('checkUsage - Premium Tier (Time-Based)', () => {
+    it('should allow usage when free exhausted but has active purchase', async () => {
+      // Mock: free tier exhausted
+      vi.spyOn(
+        aiUsageRepo.aiUsageRepository,
+        'getUsageCount'
+      ).mockResolvedValue(10); // At free limit
+
+      // Mock: has active purchase (not expired)
+      const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
       const mockPurchase = {
         id: 'purchase1',
         userId: 'user1',
         product: 'standup-pro',
-        generationsLimit: null, // Unlimited
+        generationsLimit: null, // Time-based unlimited
         generationsUsed: 0,
-        expiresAt: null,
+        expiresAt: futureDate,
         purchasedAt: new Date(),
-        amount: null,
-        currency: null,
+        amount: 900,
+        currency: 'usd',
         createdAt: new Date(),
       };
 
@@ -280,55 +281,38 @@ describe('Usage Limiter', () => {
       const result = await checkUsage('user1', 'standup');
 
       expect(result.allowed).toBe(true);
-      expect(result.reason).toBe('premium_unlimited');
-      expect(result.purchase_id).toBe('purchase1');
+      expect(result.reason).toBe('premium');
+      expect(result.expires_at).toBeDefined();
     });
 
-    it('should allow usage with count-limited purchase', async () => {
-      const mockPurchase = {
-        id: 'purchase1',
-        userId: 'user1',
-        product: 'standup-pro',
-        generationsLimit: 100,
-        generationsUsed: 50,
-        expiresAt: null,
-        purchasedAt: new Date(),
-        amount: null,
-        currency: null,
-        createdAt: new Date(),
-      };
-
+    it('should use free tier first even with active purchase', async () => {
+      // Mock: free tier has remaining (5/10)
       vi.spyOn(
-        aiPurchaseRepo.aiPurchaseRepository,
-        'findActivePurchase'
-      ).mockResolvedValue(mockPurchase);
+        aiUsageRepo.aiUsageRepository,
+        'getUsageCount'
+      ).mockResolvedValue(5);
 
+      // Note: findActivePurchase should NOT be called if free tier available
       const result = await checkUsage('user1', 'standup');
 
       expect(result.allowed).toBe(true);
-      expect(result.reason).toBe('premium_limited');
-      expect(result.generations_used).toBe(50);
-      expect(result.generations_limit).toBe(100);
+      expect(result.reason).toBe('free_tier'); // Uses free tier first!
+      expect(result.used).toBe(5);
+      expect(result.limit).toBe(10);
     });
 
-    it('should deny usage when count limit reached', async () => {
-      const mockPurchase = {
-        id: 'purchase1',
-        userId: 'user1',
-        product: 'standup-pro',
-        generationsLimit: 100,
-        generationsUsed: 100, // Reached limit
-        expiresAt: null,
-        purchasedAt: new Date(),
-        amount: null,
-        currency: null,
-        createdAt: new Date(),
-      };
+    it('should deny when free exhausted and no active purchase', async () => {
+      // Mock: free tier exhausted
+      vi.spyOn(
+        aiUsageRepo.aiUsageRepository,
+        'getUsageCount'
+      ).mockResolvedValue(10);
 
+      // Mock: no active purchase
       vi.spyOn(
         aiPurchaseRepo.aiPurchaseRepository,
         'findActivePurchase'
-      ).mockResolvedValue(mockPurchase);
+      ).mockResolvedValue(null);
 
       const result = await checkUsage('user1', 'standup');
 
@@ -336,40 +320,28 @@ describe('Usage Limiter', () => {
       expect(result.reason).toBe('limit_exceeded');
     });
 
-    it('should bypass free tier limit with premium purchase', async () => {
-      // User has used 100 free requests, but has premium purchase
-      const mockPurchase = {
-        id: 'purchase1',
-        userId: 'user1',
-        product: 'standup-pro',
-        generationsLimit: null,
-        generationsUsed: 0,
-        expiresAt: null,
-        purchasedAt: new Date(),
-        amount: null,
-        currency: null,
-        createdAt: new Date(),
-      };
-
-      vi.spyOn(
-        aiPurchaseRepo.aiPurchaseRepository,
-        'findActivePurchase'
-      ).mockResolvedValue(mockPurchase);
-      // Free tier usage is 100 (doesn't matter with premium)
+    it('should deny when free exhausted and purchase expired', async () => {
+      // Mock: free tier exhausted
       vi.spyOn(
         aiUsageRepo.aiUsageRepository,
         'getUsageCount'
-      ).mockResolvedValue(100);
+      ).mockResolvedValue(10);
+
+      // Mock: findActivePurchase returns null (expired purchases filtered out)
+      vi.spyOn(
+        aiPurchaseRepo.aiPurchaseRepository,
+        'findActivePurchase'
+      ).mockResolvedValue(null);
 
       const result = await checkUsage('user1', 'standup');
 
-      expect(result.allowed).toBe(true);
-      expect(result.reason).toBe('premium_unlimited');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toBe('limit_exceeded');
     });
   });
 
   describe('incrementUsage', () => {
-    it('should increment free tier usage', async () => {
+    it('should increment usage for free tier', async () => {
       const upsertSpy = vi
         .spyOn(aiUsageRepo.aiUsageRepository, 'upsertUsage')
         .mockResolvedValue({
@@ -382,34 +354,38 @@ describe('Usage Limiter', () => {
           updatedAt: new Date(),
         });
 
-      await incrementUsage('user1', 'standup');
+      // Free tier usage info
+      const usageInfo = {
+        allowed: true,
+        reason: 'free_tier' as const,
+        used: 5,
+        limit: 10,
+        resets_at: '2025-02-01T00:00:00.000Z',
+      };
+
+      await incrementUsage('user1', 'standup', usageInfo);
 
       expect(upsertSpy).toHaveBeenCalledWith(
         'user1',
         'standup',
-        expect.any(String)
+        expect.any(String) // Current month
       );
     });
 
-    it('should increment premium purchase usage', async () => {
-      const incrementSpy = vi
-        .spyOn(aiPurchaseRepo.aiPurchaseRepository, 'incrementGenerationsUsed')
-        .mockResolvedValue({
-          id: 'purchase1',
-          userId: 'user1',
-          product: 'standup-pro',
-          generationsLimit: 100,
-          generationsUsed: 51,
-          expiresAt: null,
-          purchasedAt: new Date(),
-          amount: null,
-          currency: null,
-          createdAt: new Date(),
-        });
+    it('should NOT increment usage for premium tier (time-based)', async () => {
+      const upsertSpy = vi.spyOn(aiUsageRepo.aiUsageRepository, 'upsertUsage');
 
-      await incrementUsage('user1', 'standup', 'purchase1');
+      // Premium tier usage info
+      const usageInfo = {
+        allowed: true,
+        reason: 'premium' as const,
+        expires_at: '2025-04-07T00:00:00.000Z',
+      };
 
-      expect(incrementSpy).toHaveBeenCalledWith('purchase1');
+      await incrementUsage('user1', 'standup', usageInfo);
+
+      // Should NOT call upsertUsage for premium (time-based, no counting)
+      expect(upsertSpy).not.toHaveBeenCalled();
     });
   });
 });
@@ -1151,13 +1127,13 @@ pnpm test --coverage
 
    Expected: Streams standup notes
 
-7. **Check usage (1/20):**
-   Expected: `done` event shows `"used":1,"limit":20`
+7. **Check usage (1/10):**
+   Expected: `done` event shows `"used":1,"limit":10`
 
-8. **Make 19 more requests** (hit limit)
+8. **Make 9 more requests** (hit limit)
 
 9. **Try standup (should fail - limit exceeded):**
-   Expected: Error event saying "You've used 20/20 free requests"
+   Expected: Error event saying "You've used 10/10 free requests"
 
 **All steps work?** ✅ Feature is production-ready!
 
@@ -1200,7 +1176,7 @@ AI_MAX_TOKENS=2048
 AI_TEMPERATURE=0.7
 
 # AI Usage Limits (Free Tier)
-AI_STANDUP_FREE_LIMIT=20
+AI_STANDUP_FREE_LIMIT=10
 AI_PROMOTION_FREE_LIMIT=1
 AI_RESUME_FREE_LIMIT=1
 AI_INTERVIEW_FREE_LIMIT=1
