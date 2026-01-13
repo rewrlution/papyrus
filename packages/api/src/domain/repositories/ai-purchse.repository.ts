@@ -6,17 +6,17 @@ import { prisma } from '../../lib/prisma.js';
  * Repository for AiPurchase table operations
  *
  * Handles:
- * - Finding active purchases (not expired, within limits)
+ * - Finding active purchases (not expired)
  * - Recording new purchases
- * - Incrementing generation usage
  */
 export const aiPurchaseRepository = {
   /**
    * Find an active purchase for a user/product
    *
    * Active means:
-   * - Not expired (expiresAt is null OR in the future)
-   * - Within generation limit (generationLimit is null OR generationUsed < generationsLimit)
+   * - Not expired
+   *
+   * Time-based model: we only check expiration, not generation counts
    */
   async findActivePurchase(
     userId: string,
