@@ -20,7 +20,7 @@ export async function sendVerificationEmail(
   token: string
 ): Promise<void> {
   const subject = 'Verify your papyrus account';
-  const verificationUrl = `${env.APP_URL}/auth/verify-email?token=${token}`;
+  const verificationUrl = `${env.APP_URL}/api/auth/verify-email?token=${token}`;
 
   const html = renderTemplate('verify-email', {
     verificationUrl,
