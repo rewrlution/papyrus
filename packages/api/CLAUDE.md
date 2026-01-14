@@ -446,6 +446,17 @@ throw new Error('Email already registered'); // No status code
 - Configure CORS_ORIGIN (no wildcards in prod)
 - Enable HTTPS in production
 - Review Prisma migrations before deploying
+- Ensure RLS is enabled on all tables (see [docs/database.md](./docs/database.md#row-level-security-rls))
+
+### Row Level Security (RLS)
+
+All tables have RLS enabled with no policies. This means:
+
+- **PostgREST/Supabase client**: No access (blocked by RLS)
+- **Service Role Key**: Full access (backend API uses this)
+- **Prisma direct connection**: Full access
+
+This ensures all data access goes through our API layer, which handles authentication and authorization. See [docs/database.md](./docs/database.md#row-level-security-rls) for details.
 
 ### Performance Tips
 

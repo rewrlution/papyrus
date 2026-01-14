@@ -536,6 +536,98 @@ ALTER TABLE "AiUsage" RENAME COLUMN "user_id" TO "userId";
 
 ---
 
+## Row Level Security (RLS)
+
+### Overview
+
+All tables in the Papyrus database have Row Level Security (RLS) enabled. This is a PostgreSQL feature that restricts which rows can be accessed or modified based on security policies.
+
+### Why RLS?
+
+When using Supabase, tables in the `public` schema are automatically exposed via PostgREST (Supabase's auto-generated REST API). Without RLS:
+
+- Anyone with the `anon` key could potentially read/write to tables
+- This is a significant security risk for sensitive data
+
+### Our Approach: Backend-Only Access
+
+We use RLS with **no policies**, which means:
+
+- **PostgREST API** (anon/authenticated keys): ❌ No access
+- **Service Role Key** (backend API): ✅ Full access (bypasses RLS)
+- **Direct database connection** (Prisma): ✅ Full access
+
+This is intentional because:
+
+1. All data access goes through our Express.js API
+2. The API handles authentication, authorization, and validation
+3. Direct client-to-database access is not needed or desired
+
+### Tables with RLS Enabled
+
+| Table            | Purpose                          | RLS Status |
+| ---------------- | -------------------------------- | ---------- |
+| `users`          | User accounts and authentication | ✅ Enabled |
+| `journals`       | Encrypted journal entries        | ✅ Enabled |
+| `ai_usage`       | AI feature usage tracking        | ✅ Enabled |
+| `ai_trial_usage` | Trial usage tracking             | ✅ Enabled |
+| `ai_purchases`   | Premium purchase records         | ✅ Enabled |
+
+### Migration
+
+RLS was enabled via migration `20260114000000_enable_rls_all_tables`:
+
+```sql
+ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "journals" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ai_usage" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ai_trial_usage" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ai_purchases" ENABLE ROW LEVEL SECURITY;
+```
+
+### Verifying RLS Status
+
+To check if RLS is enabled on a table:
+
+```sql
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public';
+```
+
+To view policies on a table:
+
+```sql
+SELECT * FROM pg_policies WHERE tablename = 'users';
+```
+
+### Adding Policies (If Needed in Future)
+
+If you ever need to allow direct client access to certain tables:
+
+```sql
+-- Example: Allow users to read their own data
+CREATE POLICY "Users can view own data"
+ON public.users
+FOR SELECT
+USING (auth.uid() = id);
+
+-- Example: Allow authenticated users to insert
+CREATE POLICY "Authenticated users can insert"
+ON public.journals
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+```
+
+### Security Best Practices
+
+1. **Always use service_role key in backend**: Never expose this key to clients
+2. **Keep RLS enabled**: Even if you add policies, RLS should remain enabled
+3. **Test policies thoroughly**: Policies can have subtle bugs that expose data
+4. **Audit regularly**: Review policies when adding new features
+
+---
+
 ## Future Considerations
 
 ### Adding New Tables
