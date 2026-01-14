@@ -53,6 +53,9 @@ export async function checkUsage(
   return freeUsage; // Contains limit_exceeded info
 }
 
+/**
+ * Check free tier availability
+ */
 async function checkFreeTier(
   userId: string,
   feature: string,
@@ -103,6 +106,33 @@ async function checkFreeTier(
         limit: 1,
         resets_at: null,
       };
+    }
+  }
+}
+
+/**
+ * Increment usage counter after successful AI generation.
+ *
+ * @param userId - User ID
+ * @param feature - Feature name
+ * @param usageInfo - Usage info from checkUsage (to determine if free or premium)
+ */
+export async function incrementUsage(
+  userId: string,
+  feature: string,
+  usageInfo: UsageInfo
+): Promise<void> {
+  // Only increment for free tier usage
+  // Premium is time-based, no counting needed
+  if (usageInfo.reason === 'free_tier') {
+    const config = getFeatureConfig(feature);
+    const { freeTier } = config;
+
+    if (freeTier.type === 'monthly') {
+      const month = getCurrentMonth();
+      await aiUsageRepository.upsertUsage(userId, feature, month);
+    } else if (freeTier.type === 'trial') {
+      await aiTrialUsageRepository.markTrialUsed(userId, feature);
     }
   }
 }

@@ -1,12 +1,43 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Response } from 'express';
 
-import { AnthropicProvider, buildStandupPrompt } from '../../lib/ai/index.js';
+import { ApiErrorResponse } from '@rewrlution/papyrus-shared';
+
+import {
+  AnthropicProvider,
+  buildStandupPrompt,
+  checkUsage,
+  getFeatureConfig,
+  incrementUsage,
+} from '../../lib/ai/index.js';
 import { RequestWithUser } from '../../middleware/auth.js';
 import { asyncHandler } from '../../middleware/handlers.js';
 
 export const StandupController = {
   generate: asyncHandler(async (req: RequestWithUser, res: Response) => {
+    const userId = req.user.id;
+    const usageInfo = await checkUsage(userId, 'standup');
+
+    if (!usageInfo.allowed) {
+      // Usage limit exceeded - return 429 error
+      const config = getFeatureConfig('standup');
+      const message = usageInfo.resets_at
+        ? `You've used ${usageInfo.used}/${usageInfo.limit} free requests this month. Resets on ${new Date(usageInfo.resets_at).toLocaleDateString()}.`
+        : `You've used your free trail. Purchase ${config.product} to continue.`;
+
+      const err: ApiErrorResponse = {
+        success: false,
+        message,
+        error: {
+          code: usageInfo.reason,
+        },
+      };
+
+      res.status(429).json(err);
+      return;
+    }
+
+    // Usage allowed - proceed with streaming
     // set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -46,13 +77,15 @@ Blocker: Still waiting on design team to approve mockups for feature X. Been wai
         writeEvent('content', { text: chunk });
       }
 
+      // ========================================
+      // Increment usage counter after success
+      // ========================================
+      await incrementUsage(userId, 'standup', usageInfo);
+      const updatedUsage = await checkUsage(userId, 'standup');
+
       writeEvent('done', {
         journal_date: testJournal.date,
-        usage: {
-          used: 3,
-          limit: 20,
-          resets_at: '2025-02-01T00:00:00Z',
-        },
+        usage: updatedUsage,
       });
 
       // close the stream
