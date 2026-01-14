@@ -180,10 +180,6 @@ model AiPurchase {
   purchasedAt DateTime @default(now()) @map("purchased_at")
   expiresAt   DateTime @map("expires_at")  // When access expires
 
-  // Legacy fields (kept for flexibility, set to null for time-based model)
-  generationsLimit Int? @map("generations_limit")  // null = time-based unlimited
-  generationsUsed  Int  @default(0) @map("generations_used")  // Not used for time-based
-
   // Payment metadata (for Stripe integration later)
   amount      Int?     // Amount in cents (e.g., 900 for $9.00)
   currency    String?  // 'usd', 'eur', etc.
@@ -222,8 +218,8 @@ model User {
 
 - **AiUsage.month:** Always 'YYYY-MM' format - no special cases
 - **AiTrialUsage.usedAt:** Timestamp when trial was used (useful for analytics)
-- **AiPurchase.expiresAt:** Required field - all purchases are time-based
-- **generationsLimit:** Nullable, set to `null` for time-based unlimited model
+- **AiPurchase.expiresAt:** Required field - all purchases are time-based (no counting)
+- **AiPurchase.amount/currency:** Optional payment metadata for Stripe integration
 - **onDelete: Cascade:** When user is deleted, all related records are deleted too
 
 ### 1.3: Generate and Run Migration
@@ -494,8 +490,6 @@ export const aiPurchaseRepository = {
         expiresAt: data.expiresAt,
         amount: data.amount,
         currency: data.currency,
-        generationsLimit: null, // Time-based model
-        generationsUsed: 0,
       },
     });
   },
@@ -512,11 +506,11 @@ export const aiPurchaseRepository = {
 };
 ```
 
-**Why this is simpler than before:**
+**Why time-based purchases are simple:**
 
-- No `generationsUsed` tracking needed
-- Just check `expiresAt > now`
-- No complex AND/OR conditions
+- Just check `expiresAt > now` - single condition
+- No counting or tracking usage
+- No complex limit calculations
 
 ### 2.5: Update Repository Index
 
@@ -733,10 +727,9 @@ export interface UsageInfo {
   // For free tier
   used?: number;
   limit?: number;
-  resets_at?: string | null; // ISO date string (null for lifetime)
 
   // For premium tier
-  expires_at?: string; // ISO date string
+  expires_at?: string; // When premium access expires (ISO date string)
 }
 
 /**
@@ -813,7 +806,7 @@ async function checkFreeTier(
       reason: allowed ? 'free_tier' : 'limit_exceeded',
       used,
       limit: freeTier.limit,
-      resets_at: getNextMonthStart().toISOString(),
+      resets_at: getNextMonthStart().toISOString(), // Show when limit resets
     };
   }
 
@@ -828,7 +821,7 @@ async function checkFreeTier(
       reason: allowed ? 'free_tier' : 'limit_exceeded',
       used,
       limit: 1, // Trials are always one-time
-      resets_at: null, // Never resets
+      resets_at: null, // Trials never reset
     };
   }
 
@@ -1114,8 +1107,8 @@ pnpm prisma studio
 #   product: 'standup-pro'
 #   purchasedAt: <current date>
 #   expiresAt: <90 days from now>
-#   generationsLimit: null (leave empty)
-#   generationsUsed: 0
+#   amount: 900 (optional)
+#   currency: 'usd' (optional)
 # Save
 ```
 

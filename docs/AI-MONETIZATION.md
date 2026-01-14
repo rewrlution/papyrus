@@ -182,17 +182,13 @@ model AiPurchase {
   // Payment metadata
   amount      Int?      // Amount in cents
   currency    String?   // 'usd', etc.
-
-  // Legacy fields (kept for flexibility, not used in current model)
-  generationsLimit Int?  @default(null) // Always null for time-based
-  generationsUsed  Int   @default(0)    // Not used for time-based
 }
 ```
 
 **Note:**
 
 - `resume-interview-pro` is a single product that grants access to both resume and interview features
-- `generationsLimit` and `generationsUsed` are kept for potential future use but set to `null`/`0` for all current purchases
+- All purchases are time-based (no generation counting) - just check `expiresAt > now`
 
 ### User Model Relations
 
@@ -367,13 +363,13 @@ You're making requests too quickly. Please try again in a few minutes.
 
 ### Why Time-Based Unlimited?
 
-| Aspect            | Count-Based                 | Time-Based Unlimited     |
+| Aspect            | Count-Based (❌ Not used)    | Time-Based Unlimited (✅ Our choice) |
 | ----------------- | --------------------------- | ------------------------ |
 | User anxiety      | High ("Should I use this?") | Low ("I have access")    |
 | Iteration freedom | Limited                     | Unlimited                |
-| Implementation    | Track `generationsUsed`     | Just check `expiresAt`   |
+| Implementation    | Track generation counts     | Just check `expiresAt`   |
 | User perception   | "Running out"               | "I have access until..." |
-| Cost control      | Via count                   | Via rate limits          |
+| Cost control      | Via count limits            | Via rate limits          |
 
 ### Why Free Tier First?
 

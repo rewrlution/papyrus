@@ -1,5 +1,7 @@
 # AI Architecture Design for Papyrus
 
+> ⚠️ **Note:** This is an early design document. The monetization model described here (generation limits) has been superseded by a time-based unlimited access model. See [AI-MONETIZATION.md](./AI-MONETIZATION.md) for the current implementation.
+
 > Discussion document for deciding how to implement AI features in Papyrus
 
 ## The Core Question

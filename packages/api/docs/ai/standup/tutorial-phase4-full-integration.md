@@ -7,7 +7,7 @@ Wire all layers together to create a production-ready standup notes endpoint. Af
 - ✅ Load real journals from database (not hardcoded test data)
 - ✅ Request validation with Zod schemas
 - ✅ Service layer for business logic orchestration
-- ✅ Support three modes: latest journal, specific date, date range
+- ✅ Support four modes: latest journal, specific date, from-to-today, explicit date range
 - ✅ Comprehensive error handling with helpful messages
 - ✅ Clean separation of concerns (Routes → Controllers → Services → Repositories)
 
@@ -26,7 +26,7 @@ Wire all layers together to create a production-ready standup notes endpoint. Af
 │  3. Load journals from database                 │
 │  4. Update controller to use service            │
 │  5. Add comprehensive error handling            │
-│  6. Test all three modes                        │
+│  6. Test all four modes                         │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -63,7 +63,7 @@ Controller streams events to client
 
 ### 1.1: Understand the Request Modes
 
-**Three ways to call the endpoint:**
+**Four ways to call the endpoint:**
 
 1. **Empty body** → Use most recent journal
 
@@ -79,17 +79,25 @@ Controller streams events to client
    # Body: { "date": "2025-01-07" }
    ```
 
-3. **Date range** → Aggregate journals from range
+3. **From date** → Aggregate journals from date to today
+   ```bash
+   POST /api/ai/standup
+   # Body: { "from": "2025-01-01" }
+   # Will use 2025-01-01 to today
+   ```
+
+4. **Date range** → Aggregate journals from explicit range
    ```bash
    POST /api/ai/standup
    # Body: { "from": "2025-01-01", "to": "2025-01-07" }
    ```
 
-**Why three modes?**
+**Why these modes?**
 
 - Empty body: Most common use case (daily standup)
 - Specific date: Look back at past work
-- Date range: Weekly/monthly summaries
+- From date: Weekly summary without calculating end date
+- Date range: Explicit time period summaries
 
 ### 1.2: Create Zod Schemas
 
@@ -115,10 +123,11 @@ const DateStringSchema = z
 /**
  * Request schema for POST /api/ai/standup
  *
- * Three modes:
+ * Four modes:
  * 1. Empty body {} -> Use most recent journal
  * 2. { date: "YYYY-MM-DD" } -> Use specific date
- * 3. { from: "YYYY-MM-DD", to: "YYYY-MM-DD" } -> Use date range
+ * 3. { from: "YYYY-MM-DD" } -> Use date range from 'from' to today
+ * 4. { from: "YYYY-MM-DD", to: "YYYY-MM-DD" } -> Use explicit date range
  */
 export const StandupRequestSchema = z
   .object({
@@ -132,11 +141,11 @@ export const StandupRequestSchema = z
       if (data.date && (data.from || data.to)) {
         return false;
       }
-      // If 'from' is provided, 'to' must also be provided (and vice versa)
-      if ((data.from && !data.to) || (!data.from && data.to)) {
+      // Cannot provide 'to' without 'from'
+      if (data.to && !data.from) {
         return false;
       }
-      // If 'from' and 'to' are provided, 'from' must be before or equal to 'to'
+      // If both 'from' and 'to' are provided, 'from' must be <= 'to'
       if (data.from && data.to && data.from > data.to) {
         return false;
       }
@@ -144,7 +153,7 @@ export const StandupRequestSchema = z
     },
     {
       message:
-        'Either provide "date", or both "from" and "to", or neither. Ensure "from" <= "to".',
+        'Either provide "date", or "from" (with optional "to"), or neither. If both "from" and "to" are provided, ensure "from" <= "to".',
     }
   );
 
@@ -186,8 +195,9 @@ export const ErrorEventSchema = z.object({
 **Why these refinements?**
 
 - Prevent invalid combinations (can't have both `date` and `from`/`to`)
-- Ensure range is valid (`from` <= `to`)
-- Both `from` and `to` required together (not just one)
+- Ensure range is valid (`from` <= `to` when both provided)
+- Allow `from` alone (defaults `to` to today in business logic)
+- Disallow `to` without `from` (doesn't make sense)
 
 ### 1.3: Export Schemas
 
@@ -221,6 +231,120 @@ pnpm build
 # In packages/api, this should work:
 # import { StandupRequestSchema } from '@rewrlution/papyrus-shared';
 ```
+
+### 1.5: Basic Schema Unit Tests
+
+**Why test the schema?**
+
+- Ensure validation logic is correct
+- Document expected behavior
+- Catch regressions when modifying validation rules
+
+**Note:** These are conceptual tests for the tutorial. In Phase 5, you'll implement these in actual test files.
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { StandupRequestSchema } from './standup';
+
+describe('StandupRequestSchema', () => {
+  describe('Valid inputs', () => {
+    it('should accept empty object', () => {
+      const result = StandupRequestSchema.safeParse({});
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept date only', () => {
+      const result = StandupRequestSchema.safeParse({ date: '2025-01-07' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept from only', () => {
+      const result = StandupRequestSchema.safeParse({ from: '2025-01-01' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept from and to', () => {
+      const result = StandupRequestSchema.safeParse({
+        from: '2025-01-01',
+        to: '2025-01-07',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept from and to with same date', () => {
+      const result = StandupRequestSchema.safeParse({
+        from: '2025-01-07',
+        to: '2025-01-07',
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('Invalid inputs', () => {
+    it('should reject invalid date format', () => {
+      const result = StandupRequestSchema.safeParse({ date: '01-07-2025' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject invalid date', () => {
+      const result = StandupRequestSchema.safeParse({ date: '2025-13-45' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject date mixed with from', () => {
+      const result = StandupRequestSchema.safeParse({
+        date: '2025-01-07',
+        from: '2025-01-01',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject date mixed with to', () => {
+      const result = StandupRequestSchema.safeParse({
+        date: '2025-01-07',
+        to: '2025-01-10',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject date mixed with from and to', () => {
+      const result = StandupRequestSchema.safeParse({
+        date: '2025-01-07',
+        from: '2025-01-01',
+        to: '2025-01-10',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject to without from', () => {
+      const result = StandupRequestSchema.safeParse({ to: '2025-01-07' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject from > to', () => {
+      const result = StandupRequestSchema.safeParse({
+        from: '2025-01-07',
+        to: '2025-01-01',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+});
+```
+
+**What these tests verify:**
+
+- ✅ Empty body is valid (most recent journal)
+- ✅ Date alone is valid (specific date)
+- ✅ From alone is valid (from date to today)
+- ✅ From + to is valid (explicit range)
+- ✅ Invalid date formats are rejected
+- ✅ Invalid date values are rejected
+- ✅ Mixing date with from/to is rejected
+- ✅ To without from is rejected
+- ✅ From > to is rejected
+
+**Key insight:** Schema only validates structure and constraints. It does NOT apply the default `to` date—that's handled in the service layer (Step 2).
 
 ---
 
@@ -386,10 +510,11 @@ export const StandupService = {
   /**
    * Load journals based on options
    *
-   * Three modes:
+   * Four modes:
    * 1. No options -> Load most recent journal
    * 2. { date } -> Load specific date
-   * 3. { from, to } -> Load date range
+   * 3. { from } -> Load date range from 'from' to today
+   * 4. { from, to } -> Load explicit date range
    *
    * @private
    */
@@ -408,14 +533,16 @@ export const StandupService = {
       );
       journals = journal ? [journal] : [];
       dateRange = options.date;
-    } else if (options.from && options.to) {
-      // Mode 3: Date range
+    } else if (options.from) {
+      // Mode 3 & 4: Date range (with default 'to' if not provided)
+      const toDate = options.to || this.getCurrentDate();
+
       journals = await journalRepository.findByDateRange(
         userId,
         this.formatDateForDb(options.from),
-        this.formatDateForDb(options.to)
+        this.formatDateForDb(toDate)
       );
-      dateRange = `${options.from} to ${options.to}`;
+      dateRange = `${options.from} to ${toDate}`;
     } else {
       // Mode 1: Most recent journal
       const journal = await journalRepository.findMostRecent(userId);
@@ -443,6 +570,14 @@ export const StandupService = {
   formatDateForDisplay(date: string): string {
     // date is in YYYYMMDD format
     return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+  },
+
+  /**
+   * Get current date in YYYY-MM-DD format
+   * @private
+   */
+  getCurrentDate(): string {
+    return new Date().toISOString().split('T')[0];
   },
 };
 ```
@@ -656,7 +791,7 @@ export { router as standupRoutes };
 
 ---
 
-## Step 4: Test All Three Modes
+## Step 4: Test All Four Modes
 
 ### 4.1: Test Mode 1 - Latest Journal (Empty Body)
 
@@ -709,7 +844,35 @@ event: error
 data: {"message":"No journals found. Use `papyrus sync` to sync your local journals to the server."}
 ```
 
-### 4.3: Test Mode 3 - Date Range
+### 4.3: Test Mode 3 - From Date (Defaults to Today)
+
+```bash
+curl -N -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"from":"2025-01-01"}' \
+  -X POST http://localhost:3000/api/ai/standup
+```
+
+**Expected behavior:**
+
+- Loads all journals from 2025-01-01 to today
+- AI aggregates work from all entries
+- `done` event shows `"journal_date":"2025-01-01 to 2026-01-14"` (assuming today is 2026-01-14)
+
+**Why this is useful:**
+
+- Weekly summaries: Just provide Monday's date
+- Monthly summaries: Just provide first day of month
+- No need to calculate end date manually
+
+**Example output:**
+
+```
+event: content
+data: {"text":"This week:\n- Implemented authentication system (Mon-Tue)\n- Built dashboard UI (Wed-Thu)\n- Fixed bugs and deployed (Fri)\n\nToday:\n- Plan next sprint features\n\nBlockers:\n- None"}
+```
+
+### 4.4: Test Mode 4 - Explicit Date Range
 
 ```bash
 curl -N -H "Authorization: Bearer YOUR_TOKEN" \
@@ -731,7 +894,7 @@ event: content
 data: {"text":"Yesterday:\n- Implemented authentication (Mon-Tue)\n- Built dashboard UI (Wed-Thu)\n- Fixed bugs and deployed (Fri-Sun)\n\nToday:\n- Plan next sprint features\n\nBlockers:\n- Waiting on API rate limit approval"}
 ```
 
-### 4.4: Test Invalid Requests
+### 4.5: Test Invalid Requests
 
 **Invalid date format:**
 
@@ -773,7 +936,7 @@ curl -N -H "Authorization: Bearer YOUR_TOKEN" \
 
 ```json
 {
-  "error": "Either provide \"date\", or both \"from\" and \"to\", or neither. Ensure \"from\" <= \"to\"."
+  "error": "Either provide \"date\", or \"from\" (with optional \"to\"), or neither. If both \"from\" and \"to\" are provided, ensure \"from\" <= \"to\"."
 }
 ```
 
@@ -788,7 +951,24 @@ curl -N -H "Authorization: Bearer YOUR_TOKEN" \
 
 **Expected: 422 Validation Error**
 
-### 4.5: Test No Journals
+**To without from:**
+
+```bash
+curl -N -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"2025-01-07"}' \
+  -X POST http://localhost:3000/api/ai/standup
+```
+
+**Expected: 422 Validation Error**
+
+```json
+{
+  "error": "Either provide \"date\", or \"from\" (with optional \"to\"), or neither. If both \"from\" and \"to\" are provided, ensure \"from\" <= \"to\"."
+}
+```
+
+### 4.6: Test No Journals
 
 **Create a new user with no synced journals:**
 
@@ -930,7 +1110,12 @@ async *generateStream(
   - Loads journal from specified date
   - Correct `journal_date` in response
 
-- [x] **Date range**
+- [x] **From date (defaults to today)**
+  - Loads all journals from specified date to today
+  - AI aggregates work from multiple entries
+  - Correct `journal_date` range in response (e.g., "2025-01-01 to 2026-01-14")
+
+- [x] **Explicit date range**
   - Loads all journals in range
   - AI aggregates work from multiple entries
   - Correct `journal_date` range in response
@@ -1073,10 +1258,11 @@ if (options.date && journals.length === 0) {
 
 Before moving to Phase 5, verify:
 
-- [x] **All three modes work**
+- [x] **All four modes work**
   - Empty body → Latest journal
   - `{ date }` → Specific date
-  - `{ from, to }` → Date range
+  - `{ from }` → Date range from `from` to today
+  - `{ from, to }` → Explicit date range
 
 - [x] **Request validation works**
   - Invalid formats rejected (422)
@@ -1123,7 +1309,7 @@ Before moving to Phase 5, verify:
 - ✅ Clean architecture (Routes → Controllers → Services → Repositories)
 - ✅ Real database integration
 - ✅ Comprehensive error handling
-- ✅ Three flexible modes
+- ✅ Four flexible modes (latest, date, from-to-today, explicit range)
 
 **Almost production-ready!** Next: Tests & polish 🚀
 
@@ -1147,7 +1333,16 @@ curl -N -H "Authorization: Bearer TOKEN" \
   -X POST http://localhost:3000/api/ai/standup
 ```
 
-**Make request (date range):**
+**Make request (from date to today):**
+
+```bash
+curl -N -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"from":"2025-01-01"}' \
+  -X POST http://localhost:3000/api/ai/standup
+```
+
+**Make request (explicit date range):**
 
 ```bash
 curl -N -H "Authorization: Bearer TOKEN" \

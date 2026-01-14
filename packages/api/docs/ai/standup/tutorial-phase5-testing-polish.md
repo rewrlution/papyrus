@@ -266,8 +266,6 @@ describe('Usage Limiter', () => {
         id: 'purchase1',
         userId: 'user1',
         product: 'standup-pro',
-        generationsLimit: null, // Time-based unlimited
-        generationsUsed: 0,
         expiresAt: futureDate,
         purchasedAt: new Date(),
         amount: 900,
