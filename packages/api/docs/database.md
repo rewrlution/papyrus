@@ -565,17 +565,20 @@ This is intentional because:
 
 ### Tables with RLS Enabled
 
-| Table            | Purpose                          | RLS Status |
-| ---------------- | -------------------------------- | ---------- |
-| `users`          | User accounts and authentication | ✅ Enabled |
-| `journals`       | Encrypted journal entries        | ✅ Enabled |
-| `ai_usage`       | AI feature usage tracking        | ✅ Enabled |
-| `ai_trial_usage` | Trial usage tracking             | ✅ Enabled |
-| `ai_purchases`   | Premium purchase records         | ✅ Enabled |
+| Table                | Purpose                          | RLS Status |
+| -------------------- | -------------------------------- | ---------- |
+| `users`              | User accounts and authentication | ✅ Enabled |
+| `journals`           | Encrypted journal entries        | ✅ Enabled |
+| `ai_usage`           | AI feature usage tracking        | ✅ Enabled |
+| `ai_trial_usage`     | Trial usage tracking             | ✅ Enabled |
+| `ai_purchases`       | Premium purchase records         | ✅ Enabled |
+| `_prisma_migrations` | Prisma migration tracking        | ✅ Enabled |
 
-### Migration
+### Migrations
 
-RLS was enabled via migration `20260114000000_enable_rls_all_tables`:
+RLS was enabled via two migrations:
+
+**`20260114000000_enable_rls_all_tables`** - Application tables:
 
 ```sql
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;
@@ -583,6 +586,12 @@ ALTER TABLE "journals" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "ai_usage" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "ai_trial_usage" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "ai_purchases" ENABLE ROW LEVEL SECURITY;
+```
+
+**`20260114000001_enable_rls_prisma_migrations`** - Prisma internal table:
+
+```sql
+ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY;
 ```
 
 ### Verifying RLS Status
