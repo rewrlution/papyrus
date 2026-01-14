@@ -1,5 +1,7 @@
 # AI Standup Notes - Architecture Design
 
+> **⚠️ Note:** This document contains outdated information from the initial design phase. Date formats mentioned as YYYY-MM-DD should be YYYYMMDD (database and API format). The actual implementation uses YYYYMMDD for all date parameters. Refer to CLAUDE.md and the source code for current implementation details.
+
 ## Overview
 
 The AI Standup Notes feature generates daily/weekly standup notes from journal entries using Claude AI. This is a **one-shot generation** feature (no multi-turn chat) with **SSE streaming** that serves as Phase 1 to validate the AI infrastructure before building more complex interactive features.

@@ -1,4 +1,10 @@
 import {
+  UsageInfo,
+  getCurrentMonth,
+  getNextMonthStart,
+} from '@rewrlution/papyrus-shared';
+
+import {
   aiUsageRepository,
   aiTrialUsageRepository,
   aiPurchaseRepository,
@@ -7,9 +13,12 @@ import {
 import { getFeatureConfig, FeatureConfig } from './feature-config.js';
 
 /**
- * Usage information returned by checkUsage()
+ * Internal usage information with decision-making fields.
+ *
+ * Used internally to determine whether to allow a request.
+ * Transform to external UsageInfo before sending to clients.
  */
-export interface UsageInfo {
+export interface InternalUsageInfo {
   allowed: boolean;
   reason: 'free_tier' | 'premium' | 'limit_exceeded';
 
@@ -22,10 +31,28 @@ export interface UsageInfo {
   expires_at?: string; // ISO date string
 }
 
+/**
+ * Transform internal usage info to external API response format.
+ *
+ * Removes internal decision-making fields (allowed, reason) and maps
+ * reason to tier for client consumption.
+ */
+export function toExternalUsageInfo(internal: InternalUsageInfo): UsageInfo {
+  const tier = internal.reason === 'premium' ? 'premium' : 'free';
+
+  return {
+    tier,
+    used: internal.used,
+    limit: internal.limit,
+    resets_at: internal.resets_at ?? undefined,
+    expires_at: internal.expires_at,
+  };
+}
+
 export async function checkUsage(
   userId: string,
   feature: string
-): Promise<UsageInfo> {
+): Promise<InternalUsageInfo> {
   const config = getFeatureConfig(feature);
 
   // Step 1: Check FREE TIER first
@@ -60,7 +87,7 @@ async function checkFreeTier(
   userId: string,
   feature: string,
   config: FeatureConfig
-): Promise<UsageInfo> {
+): Promise<InternalUsageInfo> {
   const { freeTier } = config;
 
   switch (freeTier.type) {
@@ -120,7 +147,7 @@ async function checkFreeTier(
 export async function incrementUsage(
   userId: string,
   feature: string,
-  usageInfo: UsageInfo
+  usageInfo: InternalUsageInfo
 ): Promise<void> {
   // Only increment for free tier usage
   // Premium is time-based, no counting needed
@@ -135,26 +162,4 @@ export async function incrementUsage(
       await aiTrialUsageRepository.markTrialUsed(userId, feature);
     }
   }
-}
-
-/**
- * Get current month in 'YYYY-MM' format
- */
-function getCurrentMonth(): string {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
-}
-
-/**
- * Get start of next month (for resets_at timestamp)
- */
-function getNextMonthStart(): Date {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth();
-
-  // First day of next month
-  return new Date(Date.UTC(year, month + 1, 1, 0, 0, 0, 0));
 }

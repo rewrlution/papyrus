@@ -1,6 +1,10 @@
 import type { Journal } from '@prisma/client';
 
-import { StandupRequest } from '@rewrlution/papyrus-shared';
+import {
+  StandupRequest,
+  getCurrentDate,
+  type StandupStreamEvent,
+} from '@rewrlution/papyrus-shared';
 
 import { journalRepository } from '../../domain/repositories/journal.repository.js';
 import {
@@ -10,16 +14,11 @@ import {
   incrementUsage,
   getFeatureConfig,
   AnthropicProvider,
-  type UsageInfo,
+  toExternalUsageInfo,
+  type InternalUsageInfo,
 } from '../../lib/ai/index.js';
-import { decrypt } from '../../lib/encryption.js';
+import { decryptJournalContent } from '../../lib/encryption.js';
 import { logger } from '../../lib/logger.js';
-
-export type StandupEvent =
-  | { type: 'thinking'; message: string }
-  | { type: 'content'; text: string }
-  | { type: 'done'; journal_date: string; usage: UsageInfo }
-  | { type: 'error'; message: string };
 
 /**
  * Standup service - generates standup notes from journal entries
@@ -28,7 +27,7 @@ export const StandupService = {
   async *generateStream(
     userId: string,
     options: StandupRequest = {}
-  ): AsyncGenerator<StandupEvent> {
+  ): AsyncGenerator<StandupStreamEvent> {
     // Step 1: Check usage limit (free tier first, then premium)
     const usageInfo = await checkUsage(userId, 'standup');
 
@@ -57,7 +56,7 @@ export const StandupService = {
     const decryptedJournals: Array<{ date: string; content: string }> =
       journals.map((j) => ({
         date: j.date,
-        content: decrypt(j),
+        content: decryptJournalContent(j),
       }));
     const prompt =
       decryptedJournals.length === 1
@@ -89,7 +88,7 @@ export const StandupService = {
     yield {
       type: 'done',
       journal_date: dateRange,
-      usage: updatedUsage,
+      usage: toExternalUsageInfo(updatedUsage),
     };
   },
 
@@ -110,7 +109,7 @@ export const StandupService = {
       dateRange = options.date;
     } else if (options.from) {
       // Date range (with default 'to' if not provided)
-      const toDate = options.to || this.getCurrentDate();
+      const toDate = options.to || getCurrentDate();
 
       journals = await journalRepository.findByUserAndDateRange(
         userId,
@@ -126,30 +125,5 @@ export const StandupService = {
     }
 
     return { journals, dateRange };
-  },
-
-  // TODO: move all date related functions to the shared package, uitls
-  getCurrentDate(): string {
-    return new Date().toISOString().split('T')[0];
-  },
-
-  /**
-   * TODO: this is copied directly from journals service. need to refactor it
-   * Decrypts journal content with error handling
-   *
-   * @param entity - Journal entity with encryption fields
-   * @returns Decrypted content or error placeholder
-   */
-  decryptJournalContent(entity: Journal): string {
-    try {
-      return decrypt({
-        ciphertext: entity.ciphertext,
-        iv: entity.iv,
-        authTag: entity.authTag,
-      });
-    } catch (err) {
-      logger.error('Failed to decrypt journal', { id: entity.id, err });
-      return '[Decryption failed]';
-    }
   },
 };

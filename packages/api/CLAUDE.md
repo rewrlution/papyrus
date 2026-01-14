@@ -145,9 +145,9 @@ POST /api/auth/signup
 - `POST /api/ai/standup` - Generate AI standup notes from journal entries
   - Supports Server-Sent Events (SSE) for streaming
   - Request body (all fields optional):
-    - `date` (YYYY-MM-DD) - Use specific date
-    - `from` (YYYY-MM-DD) - Use journals from this date onwards
-    - `to` (YYYY-MM-DD) - Use journals up to this date (requires `from`)
+    - `date` (YYYYMMDD) - Use specific date
+    - `from` (YYYYMMDD) - Use journals from this date onwards
+    - `to` (YYYYMMDD) - Use journals up to this date (requires `from`)
   - SSE events: `thinking`, `content`, `done`, `error`
   - Includes usage tracking (free/premium tiers)
 

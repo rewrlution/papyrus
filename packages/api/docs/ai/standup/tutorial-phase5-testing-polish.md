@@ -1,5 +1,7 @@
 # Phase 5: Testing & Polish - Tutorial
 
+> **⚠️ Note:** This tutorial contains outdated information from the initial implementation. Date formats mentioned as YYYY-MM-DD should be YYYYMMDD (database and API format). The actual implementation uses YYYYMMDD for all date parameters. Refer to CLAUDE.md and the source code for current implementation details.
+
 ## Goal
 
 Make the AI standup feature production-ready with comprehensive testing, documentation, and polish. After this phase, you'll have:
