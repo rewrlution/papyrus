@@ -12,7 +12,7 @@ export const aiTrialUsageRepository = {
    * Check if a user has used their free trial for a feature
    * Returns true if trial has been used, false if still available
    */
-  async hashUsedTrial(userId: string, feature: string): Promise<boolean> {
+  async hasUsedTrial(userId: string, feature: string): Promise<boolean> {
     const record = await prisma.aiTrialUsage.findUnique({
       where: {
         userId_feature: {

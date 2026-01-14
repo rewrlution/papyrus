@@ -85,8 +85,6 @@ function validateEnv() {
   return parsed.data;
 }
 
-// Skip validation in tests to allow importing schema without valid env vars
-export const env =
-  process.env.NODE_ENV === 'test' ? ({} as Env) : validateEnv();
+export const env = validateEnv();
 
 export type Env = z.infer<typeof envSchema>;
