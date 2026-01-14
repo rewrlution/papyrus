@@ -23,6 +23,34 @@ export const journalRepository = {
   },
 
   /**
+   * Find journals by user within a date range (inclusive, excluding soft-deleted)
+   */
+  async findByUserAndDateRange(
+    userId: string,
+    from: string,
+    to: string
+  ): Promise<Journal[]> {
+    return prisma.journal.findMany({
+      where: {
+        userId,
+        date: { gte: from, lte: to },
+        deletedAt: null,
+      },
+      orderBy: { date: 'desc' },
+    });
+  },
+
+  /**
+   * Find the most recent journal entry for a user (excluding soft-deleted)
+   */
+  async findMostRecent(userId: string): Promise<Journal | null> {
+    return prisma.journal.findFirst({
+      where: { userId, deletedAt: null },
+      orderBy: { date: 'desc' },
+    });
+  },
+
+  /**
    * Find all journals for a user (excluding soft-deleted) in desc order
    */
   async findByUserId(

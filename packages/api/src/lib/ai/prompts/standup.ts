@@ -42,10 +42,10 @@ Generate standup notes based on this journal entry.`;
  * Build prompt for multiple journal entries (date range)
  */
 export function buildStandupPromptForRange(
-  journals: Array<{ date: string; contentet: string }>
+  journals: Array<{ date: string; content: string }>
 ): string {
   const journalText = journals
-    .map((j) => `[${j.date}\n${j.contentet}]`)
+    .map((j) => `[${j.date}\n${j.content}]`)
     .join('\n\n---\n\n');
 
   const dateRange = `${journals[0].date} to ${journals[journals.length - 1].date}`;
