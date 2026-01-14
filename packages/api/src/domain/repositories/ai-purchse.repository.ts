@@ -38,7 +38,6 @@ export const aiPurchaseRepository = {
 
   /**
    * Create a new purchase record
-   * (For future payment integration)
    */
   async createPurchase(data: {
     userId: string;
@@ -46,8 +45,39 @@ export const aiPurchaseRepository = {
     expiresAt?: Date | null;
     amount?: number;
     currency?: string;
+    stripeCustomerId?: string;
+    stripePaymentIntentId?: string;
+    stripeCheckoutSessionId?: string;
+    paymentStatus?: string;
   }): Promise<AiPurchase> {
     return prisma.aiPurchase.create({ data });
+  },
+
+  /**
+   * Find purchase by Stripe checkout session ID
+   * (For webhook idempotency)
+   */
+  async findByCheckoutSessionId(
+    sessionId: string
+  ): Promise<AiPurchase | null> {
+    return prisma.aiPurchase.findUnique({
+      where: {
+        stripeCheckoutSessionId: sessionId,
+      },
+    });
+  },
+
+  /**
+   * Find purchase by Stripe payment intent ID
+   */
+  async findByPaymentIntentId(
+    paymentIntentId: string
+  ): Promise<AiPurchase | null> {
+    return prisma.aiPurchase.findUnique({
+      where: {
+        stripePaymentIntentId: paymentIntentId,
+      },
+    });
   },
 
   /**

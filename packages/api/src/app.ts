@@ -12,6 +12,7 @@ import {
   healthRoutes,
   journalRoutes,
   standupRoutes,
+  paymentRoutes,
 } from './routes/index.js';
 import { swaggerOptions, swaggerDocument } from './swagger/index.js';
 
@@ -21,6 +22,15 @@ export function createApp(): Express {
   // middleware
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(requestLogger);
+
+  // Stripe webhook needs raw body, so we handle it before JSON middleware
+  app.post(
+    '/api/payments/webhook',
+    express.raw({ type: 'application/json' }),
+    paymentRoutes
+  );
+
+  // Apply JSON middleware for all other routes
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -43,6 +53,8 @@ export function createApp(): Express {
           docs: '/api-docs',
           auth: '/api/auth',
           journal: '/api/journal',
+          payments: '/api/payments',
+          ai: '/api/ai',
         },
       },
     };
@@ -57,6 +69,7 @@ export function createApp(): Express {
   app.use('/health', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/journals', journalRoutes);
+  app.use('/api/payments', paymentRoutes);
 
   app.use('/api/ai/standup', standupRoutes);
 

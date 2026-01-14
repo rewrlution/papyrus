@@ -51,6 +51,15 @@ export const envSchema = z
     // AI Feature free-tier limits
     AI_STANDUP_FREE_LIMIT: z.coerce.number().int().positive().default(10),
     AI_PROMOTION_FREE_LIMIT: z.coerce.number().int().positive().default(1),
+
+    // Stripe Payment Integration
+    STRIPE_SECRET_KEY: z.string().min(1, 'STRIPE_SECRET_KEY is required'),
+    STRIPE_WEBHOOK_SECRET: z
+      .string()
+      .min(1, 'STRIPE_WEBHOOK_SECRET is required'),
+    STRIPE_PUBLISHABLE_KEY: z
+      .string()
+      .min(1, 'STRIPE_PUBLISHABLE_KEY is required'),
   })
   .refine(
     (data) => {
