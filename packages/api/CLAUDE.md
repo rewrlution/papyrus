@@ -27,10 +27,14 @@ packages/api/
 │   ├── setup.ts              # Environment setup
 │   ├── controllers/          # HTTP handlers (thin layer)
 │   │   ├── auth.controller.ts
-│   │   └── journal.controller.ts
+│   │   ├── journal.controller.ts
+│   │   └── ai/
+│   │       └── standup.controller.ts
 │   ├── services/             # Business logic layer
 │   │   ├── auth.service.ts
-│   │   └── journal.service.ts
+│   │   ├── journal.service.ts
+│   │   └── ai/
+│   │       └── standup.service.ts
 │   ├── domain/               # Data access & transformation
 │   │   ├── repositories/     # Prisma query isolation
 │   │   │   ├── user.repository.ts
@@ -41,6 +45,8 @@ packages/api/
 │   ├── routes/               # Route definitions
 │   │   ├── auth.routes.ts    # /api/auth endpoints
 │   │   ├── journal.routes.ts # /api/journals endpoints
+│   │   ├── ai/
+│   │   │   └── standup.routes.ts  # /api/ai/standup endpoint
 │   │   └── health.routes.ts  # /health endpoint
 │   ├── middleware/           # Express middleware
 │   │   ├── auth.ts           # JWT verification
@@ -53,7 +59,13 @@ packages/api/
 │   │   ├── jwt.ts            # JWT sign/verify
 │   │   ├── prisma.ts         # Prisma client singleton
 │   │   ├── password.ts       # bcrypt utilities
-│   │   └── encryption.ts     # AES-256-GCM encrypt/decrypt
+│   │   ├── encryption.ts     # AES-256-GCM encrypt/decrypt
+│   │   └── ai/               # AI features
+│   │       ├── anthropic-provider.ts  # Anthropic API client
+│   │       ├── usage-limiter.ts       # Usage tracking & limits
+│   │       ├── feature-config.ts      # AI feature configuration
+│   │       └── prompts/
+│   │           └── standup.ts         # Standup prompt templates
 │   ├── email/                # Email system
 │   │   ├── services.ts       # Token generation & sending
 │   │   ├── index.ts          # Provider factory
@@ -127,6 +139,17 @@ POST /api/auth/signup
 - `POST /api/journals` - Create journal entry
 - `PUT /api/journals/:date` - Update journal
 - `DELETE /api/journals/:date` - Soft delete journal
+
+### AI Features (`/api/ai/*`) - All require Bearer token
+
+- `POST /api/ai/standup` - Generate AI standup notes from journal entries
+  - Supports Server-Sent Events (SSE) for streaming
+  - Request body (all fields optional):
+    - `date` (YYYY-MM-DD) - Use specific date
+    - `from` (YYYY-MM-DD) - Use journals from this date onwards
+    - `to` (YYYY-MM-DD) - Use journals up to this date (requires `from`)
+  - SSE events: `thinking`, `content`, `done`, `error`
+  - Includes usage tracking (free/premium tiers)
 
 ### Health & Docs
 

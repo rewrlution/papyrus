@@ -110,7 +110,8 @@ packages/cli/
 │   │       ├── edit.ts               # Edit utilities
 │   │       ├── show.ts               # Display entry
 │   │       ├── app.ts                # Launch TUI browser
-│   │       └── sync.ts               # Sync with server
+│   │       ├── sync.ts               # Sync with server
+│   │       └── standup.ts            # Generate AI standup notes
 │   ├── components/
 │   │   ├── JournalBrowser.tsx        # Interactive journal browser (main app)
 │   │   ├── AppLayout.tsx             # Reusable layout with header/footer
@@ -124,6 +125,7 @@ packages/cli/
 │   │   ├── RegisterForm.tsx          # Registration form (multi-step)
 │   │   ├── StatusMessage.tsx         # Status message display
 │   │   ├── SyncProgress.tsx          # Sync progress with real-time updates
+│   │   ├── StandupStream.tsx         # AI standup streaming with real-time output
 │   │   └── Logo.tsx                  # ASCII art logo with gradient
 │   ├── lib/
 │   │   ├── api/
@@ -152,6 +154,8 @@ packages/cli/
 │       └── alternate-screen.ts       # Alternate screen buffer management
 ├── docs/                             # Tutorial documentation
 │   ├── README.md                     # Documentation index
+│   ├── tutorials/
+│   │   └── adding-standup-command.md # AI standup command tutorial
 │   ├── 01-STORAGE-LAYER.md          # Storage layer tutorial
 │   ├── 02-API-CLIENT-SETUP.md       # API client tutorial
 │   ├── 03-REACT-CLI-COMPONENTS.md   # Ink components tutorial
@@ -204,6 +208,10 @@ program.parse(process.argv);
 - `papyrus show [-d <date>]` - Display an entry in reader view
 - `papyrus app` - Launch TUI to browse and read entries interactively
 - `papyrus sync` - Sync journals with server
+- `papyrus standup [options]` - Generate AI standup notes from journal entries
+  - `--date <date>` - Use specific date (YYYY-MM-DD)
+  - `--from <date>` - Use journals from this date onwards (YYYY-MM-DD)
+  - `--to <date>` - Use journals up to this date (YYYY-MM-DD, requires --from)
 
 #### Auth Commands
 
@@ -593,6 +601,7 @@ React/Ink UI components:
 - `LoginForm` - Email/password form with validation
 - `RegisterForm` - Multi-step registration (email → password → confirm)
 - `SyncProgress` - Real-time sync progress with spinner
+- `StandupStream` - AI standup streaming with real-time text updates
 - `FormInput` - Reusable input component
 - `ColdStart` - Spinner with cold start warning
 - `StatusMessage` - Status message display component
@@ -821,6 +830,7 @@ Comprehensive tutorials are available in the `docs/` directory:
 7. **[Sync Implementation](./docs/07-SYNC-IMPLEMENTATION.md)** - Hash-based synchronization
 8. **[Token Management](./docs/08-TOKEN-MANAGEMENT.md)** - Decoupled auth middleware
 9. **[List & Browse](./docs/09-LIST-BROWSE-MIGRATION.md)** - Interactive journal browser
+10. **[Standup Command](./docs/tutorials/adding-standup-command.md)** - AI standup with streaming
 
 ### Architecture Decisions
 
@@ -849,6 +859,7 @@ The following features are fully implemented:
 - ✅ **Real-time progress** - Sync progress with live updates
 - ✅ **Message utilities** - Consistent console messaging with icons
 - ✅ **Text utilities** - Width-aware text handling (CJK/emoji support)
+- ✅ **AI standup generation** - Generate standup notes from journals with streaming output
 
 ## Future Enhancements
 
