@@ -2,11 +2,16 @@
 node_modules/
 
 # Typescript
-tsconfig.tsbuildinfo
+*.tsbuildinfo
+next-env.d.ts
 
 # Build outputs
 dist/
 coverage/
+
+# Next.js
+.next/
+out/
 
 # Turborepo cache
 .turbo/
