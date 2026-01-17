@@ -1,14 +1,16 @@
 import axios, { AxiosInstance } from 'axios';
 
-import type {
-  SigninInput,
-  SigninResponse,
-  SignupInput,
-  SignupResponse,
-  JournalData,
-  JournalMetaData,
-  JournalMetadataListResponse,
-  JournalResponse,
+import {
+  StandupStreamEventSchema,
+  type SigninInput,
+  type SigninResponse,
+  type SignupInput,
+  type SignupResponse,
+  type JournalData,
+  type JournalMetaData,
+  type JournalMetadataListResponse,
+  type JournalResponse,
+  type StandupStreamEvent,
 } from '@rewrlution/papyrus-shared';
 
 import { tokenStore } from '../storage/index.js';
@@ -124,6 +126,80 @@ export class ApiClient {
       return response.data.data;
     } catch (error) {
       this.handleError(error);
+    }
+  }
+
+  async generateStandup(
+    options: { date?: string; from?: string; to?: string },
+    onEvent: (event: StandupStreamEvent) => void
+  ): Promise<void> {
+    const token = tokenStore.get();
+    if (!token) throw new Error('Not authenticated');
+
+    const url = `${this.http.defaults.baseURL}/api/ai/standup`;
+
+    // Use fetch for SSE support (axios doesn't support streaming responses well)
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(options),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    if (!response.body) {
+      throw new Error('No response body');
+    }
+
+    // Parse SSE stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE messages
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        let currentEvent = '';
+        let currentData = '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7);
+          } else if (line.startsWith('data: ')) {
+            currentData = line.slice(6);
+          } else if (line === '' && currentEvent && currentData) {
+            // Complete message - parse with Zod for type safety
+            try {
+              const data = JSON.parse(currentData);
+              const event = StandupStreamEventSchema.parse({
+                type: currentEvent,
+                ...data,
+              });
+              onEvent(event);
+            } catch {
+              console.error('Failed to parse SSE data: ', currentData);
+            }
+            currentEvent = '';
+            currentData = '';
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
     }
   }
 

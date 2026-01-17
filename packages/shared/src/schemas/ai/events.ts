@@ -32,17 +32,22 @@ export type DoneEvent = z.infer<typeof DoneEventSchema>;
 export type ErrorEvent = z.infer<typeof ErrorEventSchema>;
 
 /**
- * Discriminated union type for SSE events.
+ * Zod schema for SSE events using a discriminated union.
  *
- * Each event has a 'type' field that identifies the event type,
- * allowing type-safe handling in TypeScript.
+ * A discriminated union is a union of types sharing a common "discriminant"
+ * property (here, 'type') with literal values. This enables:
+ * - TypeScript to auto-narrow types based on the discriminant in conditionals
+ * - Zod to efficiently validate by checking the discriminant first
  */
-export type StandupStreamEvent =
-  | { type: 'thinking'; message: string }
-  | { type: 'content'; text: string }
-  | {
-      type: 'done';
-      journal_date: string;
-      usage: z.infer<typeof UsageInfoSchema>;
-    }
-  | { type: 'error'; message: string };
+export const StandupStreamEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('thinking'), message: z.string() }),
+  z.object({ type: z.literal('content'), text: z.string() }),
+  z.object({
+    type: z.literal('done'),
+    journal_date: z.string(),
+    usage: UsageInfoSchema,
+  }),
+  z.object({ type: z.literal('error'), message: z.string() }),
+]);
+
+export type StandupStreamEvent = z.infer<typeof StandupStreamEventSchema>;
