@@ -1,5 +1,2 @@
 export * from './hash.js';
-
-export function formatMessage(message: string): string {
-  return `[MyApp] ${message}`;
-}
+export * from './date.js';

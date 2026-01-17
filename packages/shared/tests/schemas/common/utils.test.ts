@@ -1,16 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import {
-  formatMessage,
-  generateContentHash,
-} from '../../../src/utils/index.js';
-
-describe('formatMessage', () => {
-  it('should format message with prefix', () => {
-    const result = formatMessage('Hello world!');
-    expect(result).toBe('[MyApp] Hello world!');
-  });
-});
+import { generateContentHash } from '../../../src/utils/index.js';
 
 describe('generateContentHash', () => {
   it('should generate same hash for same content', () => {
