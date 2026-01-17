@@ -10,7 +10,7 @@ import {
 
 import { JournalMapper } from '../domain/mappers/journal.mapper.js';
 import { journalRepository } from '../domain/repositories/journal.repository.js';
-import { encrypt, decrypt } from '../lib/encryption.js';
+import { encrypt, decryptJournalContent } from '../lib/encryption.js';
 import { ConflictError, NotFoundError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 
@@ -26,25 +26,6 @@ export const JournalService = {
       encrypted: encrypt(content),
       hash: generateContentHash(content),
     };
-  },
-
-  /**
-   * Decrypts journal content with error handling
-   *
-   * @param entity - Journal entity with encryption fields
-   * @returns Decrypted content or error placeholder
-   */
-  decryptJournalContent(entity: Journal): string {
-    try {
-      return decrypt({
-        ciphertext: entity.ciphertext,
-        iv: entity.iv,
-        authTag: entity.authTag,
-      });
-    } catch (err) {
-      logger.error('Failed to decrypt journal', { id: entity.id, err });
-      return '[Decryption failed]';
-    }
   },
 
   /**
@@ -129,7 +110,7 @@ export const JournalService = {
 
     logger.info('Decrypting journals', { count: entities.length });
     const data = entities.map((entity) => {
-      const content = this.decryptJournalContent(entity);
+      const content = decryptJournalContent(entity);
       return JournalMapper.toJournalData(entity, content);
     });
 
@@ -161,7 +142,7 @@ export const JournalService = {
       throw new NotFoundError('Journal has been deleted');
     }
 
-    const content = this.decryptJournalContent(entity);
+    const content = decryptJournalContent(entity);
 
     return {
       success: true,

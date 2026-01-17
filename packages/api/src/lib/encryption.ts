@@ -4,7 +4,11 @@
  */
 import crypto from 'crypto';
 
+import { Journal } from '@prisma/client';
+
 import { env } from '../env/config.js';
+
+import { logger } from './logger.js';
 
 const ALGORITHM = 'aes-256-gcm' as const;
 const IV_LENGTH = 16;
@@ -64,4 +68,26 @@ export function decrypt(encryptedData: EncryptedData): string {
   ]);
 
   return decrypted.toString('utf-8');
+}
+
+/**
+ * Decrypts journal content with error handling.
+ *
+ * Helper function that wraps decrypt() with error handling,
+ * returning a placeholder message if decryption fails.
+ *
+ * @param entity - Journal entity with encryption fields
+ * @returns Decrypted content or error placeholder
+ */
+export function decryptJournalContent(entity: Journal): string {
+  try {
+    return decrypt({
+      ciphertext: entity.ciphertext,
+      iv: entity.iv,
+      authTag: entity.authTag,
+    });
+  } catch (err) {
+    logger.error('Failed to decrypt journal', { id: entity.id, err });
+    return '[Decryption failed]';
+  }
 }
