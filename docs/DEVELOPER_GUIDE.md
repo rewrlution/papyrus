@@ -348,6 +348,30 @@ pnpm add -D <package>     # ❌ Error
 
 When you're satisfied with the main branch and ready to create a release, there are two approaches:
 
+### ⚠️ Important: Bump Shared Package Version When Needed
+
+**Before releasing**, check if you've made changes to `packages/shared/`. If you have, you **MUST** bump its version:
+
+```bash
+# Check if shared package has changes since last tag
+git diff $(git describe --tags --abbrev=0) -- packages/shared/
+
+# If there are changes, bump the version in packages/shared/package.json
+cd packages/shared
+npm version patch  # or minor/major as appropriate
+cd ../..
+```
+
+**Why?** The CLI depends on `@rewrlution/papyrus-shared` from npm (not the local workspace) when users install it globally. If you add new exports to shared but don't bump its version, the publish workflow will skip it (version already exists on npm), and CLI users will get errors like:
+
+```
+import { NewSchema } from '@rewrlution/papyrus-shared';
+         ^^^^^^^^^
+SyntaxError: Named export 'NewSchema' not found
+```
+
+**Rule of thumb:** If you touch `packages/shared/src/`, bump its version before releasing.
+
 ### Approach 1: Using npm version (Recommended)
 
 This approach automatically bumps the version in `package.json`, creates a commit, and creates a git tag:

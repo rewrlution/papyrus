@@ -474,6 +474,25 @@ cd packages/cli
 pnpm build
 ```
 
+### "Named export not found" After Installing CLI from npm
+
+**Cause:** The shared package version wasn't bumped before releasing.
+
+**Example error:**
+
+```
+import { StandupStreamEventSchema } from '@rewrlution/papyrus-shared';
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: Named export 'StandupStreamEventSchema' not found
+```
+
+**Solution:**
+
+1. Bump the shared package version: `cd packages/shared && npm version patch`
+2. Create a new release tag and push
+
+**Prevention:** Always bump `packages/shared/package.json` version when you add/change exports in the shared package before releasing CLI.
+
 ## Best Practices
 
 ### 1. Always Build Shared First
