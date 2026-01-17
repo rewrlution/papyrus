@@ -25,7 +25,7 @@ export class SseClient {
     onEvent: (event: StandupStreamEvent) => void
   ): Promise<void> {
     return this.stream(
-      '/api/ai/standup',
+      '/ai/standup',
       options,
       StandupStreamEventSchema,
       onEvent
