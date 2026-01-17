@@ -1,26 +1,16 @@
 import {
+  UsageInfo,
+  getCurrentMonth,
+  getNextMonthStart,
+} from '@rewrlution/papyrus-shared';
+
+import {
   aiUsageRepository,
   aiTrialUsageRepository,
   aiPurchaseRepository,
 } from '../../domain/repositories/index.js';
 
 import { getFeatureConfig, FeatureConfig } from './feature-config.js';
-
-/**
- * Usage information returned by checkUsage()
- */
-export interface UsageInfo {
-  allowed: boolean;
-  reason: 'free_tier' | 'premium' | 'limit_exceeded';
-
-  // For free tier
-  used?: number;
-  limit?: number;
-  resets_at?: string | null; // When free tier resets (ISO date string, null for trials)
-
-  // For premium tier
-  expires_at?: string; // ISO date string
-}
 
 export async function checkUsage(
   userId: string,
@@ -43,6 +33,7 @@ export async function checkUsage(
 
   if (activePurchase) {
     return {
+      tier: 'premium',
       allowed: true,
       reason: 'premium',
       expires_at: activePurchase.expiresAt?.toISOString(),
@@ -66,6 +57,7 @@ async function checkFreeTier(
   switch (freeTier.type) {
     case 'none':
       return {
+        tier: 'free',
         allowed: false,
         reason: 'limit_exceeded',
         used: 0,
@@ -83,6 +75,7 @@ async function checkFreeTier(
       const allowed = used < freeTier.limit;
 
       return {
+        tier: 'free',
         allowed,
         reason: allowed ? 'free_tier' : 'limit_exceeded',
         used,
@@ -100,6 +93,7 @@ async function checkFreeTier(
       const allowed = !hasUsed;
 
       return {
+        tier: 'free',
         allowed,
         reason: allowed ? 'free_tier' : 'limit_exceeded',
         used,
@@ -135,26 +129,4 @@ export async function incrementUsage(
       await aiTrialUsageRepository.markTrialUsed(userId, feature);
     }
   }
-}
-
-/**
- * Get current month in 'YYYY-MM' format
- */
-function getCurrentMonth(): string {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
-}
-
-/**
- * Get start of next month (for resets_at timestamp)
- */
-function getNextMonthStart(): Date {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth();
-
-  // First day of next month
-  return new Date(Date.UTC(year, month + 1, 1, 0, 0, 0, 0));
 }

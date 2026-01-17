@@ -18,7 +18,9 @@
       "Bash(pnpm install:*)",
       "Bash(grep:*)",
       "Bash(node:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc --version)"
     ]
   }
 }
