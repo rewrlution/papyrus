@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file
 
+## [0.0.8] - 2026-01-16
+
+Add feature for standup notes generation.
+
 ## [0.0.6] - 2026-01-05
 
 Enhance the CLI app journal list and journal view.
