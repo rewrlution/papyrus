@@ -83,12 +83,12 @@
 
 ```typescript
 type AIEvent =
-  | { type: "thinking"; message: string }
-  | { type: "question"; question: string; options?: string[] }
-  | { type: "content"; text: string }
-  | { type: "draft"; section: string; content: string }
-  | { type: "done"; session_id: string }
-  | { type: "error"; error: string };
+  | { type: 'thinking'; message: string }
+  | { type: 'question'; question: string; options?: string[] }
+  | { type: 'content'; text: string }
+  | { type: 'draft'; section: string; content: string }
+  | { type: 'done'; session_id: string }
+  | { type: 'error'; error: string };
 ```
 
 **Benefits:**

@@ -306,13 +306,13 @@
 
 ```typescript
 // packages/api/src/routes/ai.ts
-app.post("/ai/generate/standup", async (c) => {
+app.post('/ai/generate/standup', async (c) => {
   const { journals, date } = await c.req.json();
 
   const prompt = buildStandupPrompt(journals, date);
   const response = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [{ role: "user", content: prompt }],
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: prompt }],
   });
 
   return c.json({ content: response.choices[0].message.content });
@@ -342,18 +342,18 @@ app.post("/ai/generate/standup", async (c) => {
 
 ```typescript
 // packages/cli/src/commands/ai/standup.ts
-import OpenAI from "openai";
-import { loadPromptTemplate } from "../../prompts";
+import OpenAI from 'openai';
+import { loadPromptTemplate } from '../../prompts';
 
 export async function generateStandup(date: string) {
   const journals = await loadJournals(date);
-  const template = loadPromptTemplate("standup");
+  const template = loadPromptTemplate('standup');
   const prompt = fillTemplate(template, { journals, date });
 
   const openai = new OpenAI({ apiKey: config.ai.apiKey });
   const response = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [{ role: "user", content: prompt }],
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: prompt }],
   });
 
   console.log(response.choices[0].message.content);
@@ -623,7 +623,7 @@ interface AIProvider {
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
   stream(
     messages: ChatMessage[],
-    options?: StreamOptions,
+    options?: StreamOptions
   ): AsyncIterable<AIEvent>;
 }
 
@@ -634,24 +634,24 @@ interface GenerateOptions {
 }
 
 interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
 type AIEvent =
-  | { type: "thinking"; message: string }
-  | { type: "question"; question: string; options?: string[] }
-  | { type: "content"; text: string }
-  | { type: "draft"; section: string; content: string }
-  | { type: "done"; session_id: string }
-  | { type: "error"; error: string };
+  | { type: 'thinking'; message: string }
+  | { type: 'question'; question: string; options?: string[] }
+  | { type: 'content'; text: string }
+  | { type: 'draft'; section: string; content: string }
+  | { type: 'done'; session_id: string }
+  | { type: 'error'; error: string };
 ```
 
 ### Provider Implementations
 
 ```typescript
 // packages/api/src/ai/providers/anthropic.ts
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic from '@anthropic-ai/sdk';
 
 export class AnthropicProvider implements AIProvider {
   private client: Anthropic;
@@ -662,8 +662,8 @@ export class AnthropicProvider implements AIProvider {
 
   async generate(prompt: string, options: GenerateOptions): Promise<string> {
     const response = await this.client.messages.create({
-      model: options.model || "claude-3-sonnet-20240229",
-      messages: [{ role: "user", content: prompt }],
+      model: options.model || 'claude-3-sonnet-20240229',
+      messages: [{ role: 'user', content: prompt }],
       max_tokens: options.max_tokens || 4096,
     });
     return response.content[0].text;
@@ -671,24 +671,24 @@ export class AnthropicProvider implements AIProvider {
 
   async *stream(messages: ChatMessage[], options?: StreamOptions) {
     const stream = await this.client.messages.create({
-      model: options?.model || "claude-3-sonnet-20240229",
+      model: options?.model || 'claude-3-sonnet-20240229',
       messages,
       stream: true,
       max_tokens: options?.max_tokens || 4096,
     });
 
     for await (const chunk of stream) {
-      if (chunk.type === "content_block_delta") {
-        yield { type: "content", text: chunk.delta.text };
+      if (chunk.type === 'content_block_delta') {
+        yield { type: 'content', text: chunk.delta.text };
       }
     }
 
-    yield { type: "done", session_id: options?.session_id };
+    yield { type: 'done', session_id: options?.session_id };
   }
 }
 
 // packages/api/src/ai/providers/openai.ts
-import OpenAI from "openai";
+import OpenAI from 'openai';
 
 export class OpenAIProvider implements AIProvider {
   private client: OpenAI;
@@ -699,8 +699,8 @@ export class OpenAIProvider implements AIProvider {
 
   async generate(prompt: string, options: GenerateOptions): Promise<string> {
     const response = await this.client.chat.completions.create({
-      model: options.model || "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
+      model: options.model || 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
       max_tokens: options.max_tokens || 4096,
     });
     return response.choices[0].message.content;
@@ -708,7 +708,7 @@ export class OpenAIProvider implements AIProvider {
 
   async *stream(messages: ChatMessage[], options?: StreamOptions) {
     const stream = await this.client.chat.completions.create({
-      model: options?.model || "gpt-4o",
+      model: options?.model || 'gpt-4o',
       messages,
       stream: true,
       max_tokens: options?.max_tokens || 4096,
@@ -717,11 +717,11 @@ export class OpenAIProvider implements AIProvider {
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
-        yield { type: "content", text: content };
+        yield { type: 'content', text: content };
       }
     }
 
-    yield { type: "done", session_id: options?.session_id };
+    yield { type: 'done', session_id: options?.session_id };
   }
 }
 ```
@@ -732,9 +732,9 @@ export class OpenAIProvider implements AIProvider {
 // packages/api/src/ai/providers/factory.ts
 export function createProvider(name: string, apiKey: string): AIProvider {
   switch (name) {
-    case "anthropic":
+    case 'anthropic':
       return new AnthropicProvider(apiKey);
-    case "openai":
+    case 'openai':
       return new OpenAIProvider(apiKey);
     default:
       throw new Error(`Unknown AI provider: ${name}`);
@@ -742,8 +742,8 @@ export function createProvider(name: string, apiKey: string): AIProvider {
 }
 
 // Usage
-const provider = createProvider("anthropic", env.ANTHROPIC_API_KEY);
-const result = await provider.generate("Hello world");
+const provider = createProvider('anthropic', env.ANTHROPIC_API_KEY);
+const result = await provider.generate('Hello world');
 ```
 
 ### Provider-Specific Prompts (Optional)
@@ -769,8 +769,8 @@ function loadPrompt(feature: string, provider: string): string {
   const basePath = `prompts/${feature}/base.txt`;
 
   return fs.existsSync(specificPath)
-    ? fs.readFileSync(specificPath, "utf-8")
-    : fs.readFileSync(basePath, "utf-8");
+    ? fs.readFileSync(specificPath, 'utf-8')
+    : fs.readFileSync(basePath, 'utf-8');
 }
 ```
 
@@ -913,17 +913,17 @@ Use **Server-Sent Events (SSE)** for real-time streaming of AI responses.
 
 ```typescript
 // packages/api/src/routes/ai/promote.ts
-import { Hono } from "hono";
-import { streamSSE } from "hono/streaming";
+import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 
 const app = new Hono();
 
-app.post("/ai/promote/start", async (c) => {
-  const userId = c.get("userId"); // From auth middleware
+app.post('/ai/promote/start', async (c) => {
+  const userId = c.get('userId'); // From auth middleware
   const { from, to } = await c.req.json();
 
   // Create session
-  const session = await createSession(userId, "promotion", { from, to });
+  const session = await createSession(userId, 'promotion', { from, to });
 
   // Load journals
   const journals = await loadJournals(userId, from, to);
@@ -934,21 +934,21 @@ app.post("/ai/promote/start", async (c) => {
   });
 });
 
-app.post("/ai/promote/chat/:sessionId", async (c) => {
+app.post('/ai/promote/chat/:sessionId', async (c) => {
   const { sessionId } = c.req.param();
   const { message } = await c.req.json();
 
   // Validate session ownership
   const session = await getSession(sessionId);
-  if (session.user_id !== c.get("userId")) {
-    return c.json({ error: "Unauthorized" }, 403);
+  if (session.user_id !== c.get('userId')) {
+    return c.json({ error: 'Unauthorized' }, 403);
   }
 
   // Stream response using SSE
   return streamSSE(c, async (stream) => {
     try {
       // Get AI provider
-      const provider = createProvider("anthropic", c.env.ANTHROPIC_API_KEY);
+      const provider = createProvider('anthropic', c.env.ANTHROPIC_API_KEY);
 
       // Build conversation history
       const messages = await buildMessages(session, message);
@@ -962,11 +962,11 @@ app.post("/ai/promote/chat/:sessionId", async (c) => {
       }
 
       // Save conversation
-      await saveMessage(sessionId, "user", message);
-      await saveMessage(sessionId, "assistant", fullResponse);
+      await saveMessage(sessionId, 'user', message);
+      await saveMessage(sessionId, 'assistant', fullResponse);
     } catch (error) {
       await stream.writeSSE({
-        event: "error",
+        event: 'error',
         data: JSON.stringify({ error: error.message }),
       });
     }
@@ -980,26 +980,26 @@ app.post("/ai/promote/chat/:sessionId", async (c) => {
 
 ```typescript
 // packages/cli/src/commands/promote.ts
-import { EventSource } from "eventsource";
-import inquirer from "inquirer";
+import { EventSource } from 'eventsource';
+import inquirer from 'inquirer';
 
 export async function promote(options: { from: string; to?: string }) {
   // Start session
-  const session = await api.post("/ai/promote/start", {
+  const session = await api.post('/ai/promote/start', {
     from: options.from,
-    to: options.to || new Date().toISOString().split("T")[0],
+    to: options.to || new Date().toISOString().split('T')[0],
   });
 
   console.log(`Analyzing ${session.journals_count} journal entries...\n`);
 
   // Interactive Q&A loop
-  let draft = "";
+  let draft = '';
   while (true) {
     const { message } = await inquirer.prompt([
       {
-        type: "input",
-        name: "message",
-        message: "Your response:",
+        type: 'input',
+        name: 'message',
+        message: 'Your response:',
       },
     ]);
 
@@ -1013,19 +1013,19 @@ export async function promote(options: { from: string; to?: string }) {
   }
 
   // Show draft and refinement loop
-  console.log("\n" + draft + "\n");
+  console.log('\n' + draft + '\n');
 
   // Refinement menu
   const { action } = await inquirer.prompt([
     {
-      type: "list",
-      name: "action",
-      message: "What would you like to do?",
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
       choices: [
-        "Edit a section",
-        "Add more details",
-        "Regenerate with different tone",
-        "Save and exit",
+        'Edit a section',
+        'Add more details',
+        'Regenerate with different tone',
+        'Save and exit',
       ],
     },
   ]);
@@ -1036,23 +1036,23 @@ export async function promote(options: { from: string; to?: string }) {
 async function streamChat(sessionId: string, message: string): Promise<any> {
   return new Promise((resolve, reject) => {
     const es = new EventSource(`${API_URL}/ai/promote/chat/${sessionId}`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${getToken()}`,
       },
       body: JSON.stringify({ message }),
     });
 
-    let fullResponse = "";
-    let currentSection = "";
+    let fullResponse = '';
+    let currentSection = '';
 
-    es.addEventListener("thinking", (e) => {
+    es.addEventListener('thinking', (e) => {
       const data = JSON.parse(e.data);
       console.log(`\n💭 ${data.message}\n`);
     });
 
-    es.addEventListener("question", (e) => {
+    es.addEventListener('question', (e) => {
       const data = JSON.parse(e.data);
       console.log(`\n❓ ${data.question}`);
       if (data.options) {
@@ -1060,31 +1060,31 @@ async function streamChat(sessionId: string, message: string): Promise<any> {
       }
     });
 
-    es.addEventListener("content", (e) => {
+    es.addEventListener('content', (e) => {
       const data = JSON.parse(e.data);
       process.stdout.write(data.text);
       fullResponse += data.text;
     });
 
-    es.addEventListener("draft", (e) => {
+    es.addEventListener('draft', (e) => {
       const data = JSON.parse(e.data);
       if (data.section !== currentSection) {
         currentSection = data.section;
-        console.log(`\n\n${"═".repeat(60)}`);
+        console.log(`\n\n${'═'.repeat(60)}`);
         console.log(data.section.toUpperCase());
-        console.log("═".repeat(60));
+        console.log('═'.repeat(60));
       }
       console.log(data.content);
     });
 
-    es.addEventListener("done", (e) => {
+    es.addEventListener('done', (e) => {
       es.close();
       resolve({ draft: fullResponse, has_draft: true });
     });
 
-    es.addEventListener("error", (e) => {
+    es.addEventListener('error', (e) => {
       es.close();
-      reject(new Error("Stream error"));
+      reject(new Error('Stream error'));
     });
   });
 }
@@ -1097,22 +1097,22 @@ async function streamChat(sessionId: string, message: string): Promise<any> {
 ```typescript
 // Shared event types (packages/shared/src/ai-events.ts)
 export type AIEvent =
-  | { type: "thinking"; message: string }
-  | { type: "question"; question: string; options?: string[] }
-  | { type: "content"; text: string }
-  | { type: "draft"; section: string; content: string }
-  | { type: "done"; session_id: string }
-  | { type: "error"; error: string };
+  | { type: 'thinking'; message: string }
+  | { type: 'question'; question: string; options?: string[] }
+  | { type: 'content'; text: string }
+  | { type: 'draft'; section: string; content: string }
+  | { type: 'done'; session_id: string }
+  | { type: 'error'; error: string };
 
 // Example event flow for promotion doc:
 [
-  { type: "thinking", message: "Analyzing 234 journal entries..." },
-  { type: "question", question: "How large was your team?", options: null },
+  { type: 'thinking', message: 'Analyzing 234 journal entries...' },
+  { type: 'question', question: 'How large was your team?', options: null },
   // [User responds via new POST]
-  { type: "thinking", message: "Generating promotion document..." },
-  { type: "draft", section: "executive_summary", content: "Led team of 5..." },
-  { type: "draft", section: "achievements", content: "- Migrated..." },
-  { type: "done", session_id: "abc123" },
+  { type: 'thinking', message: 'Generating promotion document...' },
+  { type: 'draft', section: 'executive_summary', content: 'Led team of 5...' },
+  { type: 'draft', section: 'achievements', content: '- Migrated...' },
+  { type: 'done', session_id: 'abc123' },
 ];
 ```
 

@@ -249,9 +249,9 @@ AI_INTERVIEW_RATE_LIMIT=30
  * - 'none': No free tier (skip to purchase check)
  */
 type FreeTierConfig =
-  | { type: "monthly"; limit: number }
-  | { type: "trial" } // Always one-time
-  | { type: "none" };
+  | { type: 'monthly'; limit: number }
+  | { type: 'trial' } // Always one-time
+  | { type: 'none' };
 
 type FeatureConfig = {
   name: string;
@@ -264,33 +264,33 @@ type FeatureConfig = {
 
 const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   standup: {
-    name: "standup",
-    productName: "standup-pro",
-    freeTier: { type: "monthly", limit: 10 },
+    name: 'standup',
+    productName: 'standup-pro',
+    freeTier: { type: 'monthly', limit: 10 },
     rateLimit: 20,
     price: 900, // $9
     duration: 90,
   },
   promotion: {
-    name: "promotion",
-    productName: "promotion-pro",
-    freeTier: { type: "trial" }, // One-time trial
+    name: 'promotion',
+    productName: 'promotion-pro',
+    freeTier: { type: 'trial' }, // One-time trial
     rateLimit: 10,
     price: 1900, // $19
     duration: 30,
   },
   resume: {
-    name: "resume",
-    productName: "resume-interview-pro", // Shared product
-    freeTier: { type: "none" }, // No free tier
+    name: 'resume',
+    productName: 'resume-interview-pro', // Shared product
+    freeTier: { type: 'none' }, // No free tier
     rateLimit: 20,
     price: 2900, // $29
     duration: 30,
   },
   interview: {
-    name: "interview",
-    productName: "resume-interview-pro", // Shared product
-    freeTier: { type: "none" }, // No free tier
+    name: 'interview',
+    productName: 'resume-interview-pro', // Shared product
+    freeTier: { type: 'none' }, // No free tier
     rateLimit: 30,
     price: 2900, // $29
     duration: 30,
@@ -363,13 +363,13 @@ You're making requests too quickly. Please try again in a few minutes.
 
 ### Why Time-Based Unlimited?
 
-| Aspect            | Count-Based (❌ Not used)    | Time-Based Unlimited (✅ Our choice) |
-| ----------------- | --------------------------- | ------------------------ |
-| User anxiety      | High ("Should I use this?") | Low ("I have access")    |
-| Iteration freedom | Limited                     | Unlimited                |
-| Implementation    | Track generation counts     | Just check `expiresAt`   |
-| User perception   | "Running out"               | "I have access until..." |
-| Cost control      | Via count limits            | Via rate limits          |
+| Aspect            | Count-Based (❌ Not used)   | Time-Based Unlimited (✅ Our choice) |
+| ----------------- | --------------------------- | ------------------------------------ |
+| User anxiety      | High ("Should I use this?") | Low ("I have access")                |
+| Iteration freedom | Limited                     | Unlimited                            |
+| Implementation    | Track generation counts     | Just check `expiresAt`               |
+| User perception   | "Running out"               | "I have access until..."             |
+| Cost control      | Via count limits            | Via rate limits                      |
 
 ### Why Free Tier First?
 

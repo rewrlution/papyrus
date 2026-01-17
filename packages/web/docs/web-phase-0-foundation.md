@@ -7,12 +7,14 @@ Building the infrastructure for the Papyrus CLI marketing website.
 **Goal:** Set up a Next.js 15 marketing website with Tailwind CSS, shadcn/ui, and automated Vercel deployment.
 
 **What problem does this solve?**
+
 - Establish a solid foundation for rapid feature development
 - Enable continuous deployment for fast iteration
 - Set up design system and styling infrastructure
 - Get something live immediately to validate the pipeline
 
 **Expected outcome:**
+
 - Live URL with a basic landing page
 - Working CI/CD pipeline (GitHub → Vercel)
 - Dark theme with terminal aesthetic
@@ -74,6 +76,7 @@ Monorepo Structure:
 ```
 
 **Why this architecture:**
+
 - **Next.js App Router** - Modern React framework with static export
 - **Monorepo integration** - Shares types/utils with CLI and API
 - **shadcn/ui** - Copy-paste components (no library bloat)
@@ -81,6 +84,7 @@ Monorepo Structure:
 - **Static export** - Fast, cheap, secure (no server needed)
 
 **Trade-offs considered:**
+
 - Static vs SSR: Static is faster and cheaper (good for marketing site)
 - shadcn/ui vs custom: shadcn provides accessible primitives we can customize
 - Vercel vs Cloudflare Pages: Vercel has better Next.js integration
@@ -90,6 +94,7 @@ Monorepo Structure:
 ## Prerequisites
 
 **Required:**
+
 - Node.js 20+ installed
 - pnpm 10+ installed (`npm install -g pnpm`)
 - Git configured
@@ -97,12 +102,14 @@ Monorepo Structure:
 - Vercel account (free tier) - Sign up at [vercel.com](https://vercel.com)
 
 **Assumed knowledge:**
+
 - Basic TypeScript
 - Basic React (functional components)
 - Basic git commands
 - Terminal/command line usage
 
 **Repository:**
+
 - Clone the Papyrus monorepo
 - Familiarity with the existing structure (see `/CLAUDE.md`)
 
@@ -152,6 +159,7 @@ touch README.md
 ```
 
 **Why this structure:**
+
 - `app/` - Next.js App Router directory
 - `components/ui/` - shadcn components (will be auto-generated)
 - `components/shared/` - Custom reusable components
@@ -205,6 +213,7 @@ Create `packages/web/package.json`:
 ```
 
 **Why these dependencies:**
+
 - **next, react, react-dom** - Core framework
 - **class-variance-authority, clsx, tailwind-merge** - For shadcn/ui
 - **lucide-react** - Icon library (tree-shakeable)
@@ -255,6 +264,7 @@ Create `packages/web/tsconfig.json`:
 ```
 
 **Why this configuration:**
+
 - Extends base TypeScript config from monorepo root
 - References `shared` package for type checking
 - Path alias `@/*` for cleaner imports
@@ -277,12 +287,13 @@ const nextConfig = {
   images: {
     unoptimized: true, // Required for static export
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
 ```
 
 **Why this configuration:**
+
 - `output: 'export'` - Generate static HTML/CSS/JS (no server needed)
 - `transpilePackages` - Compile TypeScript from shared package
 - `images.unoptimized` - Required for static export (no server for image optimization)
@@ -296,74 +307,71 @@ module.exports = nextConfig
 Create `packages/web/tailwind.config.ts`:
 
 ```typescript
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  darkMode: ["class"],
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+  darkMode: ['class'],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         terminal: {
-          black: "#0a0a0a",
-          darkgray: "#1a1a1a",
-          gray: "#2a2a2a",
-          lightgray: "#666666",
-          text: "#e0e0e0",
-          green: "#00ff00",
-          cyan: "#00d9ff",
-          yellow: "#ffdd00",
-          red: "#ff4444",
+          black: '#0a0a0a',
+          darkgray: '#1a1a1a',
+          gray: '#2a2a2a',
+          lightgray: '#666666',
+          text: '#e0e0e0',
+          green: '#00ff00',
+          cyan: '#00d9ff',
+          yellow: '#ffdd00',
+          red: '#ff4444',
         },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
+        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'monospace'],
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require('tailwindcss-animate')],
 };
 
 export default config;
@@ -377,10 +385,11 @@ module.exports = {
     tailwindcss: {},
     autoprefixer: {},
   },
-}
+};
 ```
 
 **Why this configuration:**
+
 - **Terminal colors** - Custom palette for dev tool aesthetic
 - **shadcn/ui tokens** - CSS variables for theming
 - **Font families** - Geist Sans for UI, Geist Mono for code
@@ -438,7 +447,9 @@ Create `packages/web/app/globals.css`:
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 }
 
@@ -450,6 +461,7 @@ Create `packages/web/app/globals.css`:
 ```
 
 **Why these styles:**
+
 - Dark terminal background (#0a0a0a)
 - Cyan primary color (terminal aesthetic)
 - Yellow accent (like terminal warnings)
@@ -511,6 +523,7 @@ export default function RootLayout({
 ```
 
 **Why this approach:**
+
 - **Geist fonts** - Modern, optimized fonts from Vercel
 - **SEO metadata** - Open Graph and Twitter cards
 - **Dark mode** - Always dark (terminal aesthetic)
@@ -562,6 +575,7 @@ export default function Home() {
 ```
 
 **Why this page:**
+
 - Shows the Papyrus ASCII logo (brand identity)
 - Simple, clear value proposition
 - Install command (primary CTA)
@@ -577,8 +591,8 @@ export default function Home() {
 Create `packages/web/lib/utils.ts`:
 
 ```typescript
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 /**
  * Merges class names with Tailwind-aware deduplication
@@ -590,6 +604,7 @@ export function cn(...inputs: ClassValue[]) {
 ```
 
 **Why this utility:**
+
 - Required by shadcn/ui components
 - Merges Tailwind classes intelligently (no duplicates)
 - Example: `cn("text-red-500", "text-blue-500")` → `"text-blue-500"` (last wins)
@@ -642,22 +657,29 @@ Marketing website for Papyrus CLI - An AI-powered journaling tool built for deve
 ## Development
 
 \`\`\`bash
+
 # Install dependencies (from monorepo root)
+
 pnpm install
 
 # Start dev server
+
 pnpm dev
 
 # Open http://localhost:3000
+
 \`\`\`
 
 ## Build
 
 \`\`\`bash
+
 # Build for production
+
 pnpm build
 
 # Preview production build
+
 pnpm start
 \`\`\`
 
@@ -673,24 +695,27 @@ Automatically deployed to Vercel on push to main branch.
 \`\`\`
 packages/web/
 ├── app/
-│   ├── layout.tsx       # Root layout
-│   ├── page.tsx         # Home page
-│   └── globals.css      # Global styles
+│ ├── layout.tsx # Root layout
+│ ├── page.tsx # Home page
+│ └── globals.css # Global styles
 ├── components/
-│   ├── ui/              # shadcn components
-│   └── shared/          # Custom components
+│ ├── ui/ # shadcn components
+│ └── shared/ # Custom components
 ├── lib/
-│   └── utils.ts         # Utilities
-└── public/              # Static assets
+│ └── utils.ts # Utilities
+└── public/ # Static assets
 \`\`\`
 
 ## Adding shadcn/ui Components
 
 \`\`\`bash
+
 # Install shadcn CLI (first time only)
+
 npx shadcn@latest init
 
 # Add components
+
 npx shadcn@latest add button
 npx shadcn@latest add card
 \`\`\`
@@ -717,6 +742,7 @@ pnpm install
 ```
 
 **Why from root:**
+
 - pnpm workspaces handles all packages together
 - Links `@rewrlution/papyrus-shared` automatically
 - Installs all dependencies efficiently
@@ -750,6 +776,7 @@ npx shadcn@latest add button
 This creates `components/ui/button.tsx` - a fully accessible button component.
 
 **Why shadcn/ui:**
+
 - Components are copied to your codebase (no library dependency)
 - Built on Radix UI (accessible by default)
 - Fully customizable
@@ -769,12 +796,14 @@ pnpm dev
 Open your browser to `http://localhost:3000`
 
 You should see:
+
 - Papyrus ASCII logo in cyan
 - "AI-Powered Journaling for Developers" headline
 - Install command in a terminal-style box
 - Dark background with terminal colors
 
 **Test checklist:**
+
 - [ ] Page loads without errors
 - [ ] Fonts render correctly (Geist Sans/Mono)
 - [ ] Colors match terminal palette
@@ -795,12 +824,14 @@ pnpm build
 ```
 
 This should:
+
 1. Compile TypeScript
 2. Generate static HTML/CSS/JS
 3. Output to `.next` directory
 4. Show build statistics
 
 Expected output:
+
 ```
 Route (app)                              Size     First Load JS
 ┌ ○ /                                    137 B          87.2 kB
@@ -809,6 +840,7 @@ Route (app)                              Size     First Load JS
 ```
 
 **If build fails:**
+
 - Check for TypeScript errors: `pnpm type-check`
 - Check for linting errors: `pnpm lint`
 - Check imports are correct (all files exist)
@@ -837,6 +869,7 @@ Route (app)                              Size     First Load JS
 #### B. Wait for First Deploy
 
 Vercel will:
+
 - Install dependencies
 - Build the site
 - Deploy to CDN
@@ -847,6 +880,7 @@ First deploy takes 2-3 minutes.
 #### C. Verify Deployment
 
 Once deployed:
+
 - Click the URL
 - Verify the page loads
 - Check that it matches your local build
@@ -855,6 +889,7 @@ Once deployed:
 #### D. Configure Custom Domain (Optional)
 
 If you have a domain:
+
 1. Go to Project Settings → Domains
 2. Add your domain (e.g., `papyrus.dev`)
 3. Follow DNS instructions
@@ -867,12 +902,14 @@ If you have a domain:
 **Goal:** Enable continuous deployment on every push.
 
 Good news: **This is already configured!** Vercel automatically:
+
 - Deploys `main` branch to production
 - Deploys other branches to preview URLs
 - Deploys PRs to preview URLs
 - Shows build status in GitHub
 
 **To test:**
+
 1. Make a small change to `packages/web/app/page.tsx`
 2. Commit and push to your branch
 3. Check Vercel dashboard - new deployment starts
@@ -922,6 +959,7 @@ Update `/home/user/papyrus/turbo.json` to include web package:
 ```
 
 **Why these changes:**
+
 - `turbo.json` includes `.next/**` in build outputs
 - Root scripts can run web commands easily
 - `pnpm web:dev` is a shortcut for running the dev server
@@ -935,6 +973,7 @@ Update `/home/user/papyrus/turbo.json` to include web package:
 After completing all steps, verify:
 
 **Local Development:**
+
 - [ ] `pnpm dev` starts server without errors
 - [ ] `http://localhost:3000` loads the page
 - [ ] Papyrus ASCII logo displays in cyan
@@ -943,12 +982,14 @@ After completing all steps, verify:
 - [ ] No console errors in browser DevTools
 
 **Build:**
+
 - [ ] `pnpm build` completes successfully
 - [ ] No TypeScript errors
 - [ ] No lint errors
 - [ ] `.next` directory is created
 
 **Deployment:**
+
 - [ ] Vercel dashboard shows successful deploy
 - [ ] Production URL loads correctly
 - [ ] Mobile responsive (test on phone)
@@ -956,6 +997,7 @@ After completing all steps, verify:
 - [ ] Preview deployments work for new commits
 
 **Monorepo:**
+
 - [ ] `pnpm install` from root installs all packages
 - [ ] `pnpm web:dev` shortcut works
 - [ ] No conflicts with other packages
@@ -970,6 +1012,7 @@ After completing all steps, verify:
 TypeScript can't resolve the shared package.
 
 **Solution:**
+
 ```bash
 # Build shared package first
 cd packages/shared
@@ -988,6 +1031,7 @@ pnpm dev
 Next.js compiler issue, usually on first install.
 
 **Solution:**
+
 ```bash
 # Clear cache and reinstall
 rm -rf node_modules .next
@@ -1003,6 +1047,7 @@ pnpm dev
 Geist fonts not installed or imported incorrectly.
 
 **Solution:**
+
 ```bash
 # Install geist package
 pnpm add geist
@@ -1020,6 +1065,7 @@ import { GeistMono } from "geist/font/mono";
 PostCSS or Tailwind config issue.
 
 **Solution:**
+
 ```bash
 # Verify tailwind.config.ts content paths are correct
 content: [
@@ -1040,11 +1086,13 @@ Vercel needs to know to use pnpm.
 
 **Solution:**
 Add to project root (if not exists): `.npmrc`
+
 ```
 package-manager=pnpm
 ```
 
 Or in Vercel dashboard:
+
 - Settings → General → Build & Development Settings
 - Install Command: `pnpm install`
 
@@ -1056,13 +1104,16 @@ Or in Vercel dashboard:
 Different Node.js version or missing environment variables.
 
 **Solution:**
+
 1. Check Vercel build logs for specific error
 2. Match Node.js version (add `engines` in package.json):
+
 ```json
 "engines": {
   "node": ">=20.0.0"
 }
 ```
+
 3. Check that all imports are correct (case-sensitive on Vercel)
 
 ---
@@ -1070,6 +1121,7 @@ Different Node.js version or missing environment variables.
 ## Next Steps
 
 Phase 0 is complete! You now have:
+
 - ✅ Next.js 15 app with App Router
 - ✅ Tailwind CSS with terminal color palette
 - ✅ shadcn/ui configured
@@ -1100,6 +1152,7 @@ Phase 0 is complete! You now have:
 ## References
 
 ### Official Documentation
+
 - [Next.js 15 Docs](https://nextjs.org/docs)
 - [Tailwind CSS v4](https://tailwindcss.com/docs)
 - [shadcn/ui](https://ui.shadcn.com/)
@@ -1107,11 +1160,13 @@ Phase 0 is complete! You now have:
 - [pnpm Workspaces](https://pnpm.io/workspaces)
 
 ### Design Inspiration
+
 - [Linear.app](https://linear.app) - Clean dark design
 - [Vercel.com](https://vercel.com) - Modern layout
 - [Supabase.com](https://supabase.com) - Developer-focused
 
 ### Related Papyrus Docs
+
 - Main README: `/CLAUDE.md`
 - Development plan: `/docs/WEB_DEVELOPMENT_PLAN.md`
 - CLI docs: `/packages/cli/CLAUDE.md`

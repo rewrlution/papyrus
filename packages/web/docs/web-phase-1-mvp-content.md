@@ -7,12 +7,14 @@ Building the core marketing content for the Papyrus CLI website.
 **Goal:** Create a launchable marketing website with complete messaging, features showcase, and clear calls-to-action.
 
 **What problem does this solve?**
+
 - Communicate value proposition clearly to developers
 - Showcase Papyrus CLI's key features
 - Provide easy installation and onboarding path
 - Create a shareable, professional web presence
 
 **Expected outcome:**
+
 - Fully functional marketing site ready to launch
 - Hero section with compelling headline
 - 6 feature cards with icons and descriptions
@@ -77,6 +79,7 @@ components/
 ```
 
 **Why this architecture:**
+
 - **Section-based** - Each section is isolated and reusable
 - **Component separation** - Shared components in `shared/`
 - **Mobile-first** - Responsive grid and stacking
@@ -84,6 +87,7 @@ components/
 - **Clear CTAs** - Multiple paths to install
 
 **Trade-offs considered:**
+
 - Static content vs CMS: Static is simpler for MVP
 - Single page vs multi-page: Single page for marketing simplicity
 - Animations: Deferred to Phase 2 for faster MVP
@@ -93,18 +97,21 @@ components/
 ## Prerequisites
 
 **Required:**
+
 - Phase 0 completed (foundation setup)
 - Dev server running: `pnpm dev`
 - shadcn/ui initialized
 - Tailwind configured
 
 **Assumed knowledge:**
+
 - React functional components
 - Tailwind CSS classes
 - TypeScript interfaces
 - Next.js App Router
 
 **Nice to have:**
+
 - Figma/design tools (for visual planning)
 - Content writing skills
 - Basic accessibility knowledge
@@ -127,11 +134,13 @@ npx shadcn@latest add separator
 ```
 
 This creates:
+
 - `components/ui/card.tsx` - For feature cards
 - `components/ui/button.tsx` - For CTAs
 - `components/ui/separator.tsx` - For visual dividers
 
 **Why these components:**
+
 - Card: Accessible, styled containers for features
 - Button: Consistent button styling across site
 - Separator: Visual breaks between sections
@@ -190,6 +199,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
 ```
 
 **Why this component:**
+
 - **Client-side** - Uses browser clipboard API
 - **Visual feedback** - Shows "Copied!" for 2 seconds
 - **Accessible** - Includes ARIA label
@@ -229,6 +239,7 @@ export function CodeBlock({ code, language = "bash", showLineNumbers = false }: 
 ```
 
 **Why this component:**
+
 - **Terminal styling** - Matches CLI aesthetic
 - **Copy button** - Shows on hover
 - **Responsive** - Scrolls horizontally on mobile
@@ -301,6 +312,7 @@ export function Hero() {
 ```
 
 **Why this design:**
+
 - **ASCII logo** - Recognizable brand identity
 - **Clear value prop** - "Journal Like You Code" is memorable
 - **Immediate action** - Install command front and center
@@ -402,6 +414,7 @@ export function Features() {
 ```
 
 **Why this design:**
+
 - **6 key features** - Not overwhelming, covers main value props
 - **Icons** - Visual anchors from lucide-react (terminal-friendly)
 - **Grid layout** - 3 cols desktop, 2 tablet, 1 mobile
@@ -529,6 +542,7 @@ export function QuickStart() {
 ```
 
 **Why this design:**
+
 - **Multiple package managers** - Supports npm, pnpm, yarn
 - **Step-by-step guide** - 4 clear steps to get started
 - **Visual hierarchy** - Numbered steps with icons
@@ -654,6 +668,7 @@ export function SiteFooter() {
 ```
 
 **Why this design:**
+
 - **Organized links** - Product and Resources sections
 - **Social icons** - GitHub and email
 - **Brand identity** - Papyrus logo and tagline
@@ -687,6 +702,7 @@ export default function Home() {
 ```
 
 **Why this structure:**
+
 - **Clean composition** - Each section is self-contained
 - **Easy to reorder** - Just swap import order
 - **Easy to test** - Each section can be tested independently
@@ -782,6 +798,7 @@ export default function RootLayout({
 ```
 
 **Why these improvements:**
+
 - **Better description** - More keywords naturally integrated
 - **Open Graph** - Better social media previews
 - **Twitter Card** - Optimized for Twitter sharing
@@ -797,6 +814,7 @@ export default function RootLayout({
 For MVP, create a simple text-based favicon. Create `packages/web/app/favicon.ico`:
 
 Option 1: Use an online generator (quickest):
+
 1. Go to [favicon.io](https://favicon.io/favicon-generator/)
 2. Settings:
    - Text: "P"
@@ -807,12 +825,14 @@ Option 1: Use an online generator (quickest):
 3. Download and place in `packages/web/app/favicon.ico`
 
 Option 2: Use existing CLI logo:
+
 - Take a screenshot of the ASCII logo
 - Crop to square
 - Resize to 64x64
 - Convert to .ico format
 
 **Why a favicon:**
+
 - Brand recognition in browser tabs
 - Professional appearance
 - Helps users find the tab
@@ -833,18 +853,21 @@ pnpm dev
 Open `http://localhost:3000` and test:
 
 **Desktop (1920x1080):**
+
 - [ ] Features grid shows 3 columns
 - [ ] Text is readable (not too large)
 - [ ] Hero logo is appropriately sized
 - [ ] All sections have proper spacing
 
 **Tablet (768x1024):**
+
 - [ ] Features grid shows 2 columns
 - [ ] Quick start shows 2 columns
 - [ ] Font sizes scale down
 - [ ] No horizontal scroll
 
 **Mobile (375x667):**
+
 - [ ] Features grid shows 1 column (stacked)
 - [ ] Quick start shows 1 column
 - [ ] ASCII logo scales or scrolls
@@ -852,11 +875,13 @@ Open `http://localhost:3000` and test:
 - [ ] No text overflow
 
 Use browser DevTools:
+
 1. Open DevTools (F12)
 2. Click device toolbar icon
 3. Test on iPhone SE, iPhone 12, iPad, Desktop
 
 **Common fixes:**
+
 - Text too small on mobile: Increase base font size
 - Horizontal scroll: Check for fixed widths, use `max-w-*` instead
 - Buttons too small: Use `size="lg"` on mobile
@@ -891,6 +916,7 @@ Use browser DevTools:
 **Automated checks:**
 
 Install Lighthouse:
+
 ```bash
 # Lighthouse is built into Chrome DevTools
 # Or install CLI:
@@ -901,12 +927,14 @@ lighthouse http://localhost:3000 --view
 ```
 
 Target scores:
+
 - Accessibility: 90+
 - Best Practices: 90+
 - SEO: 90+
 - Performance: 80+ (will improve in Phase 2)
 
 **Common accessibility issues:**
+
 - Missing alt text on images (add when images are added)
 - Insufficient color contrast (adjust if needed)
 - Missing ARIA labels (add to icon buttons)
@@ -931,12 +959,14 @@ pnpm start
 ```
 
 **Metrics to check:**
+
 - **First Contentful Paint (FCP):** < 1.8s (good)
 - **Largest Contentful Paint (LCP):** < 2.5s (good)
 - **Time to Interactive (TTI):** < 3.8s (good)
 - **Cumulative Layout Shift (CLS):** < 0.1 (good)
 
 **Use Chrome DevTools:**
+
 1. Open DevTools → Performance tab
 2. Click Record
 3. Reload page
@@ -944,11 +974,13 @@ pnpm start
 5. Review metrics
 
 **Common performance issues:**
+
 - Large JavaScript bundles: Check bundle size with `pnpm build`
 - Render-blocking resources: Ensure fonts are optimized
 - Large images: Optimize before adding (Phase 2)
 
 **For MVP:**
+
 - Bundle size should be < 200KB
 - Page should load in < 2 seconds
 
@@ -979,6 +1011,7 @@ pnpm start
 ```
 
 **Production checklist:**
+
 - [ ] No build errors
 - [ ] No TypeScript errors
 - [ ] No lint warnings
@@ -1013,6 +1046,7 @@ git push origin your-branch-name
 ```
 
 Vercel will automatically:
+
 1. Detect the push
 2. Start a new deployment
 3. Build the site
@@ -1020,6 +1054,7 @@ Vercel will automatically:
 5. Show status in GitHub (if connected)
 
 **Check deployment:**
+
 1. Go to Vercel dashboard
 2. Find your project
 3. Click latest deployment
@@ -1028,6 +1063,7 @@ Vercel will automatically:
 6. Test all functionality
 
 **If deployment fails:**
+
 - Check build logs for errors
 - Verify `next.config.js` is correct
 - Ensure all imports are correct
@@ -1040,6 +1076,7 @@ Vercel will automatically:
 ### Manual Testing Checklist
 
 **Visual Testing:**
+
 - [ ] Hero section renders correctly
 - [ ] ASCII logo is cyan and centered
 - [ ] Features grid shows all 6 cards
@@ -1050,6 +1087,7 @@ Vercel will automatically:
 - [ ] Fonts are Geist Sans/Mono
 
 **Functional Testing:**
+
 - [ ] Copy buttons work (install commands)
 - [ ] Copy shows "Copied!" feedback
 - [ ] GitHub link opens in new tab
@@ -1058,6 +1096,7 @@ Vercel will automatically:
 - [ ] No console errors
 
 **Responsive Testing:**
+
 - [ ] Desktop (1920x1080): 3-column grid
 - [ ] Tablet (768x1024): 2-column grid
 - [ ] Mobile (375x667): 1-column stack
@@ -1066,6 +1105,7 @@ Vercel will automatically:
 - [ ] Touch targets ≥ 44px
 
 **Cross-Browser Testing:**
+
 - [ ] Chrome/Edge (latest)
 - [ ] Firefox (latest)
 - [ ] Safari (latest)
@@ -1073,12 +1113,14 @@ Vercel will automatically:
 - [ ] Chrome Android
 
 **Performance Testing:**
+
 - [ ] Lighthouse score ≥ 80
 - [ ] Page loads < 2 seconds
 - [ ] Bundle size < 200KB
 - [ ] No render-blocking resources
 
 **SEO Testing:**
+
 - [ ] Meta title correct
 - [ ] Meta description correct
 - [ ] Open Graph tags present
@@ -1095,6 +1137,7 @@ Vercel will automatically:
 Browser clipboard API not available (HTTP instead of HTTPS, or old browser).
 
 **Solution:**
+
 - Test on HTTPS (production)
 - Or test localhost (clipboard API works on localhost)
 - Add fallback for old browsers:
@@ -1106,7 +1149,7 @@ const handleCopy = async () => {
     setCopied(true);
   } catch (err) {
     // Fallback: select text
-    console.error("Copy failed", err);
+    console.error('Copy failed', err);
   }
 };
 ```
@@ -1120,6 +1163,7 @@ Tailwind responsive classes not applying correctly.
 
 **Solution:**
 Check Tailwind config `content` paths:
+
 ```typescript
 content: [
   "./app/**/*.{ts,tsx}",
@@ -1137,6 +1181,7 @@ Restart dev server after changing config.
 Geist fonts not installed or imported incorrectly.
 
 **Solution:**
+
 ```bash
 # Install geist package
 pnpm add geist
@@ -1160,6 +1205,7 @@ fontFamily: {
 Import path is wrong or file doesn't exist.
 
 **Solution:**
+
 - Check file path is correct (case-sensitive)
 - Ensure `@/` alias is configured in tsconfig.json
 - Verify all files are created
@@ -1174,11 +1220,13 @@ Fixed font size too large for small screens.
 
 **Solution:**
 Add responsive font sizes and horizontal scroll:
+
 ```typescript
 <pre className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl overflow-x-auto">
 ```
 
 Or simplify logo on mobile:
+
 ```typescript
 {/* Mobile: Short version */}
 <div className="block sm:hidden">
@@ -1202,6 +1250,7 @@ Static export doesn't support `<Link>` for external URLs.
 
 **Solution:**
 Use `<a>` tags for external links:
+
 ```typescript
 // External link: use <a>
 <a href="https://github.com/..." target="_blank" rel="noopener noreferrer">
@@ -1220,6 +1269,7 @@ import Link from "next/link";
 These can be added later if needed:
 
 1. **Smooth Scroll:**
+
    ```typescript
    // Add to globals.css
    html {
@@ -1255,6 +1305,7 @@ These can be added later if needed:
 ## Next Steps
 
 Phase 1 is complete! You now have:
+
 - ✅ Complete marketing website
 - ✅ Hero with clear value proposition
 - ✅ Features showcase (6 cards)
@@ -1294,22 +1345,26 @@ Phase 1 is complete! You now have:
 ## References
 
 ### Official Documentation
+
 - [Next.js App Router](https://nextjs.org/docs/app)
 - [shadcn/ui Components](https://ui.shadcn.com/docs/components)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [Lucide Icons](https://lucide.dev/)
 
 ### Design Resources
+
 - [Terminal Color Palettes](https://terminal.sexy/)
 - [Web Accessibility](https://webaim.org/resources/)
 - [Open Graph Protocol](https://ogp.me/)
 
 ### Tools
+
 - [Lighthouse](https://developers.google.com/web/tools/lighthouse)
 - [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
 - [Favicon Generator](https://favicon.io/)
 
 ### Related Papyrus Docs
+
 - Development plan: `/docs/WEB_DEVELOPMENT_PLAN.md`
 - Phase 0 tutorial: `/docs/tutorials/web-phase-0-foundation.md`
 - Main README: `/CLAUDE.md`
