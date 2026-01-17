@@ -344,11 +344,101 @@ pnpm add -D <package> -w  # ✅ Correct
 pnpm add -D <package>     # ❌ Error
 ```
 
+## 🏷️ Releasing and Pushing Tags
+
+When you're satisfied with the main branch and ready to create a release, there are two approaches:
+
+### Approach 1: Using npm version (Recommended)
+
+This approach automatically bumps the version in `package.json`, creates a commit, and creates a git tag:
+
+```bash
+# Make sure you're on main and up to date
+git checkout main
+git pull origin main
+
+# Bump version (choose one)
+npm version patch   # 0.0.1 -> 0.0.2 (bug fixes)
+npm version minor   # 0.0.1 -> 0.1.0 (new features)
+npm version major   # 0.0.1 -> 1.0.0 (breaking changes)
+
+# Push the commit and tag together
+git push origin main --tags
+```
+
+**What `npm version` does:**
+
+1. Updates `version` in `package.json`
+2. Creates a commit with message `v0.0.2` (or whatever version)
+3. Creates a git tag `v0.0.2`
+
+### Approach 2: Manual Tag Creation
+
+If you want more control or need to tag an existing commit without changing `package.json`:
+
+```bash
+# Make sure you're on main and up to date
+git checkout main
+git pull origin main
+
+# Create an annotated tag (recommended)
+git tag -a v0.0.2 -m "Release v0.0.2: Brief description of changes"
+
+# Or create a lightweight tag (simpler, no message)
+git tag v0.0.2
+
+# Push the tag to remote
+git push origin v0.0.2
+
+# Or push all tags at once
+git push origin --tags
+```
+
+**Tag an older commit:**
+
+```bash
+# Find the commit hash you want to tag
+git log --oneline
+
+# Tag that specific commit
+git tag -a v0.0.2 <commit-hash> -m "Release v0.0.2"
+
+# Push the tag
+git push origin v0.0.2
+```
+
+### Viewing and Managing Tags
+
+```bash
+# List all tags
+git tag
+
+# List tags with messages
+git tag -n
+
+# Show details of a specific tag
+git show v0.0.2
+
+# Delete a local tag
+git tag -d v0.0.2
+
+# Delete a remote tag
+git push origin --delete v0.0.2
+```
+
+### Best Practices
+
+- **Use annotated tags** (`-a`) for releases - they include metadata like author and date
+- **Follow semantic versioning** (semver): `major.minor.patch`
+- **Write meaningful tag messages** describing what's in the release
+- **Always test before tagging** - run `pnpm build && pnpm test` first
+
 ## 📚 Additional Resources
 
 - [Turborepo Documentation](https://turbo.build/repo/docs)
 - [pnpm Workspaces](https://pnpm.io/workspaces)
 - [TypeScript Project References](https://www.typescriptlang.org/docs/handbook/project-references.html)
+- [Semantic Versioning](https://semver.org/)
 
 ## 🤝 Getting Help
 
