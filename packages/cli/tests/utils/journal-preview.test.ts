@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { extractPreview } from './journal-preview.js';
+import { extractPreview } from '../../src/utils/journal-preview.js';
 
 describe('extractPreview', () => {
   it('should extract first line after frontmatter', () => {

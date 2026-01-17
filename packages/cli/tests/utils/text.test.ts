@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { truncateToWidth, padToWidth } from './text.js';
+import { truncateToWidth, padToWidth } from '../../src/utils/text.js';
 
 describe('truncateToWidth', () => {
   it('should return text as-is when it fits', () => {
