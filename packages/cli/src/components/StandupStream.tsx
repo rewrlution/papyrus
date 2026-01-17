@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink';
-import Spinner from 'ink-spinner';
 import { useState, useEffect } from 'react';
 
 import {
@@ -9,6 +8,8 @@ import {
 } from '@rewrlution/papyrus-shared';
 
 import { sse } from '../lib/api/index.js';
+
+import { ColdStartAwareSpinner } from './ColdStart.js';
 
 export interface StandupStreamProps extends StandupRequest {
   onComplete: () => void;
@@ -93,12 +94,9 @@ export function StandupStream({
   if (status === 'thinking') {
     return (
       <Box flexDirection="column">
-        <Box>
-          <Text color="cyan">
-            <Spinner type="dots" />
-          </Text>
-          <Text> {thinkingMessage || 'Generating standup notes...'}</Text>
-        </Box>
+        <ColdStartAwareSpinner
+          message={thinkingMessage || 'Generating standup notes...'}
+        />
       </Box>
     );
   }
