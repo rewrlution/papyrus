@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import {
   registerJournalCommands,
   registerAuthCommands,
+  registerAiCommands,
 } from './commands/index.js';
 
 const program = new Command();
@@ -15,5 +16,6 @@ program
 
 registerAuthCommands(program);
 registerJournalCommands(program);
+registerAiCommands(program);
 
 program.parse(process.argv);
