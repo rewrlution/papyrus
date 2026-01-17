@@ -2,14 +2,15 @@ import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
 import { useState, useEffect } from 'react';
 
-import { StandupStreamEvent, UsageInfo } from '@rewrlution/papyrus-shared';
+import {
+  StandupStreamEvent,
+  UsageInfo,
+  StandupRequest,
+} from '@rewrlution/papyrus-shared';
 
 import { sse } from '../lib/api/index.js';
 
-export interface StandupStreamProps {
-  date?: string;
-  from?: string;
-  to?: string;
+export interface StandupStreamProps extends StandupRequest {
   onComplete: () => void;
 }
 

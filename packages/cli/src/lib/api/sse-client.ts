@@ -2,6 +2,7 @@ import {
   z,
   StandupStreamEventSchema,
   type StandupStreamEvent,
+  type StandupRequest,
 } from '@rewrlution/papyrus-shared';
 
 import { tokenStore } from '../storage/index.js';
@@ -20,7 +21,7 @@ export class SseClient {
    * Streams AI-generated content as SSE events.
    */
   async generateStandup(
-    options: { date?: string; from?: string; to?: string },
+    options: StandupRequest,
     onEvent: (event: StandupStreamEvent) => void
   ): Promise<void> {
     return this.stream(
