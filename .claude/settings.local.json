@@ -20,7 +20,8 @@
       "Bash(node:*)",
       "Bash(test:*)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc --version)"
+      "Bash(npx tsc --version)",
+      "Bash(curl:*)"
     ]
   }
 }
