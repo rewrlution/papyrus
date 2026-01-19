@@ -87,7 +87,7 @@ cd ../.. && pnpm install && pnpm build --filter=@rewrlution/papyrus-web
 **Output Directory:**
 
 ```
-packages/web/.next
+.next
 ```
 
 **Install Command:** Override with:
