@@ -3,6 +3,7 @@
 import { Copy, Check, Terminal } from 'lucide-react';
 import { useState } from 'react';
 
+import { ModeToggle } from '@/components/mode-toggle';
 import { Button } from '@/components/ui/button';
 
 export function Hero() {
@@ -16,7 +17,10 @@ export function Hero() {
   };
 
   return (
-    <section className="flex flex-col items-center justify-center min-h-[80vh] px-4 text-center">
+    <section className="relative flex flex-col items-center justify-center min-h-[80vh] px-4 text-center">
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
       <div className="flex items-center gap-2 mb-6">
         <Terminal className="h-10 w-10" />
         <h1 className="text-5xl font-bold tracking-tight">PAPYRUS</h1>
@@ -27,7 +31,7 @@ export function Hero() {
       </p>
 
       <p className="text-sm text-muted-foreground mb-8 max-w-md">
-        Capture your thoughts — right from your terminal
+        ✨ Ancient wisdom, modern CLI ✨
       </p>
 
       <div className="flex items-center gap-2 bg-muted rounded-lg p-2 mb-8">
