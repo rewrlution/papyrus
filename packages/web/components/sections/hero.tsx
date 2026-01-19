@@ -26,8 +26,8 @@ export function Hero() {
         AI-Powered Journaling for Developers
       </p>
 
-      <p className="text-lg text-muted-foreground mb-8 max-w-md">
-        Capture thoughts and generate standups notes — right from your terminal.
+      <p className="text-sm text-muted-foreground mb-8 max-w-md">
+        Capture your thoughts — right from your terminal
       </p>
 
       <div className="flex items-center gap-2 bg-muted rounded-lg p-2 mb-8">

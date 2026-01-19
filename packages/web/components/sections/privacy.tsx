@@ -36,7 +36,7 @@ export function Privacy() {
         <div className="space-y-8">
           {privacyPoints.map((point) => (
             <div key={point.title} className="flex gap-4">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
                   <point.icon className="h-6 w-6 text-primary" />
                 </div>
