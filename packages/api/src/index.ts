@@ -5,14 +5,30 @@ import { env } from './env/config.js';
 import { logger } from './lib/logger.js';
 import { prisma } from './lib/prisma.js';
 
-async function main() {
-  try {
-    await prisma.$connect();
-    logger.info('📀 Database connected');
-  } catch (err) {
-    logger.error('❌ Database connection failed', err);
-    process.exit(1);
+async function connectWithRetry(maxRetries = 5, initialDelayMs = 1000) {
+  let delayMs = initialDelayMs;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await prisma.$connect();
+      logger.info('📀 Database connected');
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) {
+        logger.error('❌ Database connection failed after retries', err);
+        process.exit(1);
+      }
+      logger.warn(
+        `⏳ Database connection attempt ${attempt}/${maxRetries} failed, retrying in ${delayMs}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      delayMs *= 2;
+    }
   }
+}
+
+async function main() {
+  await connectWithRetry();
 
   const app = createApp();
 
