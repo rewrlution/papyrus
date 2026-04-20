@@ -1,0 +1,16 @@
+{
+  "name": "@rewrlution/papyrus-plugin",
+  "version": "0.1.0",
+  "description": "Claude Code plugin for Papyrus — AI-powered career coaching from your developer journals",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "test": "echo \"No tests in plugin package — see packages/core for lib tests\""
+  },
+  "dependencies": {
+    "@rewrlution/papyrus-core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
