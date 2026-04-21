@@ -1,13 +1,14 @@
 /**
- * Extract first non-empty line from journal content.
- * Skips YAML frontmatter and returns the first line of actual content.
+ * Extract a readable preview from journal content.
+ * Skips YAML frontmatter, blank lines, and markdown headings.
+ * Returns the first line of actual prose content.
  *
  * @param content - Full journal content (may include frontmatter)
- * @returns First non-empty content line, or "(empty)" if none found
+ * @returns First non-empty, non-heading content line, or "(empty)" if none found
  *
  * @example
- * extractPreview('---\ndate: 2025-01-01\n---\n\nHello World\n')
- * // Returns: "Hello World"
+ * extractPreview('---\ndate: 2025-01-01\n---\n\n## What I worked on\n\nFixed the auth bug.\n')
+ * // Returns: "Fixed the auth bug."
  *
  * extractPreview('---\ndate: 2025-01-01\n---\n\n')
  * // Returns: "(empty)"
@@ -24,11 +25,12 @@ export function extractPreview(content: string): string {
     }
     if (inFrontmatter) continue;
 
-    // Return first non-empty line
     const trimmed = line.trim();
-    if (trimmed) {
-      return trimmed;
-    }
+
+    // Skip blank lines and markdown headings
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    return trimmed;
   }
 
   return '(empty)';
