@@ -1,7 +1,5 @@
 # Papyrus Monorepo - Claude Development Guide
 
-This guide provides an overview of the Papyrus monorepo and how to work with it effectively.
-
 ```
 ██████╗  █████╗ ██████╗ ██╗   ██╗██████╗ ██╗   ██╗███████╗
 ██╔══██╗██╔══██╗██╔══██╗╚██╗ ██╔╝██╔══██╗██║   ██║██╔════╝
@@ -11,723 +9,339 @@ This guide provides an overview of the Papyrus monorepo and how to work with it 
 ╚═╝     ╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝
 ```
 
-> An AI-powered journaling tool built for developers
+> An AI-powered journaling system for developers. Plugin-first; CLI optional.
 
-## Overview
+---
 
-Papyrus is a journaling system designed for developers to capture thoughts, progress, and insights directly from the command line. The project is organized as a monorepo containing multiple packages that work together.
+## Read first: strategic context
 
-## Monorepo Structure
+This repo went through a major direction change in **April 2026**. Before doing anything substantive, read:
+
+- [`docs/product/01-STRATEGY-PIVOT-2026.md`](./docs/product/01-STRATEGY-PIVOT-2026.md) — why we moved off the SaaS-with-AI-API model and onto plugin + BYOK
+- [`docs/product/02-DISTRIBUTION-AND-ONBOARDING.md`](./docs/product/02-DISTRIBUTION-AND-ONBOARDING.md) — how users discover, install, and onboard
+- [`docs/product/03-SYNC-AND-PORTABILITY.md`](./docs/product/03-SYNC-AND-PORTABILITY.md) — the future MCP-server monetization story
+- [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-architecture-decisions.md) — why a private monorepo with public mirror, open/closed source boundaries
+- [`docs/monorepo/07-plugin-distribution.md`](./docs/monorepo/07-plugin-distribution.md) — how `@rewrlution/papyrus-core` and the plugin reach users
+
+Anything in this file that contradicts those docs, the docs win — they are the source of truth for product strategy.
+
+### TL;DR of the pivot
+
+| Before                                         | After                                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| CLI is the entry point                         | **Claude Code plugin** is the entry point; CLI is optional power tool  |
+| API hosts AI features (standup, SSE, freemium) | **Skills** run in Claude Code with the user's own Anthropic key (BYOK) |
+| Monetize AI usage                              | Free skills; future paid tier is **MCP-backed sync + cloud backup**    |
+| Goal: revenue                                  | Goal: become the de-facto journaling tool for developers using Claude  |
+
+**The stable contract across all surfaces:** `~/.local/share/papyrus/journals/YYYYMMDD.md`. Plugin skills, CLI, and any future MCP server / agent all read & write the same files.
+
+---
+
+## Monorepo structure
 
 ```
-papyrus/
+papyrus/                            ← private monorepo (pnpm workspaces + Turborepo)
 ├── packages/
-│   ├── cli/              # Command-line interface
-│   ├── api/              # Backend API server
-│   └── shared/           # Shared types and utilities
-├── docs/                 # Project-wide documentation
-│   └── TUTOR-PRINCIPLES.md
-├── package.json          # Root package configuration
-├── pnpm-workspace.yaml   # Workspace configuration
-├── turbo.json            # Turborepo configuration
-├── tsconfig.base.json    # Base TypeScript config
-└── CLAUDE.md            # This file
+│   ├── core/      @rewrlution/papyrus-core    → npm (public, MIT)
+│   ├── plugin/    @rewrlution/papyrus-plugin  → mirrored to public papyrus-plugin repo → Claude Code marketplace
+│   ├── cli/       @rewrlution/papyrus-cli     → npm (public, MIT)
+│   ├── shared/    @rewrlution/papyrus-shared  → npm (public, MIT)
+│   ├── api/       @rewrlution/papyrus-api     → deployed only (proprietary)
+│   └── web/       @rewrlution/papyrus-web     → deployed only (proprietary)
+├── docs/
+│   ├── product/                    ← strategy & positioning (read first)
+│   ├── monorepo/                   ← architecture, distribution
+│   ├── DEVELOPER_GUIDE.md
+│   └── ...
+├── .github/workflows/              ← CI/CD (currently CLI-only; needs expansion)
+├── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+└── CLAUDE.md                       ← this file
 ```
 
-## Packages
+Open/closed source is enforced by **what gets published**, not by which repo code lives in. The monorepo stays private to protect `api` and `web`. `core` and `plugin` ship to the public world via npm and the public `papyrus-plugin` mirror repo respectively.
 
-### CLI (`packages/cli`)
+### Package roles at a glance
 
-**Purpose:** Terminal-based journal management tool
+| Package  | Role                                                                                                                       | Status                                                                              |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `core`   | Filesystem library underlying the plugin: `paths`, `journal`, `profile`. Each module doubles as a CLI script for skills.   | Built, **not yet published to npm**. Required before plugin can install end-to-end. |
+| `plugin` | Thin Claude Code plugin: `.claude-plugin/plugin.json` + `skills/{papyrus-setup,papyrus-journal,papyrus-standup}/SKILL.md`. | Local only. Needs CI mirror to public `papyrus-plugin` repo + marketplace listing.  |
+| `cli`    | TUI journal browser, offline writing, sync. AI features were intentionally removed in the pivot.                           | Published as `@rewrlution/papyrus-cli@0.0.10`. Standup command is now redundant.    |
+| `shared` | Zod schemas + types for the CLI ↔ API contract.                                                                            | Published as `@rewrlution/papyrus-shared@0.0.2`.                                    |
+| `api`    | Auth + journal CRUD + sync (Express + Prisma + Postgres). Pivot scope: drop AI endpoints, freemium, usage tracking.        | Built; AI infra still present in code, awaiting cleanup to match new scope.         |
+| `web`    | Marketing site (Next.js, Tailwind, dark mode).                                                                             | Hero/features template exists; not the product surface.                             |
 
-**Key Features:**
+Per-package details live in each package's `CLAUDE.md`:
 
-- Interactive journal browser with vim-style navigation
-- External editor integration (vim, nano, VS Code)
-- Authentication with JWT tokens
-- Sync with remote server
-- XDG-compliant local storage
+- [`packages/cli/CLAUDE.md`](./packages/cli/CLAUDE.md)
+- [`packages/api/CLAUDE.md`](./packages/api/CLAUDE.md)
+- [`packages/shared/CLAUDE.md`](./packages/shared/CLAUDE.md)
 
-**Tech Stack:** TypeScript, Commander.js, Ink (React for CLI), Axios
+(`core`, `plugin`, and `web` do not yet have their own CLAUDE.md; treat the strategy + monorepo docs as authoritative for them.)
 
-**Entry Points:**
+---
 
-- `papyrus add` - Create new journal entry
-- `papyrus app` - Launch TUI to browse and read entries interactively
-- `papyrus show` - Read entry in viewer
-- `papyrus sync` - Sync with server
-- `papyrus login/logout` - Authentication
+## Dependency graph
 
-**Documentation:** See [packages/cli/CLAUDE.md](./packages/cli/CLAUDE.md)
+```
+                 ┌──────────┐
+                 │  plugin  │  (skills + manifest, no build)
+                 └────┬─────┘
+                      ▼
+                 ┌──────────┐
+                 │   core   │  (filesystem lib, CLI scripts in dist/)
+                 └──────────┘
 
-### API (`packages/api`)
+┌──────────┐                            ┌──────────┐
+│   cli    │ ──────────┐    ┌────────── │   api    │
+└──────────┘           ▼    ▼           └──────────┘
+                   ┌──────────┐
+                   │  shared  │  (Zod schemas, types)
+                   └──────────┘
 
-**Purpose:** Backend server for journal synchronization
+┌──────────┐
+│   web    │  (independent — no internal deps)
+└──────────┘
+```
 
-**Key Features:**
+Two ecosystems coexist:
 
-- RESTful API for journal operations
-- User authentication and authorization
-- Database persistence
-- Cloudflare Workers deployment
+- **Plugin world** (`plugin` → `core`) — the new center of gravity. Grows over time.
+- **CLI/API world** (`cli`, `api` → `shared`) — original stack. Still ships and runs.
 
-**Tech Stack:** TypeScript, Hono (web framework), Cloudflare Workers, D1 (database)
+Migration is incremental. When CLI or API need filesystem journal logic, the plan is to pull from `core` rather than reinvent it.
 
-**Endpoints:**
+---
 
-- `POST /auth/signup` - Register new user
-- `POST /auth/signin` - Authenticate user
-- `GET /journals` - List user's journals
-- `POST /journals` - Create/update journal
-- `DELETE /journals/:date` - Delete journal
+## Distribution model (important — different per package)
 
-**Documentation:** See [packages/api/CLAUDE.md](./packages/api/CLAUDE.md) (if exists)
+| Package  | Channel                                                                                                           | Notes                                                                                 |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `core`   | npm public package, ships pre-built `dist/`                                                                       | `dist/` is **not committed** to git; CI builds it on every release tag                |
+| `plugin` | Public `papyrus-plugin` GitHub repo (mirror) → Claude Code marketplace via `marketplace.json`                     | Claude Code installs plugins by **cloning a Git repo** — no compiled artifact concept |
+| `cli`    | npm public package                                                                                                | Installable via `npm i -g @rewrlution/papyrus-cli` → `papyrus` / `paper` binaries     |
+| `shared` | npm public package                                                                                                | Bumped before CLI when exports change                                                 |
+| `api`    | Deployed (current state has both Express+Prisma+Postgres and Cloudflare Workers artifacts — needs reconciliation) |                                                                                       |
+| `web`    | Deployed (Next.js — `out/` indicates static export)                                                               |                                                                                       |
 
-### Shared (`packages/shared`)
+**Why two repos for the plugin:** Claude Code installs plugins by cloning a Git repo, so the plugin must live in a public repo. We keep `papyrus` private (protects api/web) and mirror `packages/plugin/` to a separate public `papyrus-plugin` repo on release. Users only ever interact with the public mirror. See [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-architecture-decisions.md).
 
-**Purpose:** Common types, schemas, and utilities
+---
 
-**Key Features:**
-
-- Zod validation schemas
-- TypeScript type definitions
-- Content hashing utilities
-- Date format constants
-
-**Tech Stack:** TypeScript, Zod
-
-**Exports:**
-
-- Schemas: `DateStringSchema`, `SignupSchema`, `SigninSchema`
-- Utilities: `generateContentHash()`
-- Constants: `DATE_FORMAT`, `DATE_FORMAT_REGEX`
-
-**Documentation:** See [packages/shared/CLAUDE.md](./packages/shared/CLAUDE.md)
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- **Node.js** (v20+)
-- **pnpm** (v10+) - Fast, efficient package manager
-- **Git**
+- Node.js v20+
+- pnpm v10+
+- Git
 
-### Initial Setup
+### Setup
 
 ```bash
-# Clone the repository
 git clone <repo-url>
 cd papyrus
-
-# Install dependencies (all packages)
 pnpm install
-
-# Build all packages
-pnpm build
+pnpm build          # builds shared + core first (Turborepo dep order), then cli, api, etc.
 ```
 
-### Development Workflow
-
-#### Work on CLI Only
+### Development workflows
 
 ```bash
-# Terminal 1: Build shared package once
-cd packages/shared
-pnpm build
-
-# Terminal 2: Develop CLI
-cd packages/cli
-pnpm dev
-```
-
-#### Work on API Only
-
-```bash
-# Terminal 1: Build shared package once
-cd packages/shared
-pnpm build
-
-# Terminal 2: Develop API
-cd packages/api
-pnpm dev
-```
-
-#### Work on Multiple Packages
-
-```bash
-# Watch all packages in parallel
+# Watch everything in parallel (rarely what you want)
 pnpm dev
 
-# This runs:
-# - packages/shared: tsc --watch
-# - packages/cli: tsx watch src/cli.tsx
-# - packages/api: wrangler dev
+# Work on the plugin locally (most common new-direction workflow)
+pnpm build --filter=@rewrlution/papyrus-core
+claude --plugin-dir packages/plugin
+
+# Work on the CLI
+pnpm dev --filter=@rewrlution/papyrus-cli
+
+# Work on the API
+pnpm dev --filter=@rewrlution/papyrus-api
+
+# Work on the web marketing site
+pnpm dev --filter=@rewrlution/papyrus-web
 ```
 
-### Build Everything
+### Tests
 
 ```bash
-# From monorepo root
-pnpm build
-
-# This runs:
-# 1. packages/shared: tsc
-# 2. packages/cli: tsc
-# 3. packages/api: tsc
-# (Turborepo ensures correct order)
+pnpm test                                              # all packages
+pnpm test --filter=@rewrlution/papyrus-core            # plugin foundation
+pnpm test --filter=@rewrlution/papyrus-cli             # cli
+pnpm test --filter=@rewrlution/papyrus-shared          # shared schemas
+pnpm test --filter=@rewrlution/papyrus-api             # api
 ```
 
-### Run Tests
+---
 
-```bash
-# Test all packages
-pnpm test
+## Monorepo tools
 
-# Test specific package
-pnpm test --filter=@rewrlution/papyrus-cli
-pnpm test --filter=@rewrlution/papyrus-shared
-pnpm test --filter=@rewrlution/papyrus-api
-```
-
-## Monorepo Tools
-
-### pnpm Workspaces
-
-**What it does:** Manages dependencies across packages efficiently.
-
-**Key concepts:**
-
-- Shared `node_modules` at root (saves disk space)
-- Workspace protocol for local dependencies: `"@rewrlution/papyrus-shared": "workspace:*"`
-- Install all dependencies: `pnpm install` (from root)
-- Add dependency to specific package: `pnpm add axios --filter=@rewrlution/papyrus-cli`
-
-**Configuration:** `pnpm-workspace.yaml`
+### pnpm workspaces (`pnpm-workspace.yaml`)
 
 ```yaml
 packages:
   - "packages/*"
 ```
 
-### Turborepo
+- Shared `node_modules` at root
+- Workspace protocol for local deps: `"@rewrlution/papyrus-core": "workspace:*"`
+- Add a dep to one package: `pnpm add axios --filter=@rewrlution/papyrus-cli`
 
-**What it does:** Orchestrates build tasks across packages.
+### Turborepo (`turbo.json`)
 
-**Key features:**
+- `build` depends on `^build` → builds in correct dependency order
+- `test` depends on `build` → no testing against stale dist
+- Caches by content hash → skips unchanged builds
+- `dev` is `cache: false, persistent: true` → for watch mode
 
-- **Dependency ordering** - Builds packages in correct order
-- **Caching** - Skips unchanged builds
-- **Parallelization** - Runs independent tasks concurrently
+### TypeScript project references
 
-**Configuration:** `turbo.json`
-
-```json
-{
-  "pipeline": {
-    "build": {
-      "dependsOn": ["^build"], // Build dependencies first
-      "outputs": ["dist/**"]
-    },
-    "test": {
-      "dependsOn": ["build"]
-    }
-  }
-}
-```
-
-**Usage:**
-
-```bash
-# Run build in all packages (respects dependencies)
-turbo run build
-
-# Run dev in all packages (parallel)
-turbo run dev --parallel
-```
-
-### TypeScript Project References
-
-**What it does:** Enables incremental builds across packages.
-
-**Configuration:** `tsconfig.base.json` (root) + individual `tsconfig.json` (each package)
-
-```json
-// packages/cli/tsconfig.json
-{
-  "extends": "../../tsconfig.base.json",
-  "references": [
-    { "path": "../shared" } // Depend on shared package
-  ]
-}
-```
-
-**Benefits:**
-
-- Faster builds (only rebuild changed packages)
-- Better IDE support (jump to definitions across packages)
-- Type checking across package boundaries
-
-## Package Dependencies
-
-```
-┌─────────────┐
-│     CLI     │─────┐
-└─────────────┘     │
-                    ▼
-┌─────────────┐  ┌─────────────┐
-│     API     │──▶│   Shared    │
-└─────────────┘  └─────────────┘
-```
-
-- **CLI** depends on **Shared** (types, schemas, utilities)
-- **API** depends on **Shared** (types, schemas, utilities)
-- **Shared** has no dependencies on other packages (pure library)
-
-**Why this structure:**
-
-- Shared types ensure CLI and API agree on data format
-- No circular dependencies
-- Easy to add new packages (just depend on shared)
-
-## Common Workflows
-
-### Adding a New Feature
-
-1. **Update shared types** (if needed):
-
-   ```bash
-   cd packages/shared
-   # Edit src/schemas/...
-   pnpm build
-   ```
-
-2. **Implement in CLI**:
-
-   ```bash
-   cd packages/cli
-   # Create src/commands/journal/new-feature.ts
-   pnpm dev
-   ```
-
-3. **Implement in API**:
-
-   ```bash
-   cd packages/api
-   # Create src/routes/new-feature.ts
-   pnpm dev
-   ```
-
-4. **Test**:
-   ```bash
-   pnpm test  # From root, tests all packages
-   ```
-
-### Adding a New Dependency
-
-```bash
-# Add to specific package
-pnpm add <package> --filter=@rewrlution/papyrus-cli
-
-# Add to all packages
-pnpm add <package> -w
-
-# Add dev dependency to root
-pnpm add -D <package> -w
-```
-
-### Updating Dependencies
-
-```bash
-# Update all dependencies
-pnpm update -r
-
-# Update specific package
-pnpm update axios --filter=@rewrlution/papyrus-cli
-
-# Check for outdated packages
-pnpm outdated -r
-```
-
-## Scripts Reference
-
-### Root Level (`package.json`)
-
-| Script   | Command                                    | Description               |
-| -------- | ------------------------------------------ | ------------------------- |
-| `build`  | `turbo run build`                          | Build all packages        |
-| `dev`    | `turbo run dev --parallel`                 | Watch all packages        |
-| `test`   | `turbo run test`                           | Test all packages         |
-| `lint`   | `eslint . --ext .ts,.tsx`                  | Lint all TypeScript files |
-| `format` | `prettier --write "**/*.{ts,tsx,json,md}"` | Format all files          |
-
-### Per-Package Scripts
-
-See individual package `CLAUDE.md` files:
-
-- [CLI Scripts](./packages/cli/CLAUDE.md#package-scripts)
-- [Shared Scripts](./packages/shared/CLAUDE.md#development-workflow)
-
-## Architecture Decisions
-
-### Why Monorepo?
-
-**Decision:** Use a monorepo instead of separate repositories.
-
-**Reasoning:**
-
-- **Shared code:** Easy to share types between CLI and API
-- **Atomic changes:** Update API and CLI together in one commit
-- **Consistent tooling:** Single ESLint, Prettier, TypeScript config
-- **Easier testing:** Test integration between packages
-
-**Trade-offs:**
-
-- More complex setup (but tools like Turborepo help)
-- Larger repository size (but manageable with ~3 packages)
-
-### Why pnpm?
-
-**Decision:** Use pnpm instead of npm or yarn.
-
-**Reasoning:**
-
-- **Disk efficiency:** Shared dependencies via hard links
-- **Speed:** Faster than npm, comparable to yarn
-- **Workspace support:** First-class monorepo support
-- **Strict:** Doesn't allow using undeclared dependencies
-
-### Why Turborepo?
-
-**Decision:** Use Turborepo for task orchestration.
-
-**Reasoning:**
-
-- **Smart caching:** Skip unchanged package builds
-- **Dependency-aware:** Builds packages in correct order
-- **Parallel execution:** Faster builds
-- **Simple configuration:** Just `turbo.json`
-
-**Alternatives considered:**
-
-- Lerna (older, more complex)
-- Nx (more features, steeper learning curve)
-- Custom scripts (too much manual work)
-
-## Common Issues
-
-### "Cannot find module '@rewrlution/papyrus-shared'"
-
-**Cause:** Shared package not built or installed.
-
-**Solution:**
-
-```bash
-# Build shared package
-cd packages/shared
-pnpm build
-
-# Or rebuild everything
-cd ../..
-pnpm build
-```
-
-### Build Fails with Type Errors
-
-**Cause:** TypeScript project references out of sync.
-
-**Solution:**
-
-```bash
-# Clean build all packages
-rm -rf packages/*/dist
-pnpm build
-```
-
-### Changes in Shared Not Reflected in CLI/API
-
-**Cause:** Forgot to rebuild shared package.
-
-**Solution:**
-
-```bash
-# Rebuild shared
-cd packages/shared
-pnpm build
-
-# Or use watch mode during development
-pnpm dev
-```
-
-### pnpm Commands Not Working
-
-**Cause:** Wrong directory or missing workspace configuration.
-
-**Solution:**
-
-```bash
-# Always run from root for monorepo commands
-cd /path/to/papyrus
-pnpm build
-
-# Or cd into specific package
-cd packages/cli
-pnpm build
-```
-
-### "Named export not found" After Installing CLI from npm
-
-**Cause:** The shared package version wasn't bumped before releasing.
-
-**Example error:**
-
-```
-import { StandupStreamEventSchema } from '@rewrlution/papyrus-shared';
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-SyntaxError: Named export 'StandupStreamEventSchema' not found
-```
-
-**Solution:**
-
-1. Bump the shared package version: `cd packages/shared && npm version patch`
-2. Create a new release tag and push
-
-**Prevention:** Always bump `packages/shared/package.json` version when you add/change exports in the shared package before releasing CLI.
-
-## Best Practices
-
-### 1. Always Build Shared First
-
-When starting development:
-
-```bash
-cd packages/shared
-pnpm build  # Build once
-
-cd ../cli
-pnpm dev    # Now CLI can use shared types
-```
-
-Or use watch mode:
-
-```bash
-cd packages/shared
-pnpm dev    # Auto-rebuild on changes
-```
-
-### 2. Use Workspace Protocol
-
-In package.json, reference local packages with `workspace:*`:
-
-```json
-{
-  "dependencies": {
-    "@rewrlution/papyrus-shared": "workspace:*"
-  }
-}
-```
-
-This ensures pnpm links to local package instead of npm registry.
-
-### 3. Keep Shared Package Lean
-
-Only put truly shared code in `packages/shared`:
-
-- ✅ Types used by both CLI and API
-- ✅ Validation schemas for API contracts
-- ✅ Utility functions used by multiple packages
-- ❌ CLI-specific UI components
-- ❌ API-specific database logic
-
-### 4. Run Tests from Root
-
-Always run tests from monorepo root to test all packages:
-
-```bash
-pnpm test  # Tests all packages
-```
-
-### 5. Commit Atomic Changes
-
-When changing shared types, update CLI and API in same commit:
-
-```bash
-git add packages/shared packages/cli packages/api
-git commit -m "Add new journal tags feature"
-```
-
-### 6. Document Breaking Changes
-
-When making breaking changes to shared package:
-
-1. Update shared package version
-2. Document changes in commit message
-3. Update dependent packages in same PR
-
-## Development Tips
-
-### Fast Iteration
-
-```bash
-# Terminal 1: Watch shared package
-cd packages/shared && pnpm dev
-
-# Terminal 2: Watch CLI
-cd packages/cli && pnpm dev
-
-# Terminal 3: Test CLI commands
-papyrus app
-```
-
-### Debugging
-
-```bash
-# Use tsx for debugging (enables source maps)
-cd packages/cli
-tsx src/cli.tsx list
-
-# Use Node inspector
-node --inspect dist/cli.js list
-```
-
-### Type Checking
-
-```bash
-# Check types across all packages
-pnpm build  # Also type-checks
-
-# Check specific package
-cd packages/cli
-pnpm tsc --noEmit
-```
-
-## Project Documentation
-
-- **Root:** `/CLAUDE.md` (this file) - Monorepo overview
-- **CLI:** `/packages/cli/CLAUDE.md` - CLI development guide
-- **Shared:** `/packages/shared/CLAUDE.md` - Shared package guide
-- **API:** `/packages/api/CLAUDE.md` - API development guide (if exists)
-- **Tutorials:** `/packages/cli/docs/` - Step-by-step feature tutorials
-- **Principles:** `/docs/TUTOR-PRINCIPLES.md` - Documentation guidelines
-
-## Key Technologies
-
-### Build & Package Management
-
-- **pnpm** (v10) - Package manager with workspace support
-- **Turborepo** (v2) - Build system orchestrator
-- **TypeScript** (v5) - Type-safe JavaScript
-- **Vitest** (v4) - Fast unit test framework
-
-### CLI Package
-
-- **Commander.js** - CLI framework
-- **Ink** - React for terminal UIs
-- **Axios** - HTTP client
-
-### API Package
-
-- **Hono** - Web framework
-- **Cloudflare Workers** - Serverless platform
-- **D1** - Cloudflare's SQL database
-
-### Shared Package
-
-- **Zod** - Schema validation
-- **crypto** - Content hashing
-
-## Contributing
-
-When contributing to Papyrus:
-
-1. **Branch from main**
-
-   ```bash
-   git checkout -b feature/my-feature
-   ```
-
-2. **Make changes** in appropriate package(s)
-
-3. **Build and test**
-
-   ```bash
-   pnpm build
-   pnpm test
-   ```
-
-4. **Commit with clear message**
-
-   ```bash
-   git commit -m "feat(cli): add journal search command"
-   ```
-
-5. **Push and create PR**
-   ```bash
-   git push origin feature/my-feature
-   ```
-
-## Future Enhancements
-
-Potential new packages:
-
-1. **Web UI** (`packages/web`)
-   - Browser-based journal interface
-   - Built with React/Next.js
-   - Shares types with CLI and API via `shared` package
-
-2. **Mobile App** (`packages/mobile`)
-   - React Native app
-   - Offline-first with sync
-   - Shares types via `shared` package
-
-3. **Plugins** (`packages/plugins`)
-   - Plugin system for extending functionality
-   - Custom templates
-   - Export formats
-
-## Resources
-
-### Monorepo Tools
-
-- [pnpm Workspaces](https://pnpm.io/workspaces)
-- [Turborepo Documentation](https://turbo.build/repo/docs)
-- [TypeScript Project References](https://www.typescriptlang.org/docs/handbook/project-references.html)
-
-### Package Documentation
-
-- [Commander.js](https://github.com/tj/commander.js)
-- [Ink](https://github.com/vadimdemedes/ink)
-- [Zod](https://zod.dev)
-- [Hono](https://hono.dev)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/)
+Each package extends `tsconfig.base.json` and declares `references` for cross-package navigation and incremental builds.
 
 ---
 
-## Quick Reference
+## CI/CD
+
+### Current state
+
+- `.github/workflows/test.yml` — CLI tests on PR/push, **only triggers on changes to `packages/cli` or `packages/shared`**. Doesn't see `core`, `plugin`, `api`, or `web`.
+- `.github/workflows/publish.yml` — on `v*` tag: publishes `papyrus-shared` and `papyrus-cli` to npm. Does **not** publish `core` and does **not** mirror the plugin.
+
+### Target state (planned, not yet built)
+
+The plan in [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-architecture-decisions.md) and [`docs/monorepo/07-plugin-distribution.md`](./docs/monorepo/07-plugin-distribution.md) calls for a release pipeline that, in order:
+
+1. Tests + typechecks all packages
+2. Builds + publishes `@rewrlution/papyrus-core` to npm — **this must happen first** because the plugin's `npm install` resolves core from the registry
+3. Builds + publishes `@rewrlution/papyrus-shared` to npm
+4. Builds + publishes `@rewrlution/papyrus-cli` to npm
+5. Mirrors `packages/plugin/` to the public `papyrus-plugin` repo (Claude Code marketplace source)
+
+API and web each need their own deploy workflows triggered on path-based pushes.
+
+If you change anything in `packages/core` or `packages/plugin`, expect the existing CI to **not catch regressions** — fix CI as part of the change.
+
+---
+
+## Common workflows
+
+### Adding a new skill to the plugin
+
+1. Create `packages/plugin/skills/<skill-name>/SKILL.md` (frontmatter + instructions)
+2. If the skill needs new filesystem operations, add them to `packages/core/src/` (and a CLI entry point so skills can call `node ${CLAUDE_PLUGIN_ROOT}/node_modules/@rewrlution/papyrus-core/dist/<module>.js`)
+3. Test locally: `claude --plugin-dir packages/plugin`
+4. When releasing: bump `packages/core` if its API changed, then cut release tag
+
+### Changing shared types (CLI ↔ API)
+
+1. Edit `packages/shared/src/schemas/...` and `pnpm build --filter=@rewrlution/papyrus-shared`
+2. Update consumers (`packages/cli`, `packages/api`) in the same commit
+3. Bump `packages/shared/package.json` version before tagging a release — otherwise CLI consumers see "Named export not found" errors after install
+
+### Adding a CLI command
+
+See [`packages/cli/CLAUDE.md`](./packages/cli/CLAUDE.md). Note: don't add new AI features to the CLI — those belong in plugin skills (per the pivot).
+
+### Adding an API endpoint
+
+See [`packages/api/CLAUDE.md`](./packages/api/CLAUDE.md). Note: per the pivot, AI endpoints are out of scope for the API. New API work should focus on auth + sync.
+
+---
+
+## Scripts reference
+
+### Root (`package.json`)
+
+| Script   | Command                                    |
+| -------- | ------------------------------------------ |
+| `build`  | `turbo run build`                          |
+| `dev`    | `turbo run dev --parallel`                 |
+| `test`   | `turbo run test`                           |
+| `lint`   | `eslint . --ext .ts,.tsx`                  |
+| `format` | `prettier --write "**/*.{ts,tsx,json,md}"` |
+
+### Per-package
+
+See each package's `package.json` and CLAUDE.md.
+
+---
+
+## Common issues
+
+### "Cannot find module '@rewrlution/papyrus-shared'" (or `-core`)
+
+The dependency hasn't been built. From the monorepo root:
+
+```bash
+pnpm build --filter=@rewrlution/papyrus-shared
+# or
+pnpm build --filter=@rewrlution/papyrus-core
+```
+
+### Plugin install from GitHub doesn't work
+
+Local development with `claude --plugin-dir packages/plugin` is the supported path today. End-to-end install via the marketplace requires `@rewrlution/papyrus-core` to be published to npm first, plus the `papyrus-plugin` public mirror to be set up. See [`docs/monorepo/07-plugin-distribution.md`](./docs/monorepo/07-plugin-distribution.md).
+
+### Build fails with stale type errors
+
+```bash
+rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo
+pnpm build
+```
+
+### "Named export not found" after installing CLI from npm
+
+Bump `packages/shared/package.json` version before releasing the CLI when shared's exports changed. The CLI's `package.json` pins to a specific shared version; without a bump, consumers get the old shared from npm.
+
+---
+
+## Best practices
+
+1. **Read the strategy docs before scoping new work.** A new "AI feature in the API" or a "new CLI subcommand" may run counter to the pivot. Confirm direction first.
+2. **The journal file format is the universal interface.** Don't invent a separate data format for any new surface.
+3. **Build dependencies first.** Turborepo handles this if you use the right filters.
+4. **Use the workspace protocol** (`"@rewrlution/papyrus-core": "workspace:*"`) for local references; consumers outside the workspace get a real version range at publish time.
+5. **Keep `core` lean.** It's the foundation of the plugin world — anything that lands there ships to npm and becomes a stability commitment.
+6. **Don't add CLI-specific UI to `shared` or `core`.** Both packages are consumed by non-CLI surfaces.
+7. **Bump versions deliberately.** `core`, `shared`, and `cli` are independently published. A bump in one doesn't auto-bump dependents.
+
+---
+
+## Quick reference
 
 ```bash
 # Setup
-pnpm install          # Install all dependencies
-pnpm build            # Build all packages
+pnpm install
+pnpm build
 
-# Development
-pnpm dev              # Watch all packages
-pnpm test             # Test all packages
+# Plugin dev (new world)
+claude --plugin-dir packages/plugin
 
-# Per-Package
-cd packages/<name>    # Navigate to package
-pnpm dev              # Develop single package
-pnpm build            # Build single package
-pnpm test             # Test single package
+# CLI dev (old world)
+pnpm dev --filter=@rewrlution/papyrus-cli
 
-# Add Dependency
+# API dev
+pnpm dev --filter=@rewrlution/papyrus-api
+
+# Web dev
+pnpm dev --filter=@rewrlution/papyrus-web
+
+# Test all
+pnpm test
+
+# Add a dep to one package
 pnpm add <pkg> --filter=@rewrlution/papyrus-<name>
 
-# Troubleshooting
-rm -rf node_modules packages/*/node_modules
+# Nuke and rebuild
+rm -rf node_modules packages/*/node_modules packages/*/dist
 pnpm install
 pnpm build
 ```
 
----
-
-**Happy coding!** For package-specific details, see individual `CLAUDE.md` files in each package directory.
+For package-specific workflows, see the per-package `CLAUDE.md` files.
