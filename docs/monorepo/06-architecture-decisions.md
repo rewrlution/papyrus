@@ -5,32 +5,33 @@
 
 ---
 
-## Why we keep two repos
+## Public monorepo strategy
 
-**The bummer:** Claude Code installs plugins by cloning a Git repository. There is no compiled artifact distribution — no zip, no tarball, no registry like npm. The repo itself is the distribution unit. This means the plugin repo must be **public** for anyone to install it.
+Claude Code installs plugins by cloning a Git repository — there is no compiled artifact distribution, just the repo itself. For users to install the plugin, it must be **publicly accessible**.
 
-Since `papyrus` is a private monorepo (to protect `api` and `web`), `packages/plugin` cannot be distributed directly from here. We keep a separate public repo — `papyrus-plugin` — as the distribution target.
+The monorepo is **public**. `packages/plugin/` is distributed directly to Claude Code marketplace using the `git-subdir` source type in `marketplace.json`. This points users directly to `packages/plugin/` in this repo, eliminating the need for a separate mirror repo.
 
-**The workflow:**
+**Installation flow:**
 
-- All plugin development happens in `papyrus/packages/plugin/` (this monorepo)
-- On every release, CI pushes the contents of `packages/plugin/` to the public `papyrus-plugin` repo
-- Users install from `papyrus-plugin` — they never interact with this private monorepo
-- `@rewrlution/papyrus-core` is published to npm (public package), which the plugin depends on at install time
+- Users run `/plugin marketplace add rewrlution/papyrus`
+- Claude Code fetches `.claude-plugin/marketplace.json` at the repo root
+- The manifest points to `packages/plugin` using `git-subdir`
+- Claude Code clones the subdirectory and installs the plugin
+- Users run `/plugin install papyrus@rewrlution-papyrus`
 
-**Future:** When/if the official Claude Code marketplace is used, Anthropic reviews the public `papyrus-plugin` repo. After approval, users can install with just `/plugin install papyrus` — no marketplace setup needed. Updates after initial approval appear to be automatic (no re-review per version), but this should be confirmed before building the release pipeline around it.
+All plugin development happens in `papyrus/packages/plugin/` in this monorepo. Users interact directly with this repo — no mirror needed.
 
 ---
 
 ## Monorepo structure
 
-Everything lives in one private monorepo. Open/closed boundaries are enforced by what gets **published**, not by which repo code lives in.
+Everything lives in one public monorepo. Open/closed boundaries are enforced by what gets **published**, not by directory structure.
 
 ```
-papyrus/                          ← one private monorepo (pnpm workspaces + Turborepo)
+papyrus/                          ← public monorepo (pnpm workspaces + Turborepo)
 ├── packages/
 │   ├── core/                     ← published to npm (@rewrlution/papyrus-core)
-│   ├── plugin/                   ← mirrored to public papyrus-plugin repo by CI
+│   ├── plugin/                   ← installed from marketplace.json (git-subdir)
 │   ├── cli/                      ← published to npm (@rewrlution/papyrus-cli)
 │   ├── shared/                   ← published to npm (@rewrlution/papyrus-shared)
 │   ├── api/                      ← deployed, never published (closed source)
@@ -39,7 +40,7 @@ papyrus/                          ← one private monorepo (pnpm workspaces + Tu
 
 **Why one repo:** Atomic commits across packages, shared tooling (ESLint, Prettier, TypeScript), easier to track dependencies, no cross-repo PR coordination.
 
-**Why private repo with public packages:** Community contributions are not a goal right now. The open-source benefit is discoverability and trust — users can read the plugin and CLI source. Keeping the repo private avoids the overhead of managing external contributors while still shipping open artifacts.
+**Public for plugin distribution:** The plugin must be publicly accessible for Claude Code to install it. Making the entire monorepo public is simpler than maintaining a separate mirror. The downside (api/web source visible) is outweighed by simplicity. Users who need closed-source APIs/web can be served via deployment, not source distribution.
 
 ---
 

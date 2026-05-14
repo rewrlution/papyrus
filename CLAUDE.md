@@ -20,7 +20,7 @@ This repo went through a major direction change in **April 2026**. Before doing 
 - [`docs/product/01-STRATEGY-PIVOT-2026.md`](./docs/product/01-STRATEGY-PIVOT-2026.md) — why we moved off the SaaS-with-AI-API model and onto plugin + BYOK
 - [`docs/product/02-DISTRIBUTION-AND-ONBOARDING.md`](./docs/product/02-DISTRIBUTION-AND-ONBOARDING.md) — how users discover, install, and onboard
 - [`docs/product/03-SYNC-AND-PORTABILITY.md`](./docs/product/03-SYNC-AND-PORTABILITY.md) — the future MCP-server monetization story
-- [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-architecture-decisions.md) — why a private monorepo with public mirror, open/closed source boundaries
+- [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-architecture-decisions.md) — monorepo design, open/closed source boundaries
 - [`docs/monorepo/07-plugin-distribution.md`](./docs/monorepo/07-plugin-distribution.md) — how `@rewrlution/papyrus-core` and the plugin reach users
 
 Anything in this file that contradicts those docs, the docs win — they are the source of truth for product strategy.
@@ -41,10 +41,10 @@ Anything in this file that contradicts those docs, the docs win — they are the
 ## Monorepo structure
 
 ```
-papyrus/                            ← private monorepo (pnpm workspaces + Turborepo)
+papyrus/                            ← public monorepo (pnpm workspaces + Turborepo)
 ├── packages/
 │   ├── core/      @rewrlution/papyrus-core    → npm (public, MIT)
-│   ├── plugin/    @rewrlution/papyrus-plugin  → mirrored to public papyrus-plugin repo → Claude Code marketplace
+│   ├── plugin/    @rewrlution/papyrus-plugin  → Claude Code marketplace (git-subdir)
 │   ├── cli/       @rewrlution/papyrus-cli     → npm (public, MIT)
 │   ├── shared/    @rewrlution/papyrus-shared  → npm (public, MIT)
 │   ├── api/       @rewrlution/papyrus-api     → deployed only (proprietary)
@@ -61,18 +61,18 @@ papyrus/                            ← private monorepo (pnpm workspaces + Turb
 └── CLAUDE.md                       ← this file
 ```
 
-Open/closed source is enforced by **what gets published**, not by which repo code lives in. The monorepo stays private to protect `api` and `web`. `core` and `plugin` ship to the public world via npm and the public `papyrus-plugin` mirror repo respectively.
+Open/closed source is enforced by **what gets published**, not by which repo code lives in. `core` and `plugin` ship to the public world via npm and the Claude Code marketplace. `api` and `web` are deployed only.
 
 ### Package roles at a glance
 
-| Package  | Role                                                                                                                       | Status                                                                              |
-| -------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `core`   | Filesystem library underlying the plugin: `paths`, `journal`, `profile`. Each module doubles as a CLI script for skills.   | Built, **not yet published to npm**. Required before plugin can install end-to-end. |
-| `plugin` | Thin Claude Code plugin: `.claude-plugin/plugin.json` + `skills/{papyrus-setup,papyrus-journal,papyrus-standup}/SKILL.md`. | Local only. Needs CI mirror to public `papyrus-plugin` repo + marketplace listing.  |
-| `cli`    | TUI journal browser, offline writing, sync. AI features were intentionally removed in the pivot.                           | Published as `@rewrlution/papyrus-cli@0.0.10`. Standup command is now redundant.    |
-| `shared` | Zod schemas + types for the CLI ↔ API contract.                                                                            | Published as `@rewrlution/papyrus-shared@0.0.2`.                                    |
-| `api`    | Auth + journal CRUD + sync (Express + Prisma + Postgres). Pivot scope: drop AI endpoints, freemium, usage tracking.        | Built; AI infra still present in code, awaiting cleanup to match new scope.         |
-| `web`    | Marketing site (Next.js, Tailwind, dark mode).                                                                             | Hero/features template exists; not the product surface.                             |
+| Package  | Role                                                                                                                                     | Status                                                                              |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `core`   | Filesystem library underlying the plugin: `paths`, `journal`, `profile`. Each module doubles as a CLI script for skills.                 | Built, **not yet published to npm**. Required before plugin can install end-to-end. |
+| `plugin` | Thin Claude Code plugin: `.claude-plugin/plugin.json` + `skills/{papyrus-hello,papyrus-setup,papyrus-journal,papyrus-standup}/SKILL.md`. | Available on Claude Code marketplace via git-subdir.                                |
+| `cli`    | TUI journal browser, offline writing, sync. AI features were intentionally removed in the pivot.                                         | Published as `@rewrlution/papyrus-cli@0.0.10`. Standup command is now redundant.    |
+| `shared` | Zod schemas + types for the CLI ↔ API contract.                                                                                          | Published as `@rewrlution/papyrus-shared@0.0.2`.                                    |
+| `api`    | Auth + journal CRUD + sync (Express + Prisma + Postgres). Pivot scope: drop AI endpoints, freemium, usage tracking.                      | Built; AI infra still present in code, awaiting cleanup to match new scope.         |
+| `web`    | Marketing site (Next.js, Tailwind, dark mode).                                                                                           | Hero/features template exists; not the product surface.                             |
 
 Per-package details live in each package's `CLAUDE.md`:
 
@@ -118,16 +118,14 @@ Migration is incremental. When CLI or API need filesystem journal logic, the pla
 
 ## Distribution model (important — different per package)
 
-| Package  | Channel                                                                                                           | Notes                                                                                 |
-| -------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `core`   | npm public package, ships pre-built `dist/`                                                                       | `dist/` is **not committed** to git; CI builds it on every release tag                |
-| `plugin` | Public `papyrus-plugin` GitHub repo (mirror) → Claude Code marketplace via `marketplace.json`                     | Claude Code installs plugins by **cloning a Git repo** — no compiled artifact concept |
-| `cli`    | npm public package                                                                                                | Installable via `npm i -g @rewrlution/papyrus-cli` → `papyrus` / `paper` binaries     |
-| `shared` | npm public package                                                                                                | Bumped before CLI when exports change                                                 |
-| `api`    | Deployed (current state has both Express+Prisma+Postgres and Cloudflare Workers artifacts — needs reconciliation) |                                                                                       |
-| `web`    | Deployed (Next.js — `out/` indicates static export)                                                               |                                                                                       |
-
-**Why two repos for the plugin:** Claude Code installs plugins by cloning a Git repo, so the plugin must live in a public repo. We keep `papyrus` private (protects api/web) and mirror `packages/plugin/` to a separate public `papyrus-plugin` repo on release. Users only ever interact with the public mirror. See [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-architecture-decisions.md).
+| Package  | Channel                                                                                                           | Notes                                                                             |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `core`   | npm public package, ships pre-built `dist/`                                                                       | `dist/` is **not committed** to git; CI builds it on every release tag            |
+| `plugin` | Claude Code marketplace (installs from `packages/plugin/` via git-subdir)                                         | Marketplace points to this repo; Claude Code clones the subdirectory on install   |
+| `cli`    | npm public package                                                                                                | Installable via `npm i -g @rewrlution/papyrus-cli` → `papyrus` / `paper` binaries |
+| `shared` | npm public package                                                                                                | Bumped before CLI when exports change                                             |
+| `api`    | Deployed (current state has both Express+Prisma+Postgres and Cloudflare Workers artifacts — needs reconciliation) | Proprietary, not published                                                        |
+| `web`    | Deployed (Next.js — `out/` indicates static export)                                                               | Proprietary, not published                                                        |
 
 ---
 
