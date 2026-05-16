@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "papyrus",
-  "description": "AI-powered journaling for developers",
+  "name": "rewrlution",
+  "description": "Plugins by Rewrlution",
   "owner": {
     "name": "rewrlution"
   },
@@ -10,10 +10,12 @@
       "name": "papyrus",
       "description": "AI-powered journaling for developers",
       "category": "productivity",
-      "source": "git-subdir",
-      "url": "https://github.com/rewrlution/papyrus.git",
-      "path": "packages/plugin",
-      "ref": "main",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/rewrlution/papyrus.git",
+        "path": "packages/plugin",
+        "ref": "main"
+      },
       "homepage": "https://github.com/rewrlution/papyrus"
     }
   ]

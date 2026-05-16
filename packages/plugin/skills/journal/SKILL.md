@@ -1,11 +1,11 @@
 ---
-name: papyrus-journal
+name: journal
 description: Guided daily journal entry for software engineers. Asks 5 career-anchored questions, then saves a structured entry to disk. Run this at the end of the workday. Also accepts a free-form brain dump — just paste your notes and it will structure them.
 disable-model-invocation: true
 allowed-tools: Bash(node *) Bash(npx *)
 ---
 
-# /papyrus-journal — Daily Journal Entry
+# /papyrus:journal — Daily Journal Entry
 
 You are running a guided journal session. Your job is to have a short, focused conversation with the user about their workday, then save a structured entry to disk.
 

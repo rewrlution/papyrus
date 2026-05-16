@@ -1,6 +1,6 @@
 {
   "name": "papyrus",
-  "description": "AI career coaching for software engineers — guided journaling, standups, resume bullets, and promotion prep powered by your own journal entries.",
+  "description": "AI-powered journaling for developers",
   "version": "0.1.0",
   "author": {
     "name": "Papyrus"

@@ -1,11 +1,11 @@
 ---
-name: papyrus-setup
+name: setup
 description: Onboard a new Papyrus user by collecting their career profile. Run this first — all other Papyrus skills depend on it. Also use this when the user wants to update their profile.
 disable-model-invocation: true
 allowed-tools: Bash(node *) Bash(npx *)
 ---
 
-# /papyrus-setup — Career Profile Setup
+# /papyrus:setup — Career Profile Setup
 
 You are setting up (or updating) the user's Papyrus career profile. This profile personalizes every other Papyrus skill: journal follow-up depth, resume framing, coaching tone, and promotion coaching emphasis.
 
