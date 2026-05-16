@@ -91,10 +91,10 @@ packages/plugin/
 │   ├── plugin.json        ← plugin manifest
 │   └── marketplace.json   ← marketplace manifest (at repo root, not here)
 ├── skills/
-│   ├── papyrus-hello/SKILL.md
-│   ├── papyrus-setup/SKILL.md
-│   ├── papyrus-journal/SKILL.md
-│   └── papyrus-standup/SKILL.md
+│   ├── hello/SKILL.md
+│   ├── setup/SKILL.md
+│   ├── journal/SKILL.md
+│   └── standup/SKILL.md
 └── package.json
 ```
 
@@ -165,7 +165,7 @@ Claude Code fetches `.claude-plugin/marketplace.json` from the root of the repo 
 Then to install the plugin:
 
 ```
-/plugin install papyrus@rewrlution-papyrus
+/plugin install papyrus@rewrlution
 ```
 
 This is a one-time step. The plugin persists across all sessions, saved to `~/.claude/plugins/installed_plugins.json`.
@@ -177,8 +177,8 @@ This is a one-time step. The plugin persists across all sessions, saved to `~/.c
 ```json
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "papyrus",
-  "description": "AI-powered journaling for developers",
+  "name": "rewrlution",
+  "description": "Plugins by Rewrlution",
   "owner": {
     "name": "rewrlution"
   },
@@ -187,17 +187,19 @@ This is a one-time step. The plugin persists across all sessions, saved to `~/.c
       "name": "papyrus",
       "description": "AI-powered journaling for developers",
       "category": "productivity",
-      "source": "git-subdir",
-      "url": "https://github.com/rewrlution/papyrus.git",
-      "path": "packages/plugin",
-      "ref": "main",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/rewrlution/papyrus.git",
+        "path": "packages/plugin",
+        "ref": "main"
+      },
       "homepage": "https://github.com/rewrlution/papyrus"
     }
   ]
 }
 ```
 
-The `git-subdir` source type tells Claude Code that the plugin lives in the `packages/plugin` subdirectory, not at the repo root.
+The `git-subdir` source type tells Claude Code that the plugin lives in the `packages/plugin` subdirectory, not at the repo root. Note that `source` must be a nested object — flat fields fail schema validation.
 
 ### Plugin manifest
 
@@ -206,12 +208,12 @@ The `git-subdir` source type tells Claude Code that the plugin lives in the `pac
 ```json
 {
   "name": "papyrus",
-  "description": "AI-powered career coaching from your developer journals",
+  "description": "AI-powered journaling for developers",
   "version": "0.1.0"
 }
 ```
 
-Skills are auto-discovered from `skills/<name>/SKILL.md`. They are registered as `/papyrus:papyrus-hello`, `/papyrus:papyrus-setup`, `/papyrus:papyrus-journal`, `/papyrus:papyrus-standup`.
+Skills are auto-discovered from `skills/<name>/SKILL.md`. They are registered as `/papyrus:hello`, `/papyrus:setup`, `/papyrus:journal`, `/papyrus:standup`.
 
 ### Future: Official Anthropic marketplace
 

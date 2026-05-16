@@ -42,7 +42,7 @@ Data connectors (GitHub integration, etc.) are valuable enrichment _on top of_ t
 | ------------------ | --------------------------------------------- | ----------------------------------------------------------------- |
 | Journal Storage    | `~/.local/share/papyrus/journals/YYYYMMDD.md` | The stable interface. Everything reads from here.                 |
 | CLI Tool           | `papyrus add / app / show / sync`             | The journaling habit engine. No AI commands needed here.          |
-| Claude Code Skills | `/papyrus-standup`, `/papyrus-resume`, etc.   | The AI coaching layer. Reads journals, uses user's Anthropic key. |
+| Claude Code Skills | `/papyrus:standup`, `/papyrus:resume`, etc.   | The AI coaching layer. Reads journals, uses user's Anthropic key. |
 | API (simplified)   | Auth + sync only                              | Multi-device journal backup. Remove AI endpoints.                 |
 
 ### What we removed from scope (for now)
@@ -54,7 +54,7 @@ Data connectors (GitHub integration, etc.) are valuable enrichment _on top of_ t
 
 ### Why Claude Code Skills?
 
-Claude Code is already a full agentic system. When a user runs `/papyrus-resume`, Claude Code:
+Claude Code is already a full agentic system. When a user runs `/papyrus:resume`, Claude Code:
 
 1. Loads our skill definition (our prompt)
 2. Uses its own file-reading tools to access the user's local journals
@@ -71,11 +71,11 @@ The original feature priority is still correct. Only the execution layer changes
 
 | Phase  | Feature           | Old execution           | New execution              |
 | ------ | ----------------- | ----------------------- | -------------------------- |
-| 1      | Standup Notes     | `POST /api/ai/standup`  | `/papyrus-standup` skill   |
-| 2      | Promotion Doc     | Chat session via API    | `/papyrus-promote` skill   |
-| 3      | Resume Bullets    | Chat session via API    | `/papyrus-resume` skill    |
-| 4      | Interview Stories | Chat session via API    | `/papyrus-interview` skill |
-| Future | Career Coach      | Ongoing agentic session | `/papyrus-coach` skill     |
+| 1      | Standup Notes     | `POST /api/ai/standup`  | `/papyrus:standup` skill   |
+| 2      | Promotion Doc     | Chat session via API    | `/papyrus:promote` skill   |
+| 3      | Resume Bullets    | Chat session via API    | `/papyrus:resume` skill    |
+| 4      | Interview Stories | Chat session via API    | `/papyrus:interview` skill |
+| Future | Career Coach      | Ongoing agentic session | `/papyrus:coach` skill     |
 
 ---
 

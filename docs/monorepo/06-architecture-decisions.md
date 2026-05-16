@@ -9,17 +9,17 @@
 
 Claude Code installs plugins by cloning a Git repository — there is no compiled artifact distribution, just the repo itself. For users to install the plugin, it must be **publicly accessible**.
 
-The monorepo is **public**. `packages/plugin/` is distributed directly to Claude Code marketplace using the `git-subdir` source type in `marketplace.json`. This points users directly to `packages/plugin/` in this repo, eliminating the need for a separate mirror repo.
+The monorepo is **public**. `packages/plugin/` is distributed directly to Claude Code marketplace using the `git-subdir` source type in `marketplace.json`, which points Claude Code at `packages/plugin/` inside this repo.
 
 **Installation flow:**
 
 - Users run `/plugin marketplace add rewrlution/papyrus`
 - Claude Code fetches `.claude-plugin/marketplace.json` at the repo root
-- The manifest points to `packages/plugin` using `git-subdir`
-- Claude Code clones the subdirectory and installs the plugin
-- Users run `/plugin install papyrus@rewrlution-papyrus`
+- The manifest declares a marketplace named `rewrlution` and a plugin named `papyrus` sourced from `packages/plugin` via `git-subdir`
+- Users run `/plugin install papyrus@rewrlution`
+- Claude Code sparse-clones the subdirectory and installs the plugin
 
-All plugin development happens in `papyrus/packages/plugin/` in this monorepo. Users interact directly with this repo — no mirror needed.
+All plugin development happens in `packages/plugin/` in this monorepo. Users interact directly with this repo.
 
 ---
 
@@ -40,7 +40,7 @@ papyrus/                          ← public monorepo (pnpm workspaces + Turbore
 
 **Why one repo:** Atomic commits across packages, shared tooling (ESLint, Prettier, TypeScript), easier to track dependencies, no cross-repo PR coordination.
 
-**Public for plugin distribution:** The plugin must be publicly accessible for Claude Code to install it. Making the entire monorepo public is simpler than maintaining a separate mirror. The downside (api/web source visible) is outweighed by simplicity. Users who need closed-source APIs/web can be served via deployment, not source distribution.
+**Public for plugin distribution:** The plugin must be publicly accessible for Claude Code to install it. We accept that `api/` and `web/` source becomes visible — they're deployed services, not products users build against, so source visibility has low cost. The benefit is a single source of truth with no synchronization overhead.
 
 ---
 

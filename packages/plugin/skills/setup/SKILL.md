@@ -141,10 +141,10 @@ After saving:
 
 Then give one targeted nudge based on their goal:
 
-- `promotion` → "Your journal entries are your evidence for promotion. Run `/papyrus-journal` at the end of each day — ownership and multiplier signals are what promotion committees look for most."
-- `job_search` → "The fastest way to build strong resume bullets is consistent journaling. Run `/papyrus-journal` after meaningful work days — even 2 entries a week gives the AI enough to generate strong STAR stories."
-- `growth` → "Journaling what you learned and who you helped builds a picture of your growth over time. Try `/papyrus-journal` after any day where you learned something new or helped a teammate."
-- `unsure` → "You're set up. Run `/papyrus-journal` at the end of any day worth remembering. After a few weeks, `/papyrus-coach` can help you figure out what to focus on."
+- `promotion` → "Your journal entries are your evidence for promotion. Run `/papyrus:journal` at the end of each day — ownership and multiplier signals are what promotion committees look for most."
+- `job_search` → "The fastest way to build strong resume bullets is consistent journaling. Run `/papyrus:journal` after meaningful work days — even 2 entries a week gives the AI enough to generate strong STAR stories."
+- `growth` → "Journaling what you learned and who you helped builds a picture of your growth over time. Try `/papyrus:journal` after any day where you learned something new or helped a teammate."
+- `unsure` → "You're set up. Run `/papyrus:journal` at the end of any day worth remembering. After a few weeks, `/papyrus:coach` can help you figure out what to focus on."
 
 ## Handling edge cases
 

@@ -65,14 +65,14 @@ Open/closed source is enforced by **what gets published**, not by which repo cod
 
 ### Package roles at a glance
 
-| Package  | Role                                                                                                                                     | Status                                                                              |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `core`   | Filesystem library underlying the plugin: `paths`, `journal`, `profile`. Each module doubles as a CLI script for skills.                 | Built, **not yet published to npm**. Required before plugin can install end-to-end. |
-| `plugin` | Thin Claude Code plugin: `.claude-plugin/plugin.json` + `skills/{papyrus-hello,papyrus-setup,papyrus-journal,papyrus-standup}/SKILL.md`. | Available on Claude Code marketplace via git-subdir.                                |
-| `cli`    | TUI journal browser, offline writing, sync. AI features were intentionally removed in the pivot.                                         | Published as `@rewrlution/papyrus-cli@0.0.10`. Standup command is now redundant.    |
-| `shared` | Zod schemas + types for the CLI ↔ API contract.                                                                                          | Published as `@rewrlution/papyrus-shared@0.0.2`.                                    |
-| `api`    | Auth + journal CRUD + sync (Express + Prisma + Postgres). Pivot scope: drop AI endpoints, freemium, usage tracking.                      | Built; AI infra still present in code, awaiting cleanup to match new scope.         |
-| `web`    | Marketing site (Next.js, Tailwind, dark mode).                                                                                           | Hero/features template exists; not the product surface.                             |
+| Package  | Role                                                                                                                     | Status                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `core`   | Filesystem library underlying the plugin: `paths`, `journal`, `profile`. Each module doubles as a CLI script for skills. | Built, **not yet published to npm**. Required before plugin can install end-to-end. |
+| `plugin` | Thin Claude Code plugin: `.claude-plugin/plugin.json` + `skills/{hello,setup,journal,standup}/SKILL.md`.                 | Available on Claude Code marketplace via git-subdir.                                |
+| `cli`    | TUI journal browser, offline writing, sync. AI features were intentionally removed in the pivot.                         | Published as `@rewrlution/papyrus-cli@0.0.10`. Standup command is now redundant.    |
+| `shared` | Zod schemas + types for the CLI ↔ API contract.                                                                          | Published as `@rewrlution/papyrus-shared@0.0.2`.                                    |
+| `api`    | Auth + journal CRUD + sync (Express + Prisma + Postgres). Pivot scope: drop AI endpoints, freemium, usage tracking.      | Built; AI infra still present in code, awaiting cleanup to match new scope.         |
+| `web`    | Marketing site (Next.js, Tailwind, dark mode).                                                                           | Hero/features template exists; not the product surface.                             |
 
 Per-package details live in each package's `CLAUDE.md`:
 
@@ -209,7 +209,7 @@ Each package extends `tsconfig.base.json` and declares `references` for cross-pa
 ### Current state
 
 - `.github/workflows/test.yml` — CLI tests on PR/push, **only triggers on changes to `packages/cli` or `packages/shared`**. Doesn't see `core`, `plugin`, `api`, or `web`.
-- `.github/workflows/publish.yml` — on `v*` tag: publishes `papyrus-shared` and `papyrus-cli` to npm. Does **not** publish `core` and does **not** mirror the plugin.
+- `.github/workflows/publish.yml` — on `v*` tag: publishes `papyrus-shared` and `papyrus-cli` to npm. Does **not** publish `core` yet.
 
 ### Target state (planned, not yet built)
 
@@ -219,7 +219,8 @@ The plan in [`docs/monorepo/06-architecture-decisions.md`](./docs/monorepo/06-ar
 2. Builds + publishes `@rewrlution/papyrus-core` to npm — **this must happen first** because the plugin's `npm install` resolves core from the registry
 3. Builds + publishes `@rewrlution/papyrus-shared` to npm
 4. Builds + publishes `@rewrlution/papyrus-cli` to npm
-5. Mirrors `packages/plugin/` to the public `papyrus-plugin` repo (Claude Code marketplace source)
+
+The plugin itself ships from `packages/plugin/` in this repo via the marketplace's `git-subdir` source — no separate publish step needed.
 
 API and web each need their own deploy workflows triggered on path-based pushes.
 
@@ -282,9 +283,16 @@ pnpm build --filter=@rewrlution/papyrus-shared
 pnpm build --filter=@rewrlution/papyrus-core
 ```
 
-### Plugin install from GitHub doesn't work
+### Plugin install from marketplace doesn't fully work yet
 
-Local development with `claude --plugin-dir packages/plugin` is the supported path today. End-to-end install via the marketplace requires `@rewrlution/papyrus-core` to be published to npm first, plus the `papyrus-plugin` public mirror to be set up. See [`docs/monorepo/07-plugin-distribution.md`](./docs/monorepo/07-plugin-distribution.md).
+The `hello` skill installs and runs fine via:
+
+```
+/plugin marketplace add rewrlution/papyrus
+/plugin install papyrus@rewrlution
+```
+
+The other skills (`setup`, `journal`, `standup`) depend on `@rewrlution/papyrus-core` which isn't published to npm yet. Until then, use `claude --plugin-dir packages/plugin` for local development. See [`docs/monorepo/07-plugin-distribution.md`](./docs/monorepo/07-plugin-distribution.md).
 
 ### Build fails with stale type errors
 
