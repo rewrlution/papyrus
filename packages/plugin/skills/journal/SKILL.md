@@ -25,7 +25,7 @@ TODAY=$(date +%Y%m%d) && node ${CLAUDE_PLUGIN_ROOT}/node_modules/@rewrlution/pap
 
 **If profile doesn't exist:**
 
-> "It looks like you haven't run /papyrus-setup yet. The journal skill works best when it knows your career stage. Run /papyrus-setup first (takes 2 minutes), then come back here."
+> "It looks like you haven't run /papyrus:setup yet. The journal skill works best when it knows your career stage. Run /papyrus:setup first (takes 2 minutes), then come back here."
 
 Stop here. Do not continue.
 
@@ -48,7 +48,7 @@ Use `level`, `goal`, and `staff_archetype` to shape your follow-up questions thr
 
 ## Step 2: Open the session
 
-If the user opened the skill with text after the command (e.g., `/papyrus-journal [pasted notes]`), those notes are in `$ARGUMENTS`. Skip to Step 4 (free-form mode).
+If the user opened the skill with text after the command (e.g., `/papyrus:journal [pasted notes]`), those notes are in `$ARGUMENTS`. Skip to Step 4 (free-form mode).
 
 Otherwise, open with:
 

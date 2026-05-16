@@ -16,51 +16,44 @@ The new entry point is a **Claude Code plugin**. Installation is a single comman
 
 ### How It Works
 
-Skills are bundled inside a **plugin** — a single GitHub repo that users install with one command:
+Skills are bundled inside a **plugin** — a directory in this public monorepo that users install with two commands:
 
 ```bash
-/plugin install papyrus
-```
-
-Or, if distributed via GitHub before marketplace listing:
-
-```bash
-/plugin marketplace add your-username/papyrus-plugin
-/plugin install papyrus@your-username/papyrus-plugin
+/plugin marketplace add rewrlution/papyrus
+/plugin install papyrus@rewrlution
 ```
 
 No npm install. No account creation. No configuration file to hand-edit.
 
+If the plugin is later accepted into the official Anthropic marketplace, the first command becomes unnecessary — users can install with just `/plugin install papyrus@claude-plugins-official`.
+
 ### Plugin Structure
 
 ```
-papyrus-plugin/
-├── skills/
-│   ├── papyrus-setup/
-│   │   └── SKILL.md        ← run once, collects career profile
-│   ├── papyrus-journal/
-│   │   └── SKILL.md        ← daily guided journal entry
-│   ├── papyrus-standup/
-│   │   └── SKILL.md        ← generates standup from yesterday's journal
-│   ├── papyrus-resume/
-│   │   └── SKILL.md        ← generates resume bullets from date range
-│   ├── papyrus-promote/
-│   │   └── SKILL.md        ← generates promotion document
-│   ├── papyrus-interview/
-│   │   └── SKILL.md        ← generates STAR interview stories
-│   └── papyrus-coach/
-│       └── SKILL.md        ← open-ended career Q&A
-└── marketplace.json
+packages/plugin/
+├── .claude-plugin/
+│   └── plugin.json
+└── skills/
+    ├── hello/SKILL.md      ← verify install (zero dependencies)
+    ├── setup/SKILL.md      ← run once, collects career profile
+    ├── journal/SKILL.md    ← daily guided journal entry
+    ├── standup/SKILL.md    ← generates standup from yesterday's journal
+    ├── resume/SKILL.md     ← generates resume bullets from date range
+    ├── promote/SKILL.md    ← generates promotion document
+    ├── interview/SKILL.md  ← generates STAR interview stories
+    └── coach/SKILL.md      ← open-ended career Q&A
 ```
+
+The marketplace catalog itself lives at the **repo root** in `.claude-plugin/marketplace.json` and uses `git-subdir` to point Claude Code at `packages/plugin`.
 
 ### Distribution Scopes
 
-| Scope              | How                                  | Use case                                               |
-| ------------------ | ------------------------------------ | ------------------------------------------------------ |
-| Public marketplace | `/plugin install papyrus`            | Individual developers who find it on HN, Twitter, etc. |
-| GitHub direct      | `/plugin marketplace add owner/repo` | Early adopters before marketplace listing              |
-| Project-level      | Commit `.claude/skills/` to repo     | Team or company sharing via version control            |
-| Enterprise         | Managed Claude Code settings         | DevEx team deploys company-wide, zero individual setup |
+| Scope              | How                                                        | Use case                                               |
+| ------------------ | ---------------------------------------------------------- | ------------------------------------------------------ |
+| Public marketplace | `/plugin marketplace add rewrlution/papyrus` + install     | Individual developers who find it on HN, Twitter, etc. |
+| Official catalog   | `/plugin install papyrus@claude-plugins-official` (future) | After Anthropic submission/review is approved          |
+| Project-level      | Commit `.claude/skills/` to repo                           | Team or company sharing via version control            |
+| Enterprise         | Managed Claude Code settings                               | DevEx team deploys company-wide, zero individual setup |
 
 The **enterprise path** is the highest-leverage distribution channel. One DevEx team adoption = hundreds of users with no individual friction.
 
@@ -71,13 +64,14 @@ The **enterprise path** is the highest-leverage distribution channel. One DevEx 
 ### Step 1: Install the plugin
 
 ```bash
-/plugin install papyrus
+/plugin marketplace add rewrlution/papyrus
+/plugin install papyrus@rewrlution
 ```
 
 ### Step 2: Run setup (once)
 
 ```
-User: /papyrus-setup
+User: /papyrus:setup
 
 Claude: Welcome to Papyrus — a journaling system that turns your daily
         notes into career documents (resume bullets, promotion docs,
@@ -116,8 +110,8 @@ Claude: Welcome to Papyrus — a journaling system that turns your daily
 
         ✓ Profile saved to ~/.local/share/papyrus/profile.md
 
-        You're all set. Run /papyrus-journal to write your first entry.
-        After a few weeks of entries, /papyrus-standup and the career
+        You're all set. Run /papyrus:journal to write your first entry.
+        After a few weeks of entries, /papyrus:standup and the career
         features will be available.
 ```
 
@@ -126,7 +120,7 @@ The profile file shapes every subsequent skill. Standup notes for a junior and a
 ### Step 3: Write the first journal entry
 
 ```
-User: /papyrus-journal
+User: /papyrus:journal
 
 Claude: Let's capture today. What did you work on?
         > Fixed a gnarly auth bug and started the API redesign discussion
@@ -145,7 +139,7 @@ Claude: Let's capture today. What did you work on?
 
         ✓ Saved to ~/.local/share/papyrus/journals/2026-04-09.md
 
-        Great start. After 7 days of entries you can run /papyrus-standup.
+        Great start. After 7 days of entries you can run /papyrus:standup.
         After 30 days the career features unlock their full potential.
 ```
 
@@ -155,23 +149,23 @@ This guided interview format is dramatically better than a blank editor. It make
 
 ```bash
 # Every morning
-/papyrus-standup       # "What did I do yesterday?"
+/papyrus:standup       # "What did I do yesterday?"
 
 # Every evening (or whenever)
-/papyrus-journal       # Capture today
+/papyrus:journal       # Capture today
 ```
 
 ### Step 5: Career events (months later)
 
 ```bash
 # Job search
-/papyrus-resume --from 2025-10-01
+/papyrus:resume --from 2025-10-01
 
 # Performance review
-/papyrus-promote --from 2026-01-01
+/papyrus:promote --from 2026-01-01
 
 # Interview prep
-/papyrus-interview --situation "technical leadership"
+/papyrus:interview --situation "technical leadership"
 ```
 
 ---
@@ -197,14 +191,14 @@ Both the plugin skills and the CLI write to the same location:
 
 ```
 ~/.local/share/papyrus/
-├── profile.md                    ← written by /papyrus-setup
+├── profile.md                    ← written by /papyrus:setup
 ├── journals/
-│   ├── 2026-04-09.md             ← written by /papyrus-journal OR papyrus add
+│   ├── 2026-04-09.md             ← written by /papyrus:journal OR papyrus add
 │   ├── 2026-04-08.md
 │   └── ...
 └── outputs/
-    ├── resume-2026-04.md         ← generated by /papyrus-resume
-    └── promotion-2026-Q1.md      ← generated by /papyrus-promote
+    ├── resume-2026-04.md         ← generated by /papyrus:resume
+    └── promotion-2026-Q1.md      ← generated by /papyrus:promote
 ```
 
 This format is the contract. Skills, CLI, and future agents (Codex, Cursor, etc.) all depend on this format — not on each other.
@@ -216,7 +210,7 @@ This format is the contract. Skills, CLI, and future agents (Codex, Cursor, etc.
 ### Individual developer (most common)
 
 ```
-HN / Twitter post → GitHub repo → README → /plugin install papyrus → /papyrus-setup
+HN / Twitter post → GitHub repo → README → /plugin marketplace add rewrlution/papyrus → /plugin install papyrus@rewrlution → /papyrus:setup
 ```
 
 ### Team adoption
@@ -244,12 +238,12 @@ Any of the above → also installs CLI for TUI browser + offline journaling
 Users need to understand that the career features get better over time. Skills should show progress nudges:
 
 ```
-# After /papyrus-journal on day 1
+# After /papyrus:journal on day 1
 ✓ Entry 1 saved. Career features unlock progressively as your history grows.
 
-# After /papyrus-standup with 1 week of entries
+# After /papyrus:standup with 1 week of entries
 ✓ Standup generated from 6 entries.
-  Tip: /papyrus-resume works best with 3+ months of history.
+  Tip: /papyrus:resume works best with 3+ months of history.
 
 # After 3 months
 ✓ You have 87 journal entries. All career features are fully available.

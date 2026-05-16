@@ -43,7 +43,7 @@ MCP (Model Context Protocol) is an open standard for exposing data and tools to 
 // Read journals in a date range
 read_journals(from: string, to: string): Journal[]
 
-// Write a journal entry (used by /papyrus-journal skill)
+// Write a journal entry (used by /papyrus:journal skill)
 write_journal(date: string, content: string): void
 
 // Get the user's career profile (used by all skills)

@@ -23,7 +23,7 @@ node ${CLAUDE_PLUGIN_ROOT}/node_modules/@rewrlution/papyrus-core/dist/journal.js
 
 **If profile doesn't exist:**
 
-> "Run /papyrus-setup first — standup needs your career profile to generate useful output."
+> "Run /papyrus:setup first — standup needs your career profile to generate useful output."
 
 Stop here.
 
@@ -41,7 +41,7 @@ If it's older than yesterday — tell the user which date you're pulling from:
 
 **If no journal entries exist at all:**
 
-> "No journal entries found. Run /papyrus-journal at the end of your workday, then come back here."
+> "No journal entries found. Run /papyrus:journal at the end of your workday, then come back here."
 
 Stop here.
 
