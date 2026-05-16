@@ -1,9 +1,9 @@
 ---
-name: papyrus-hello
+name: hello
 description: Verify Papyrus is installed and working. Say hello.
 ---
 
-# /papyrus-hello
+# /papyrus:hello
 
 Say:
 

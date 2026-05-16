@@ -1,11 +1,11 @@
 ---
-name: papyrus-standup
+name: standup
 description: Generates standup bullets from your most recent journal entry. Run this before your daily standup. Asks one question (today's focus), then produces yesterday / today / blockers.
 disable-model-invocation: true
 allowed-tools: Bash(node *) Bash(npx *)
 ---
 
-# /papyrus-standup — Daily Standup Generator
+# /papyrus:standup — Daily Standup Generator
 
 Generate standup bullets from the user's journal. This should feel instant — one question, then done.
 
