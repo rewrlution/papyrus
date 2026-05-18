@@ -1,909 +1,125 @@
-# Papyrus CLI - Claude Development Guide
+# `@rewrlution/papyrus-cli` — Dev Guide
 
-This guide explains how to develop, run, and test the Papyrus CLI tool locally.
+CLI for writing, browsing, and syncing journal entries. Published to npm; users install with `npm i -g @rewrlution/papyrus-cli` and run as `papyrus` or `paper`.
 
-## Overview
+Per the [strategy pivot](../../docs/product/01-STRATEGY-PIVOT-2026.md), the CLI is **no longer the primary entry point** — the Claude Code plugin is. The CLI exists for terminal-first users who want offline writing, a TUI browser, and cloud sync. AI features (standup generation, etc.) have moved to plugin skills; do not add new AI features here.
 
-The Papyrus CLI is an AI-powered journaling tool for developers. It's built using:
+## Stack
 
-- **Commander.js** - Command-line interface framework with git-like commands
-- **Ink** - React for interactive CLI applications
-- **React** - Component-based UI (rendered in terminal)
-- **Chalk** - Terminal string styling and colors
-- **TypeScript** - Type-safe development
+- **Commander.js** — command framework (git-like subcommands)
+- **Ink + React** — interactive terminal UI
+- **Axios** — HTTP to the API
+- **gray-matter** — markdown + YAML frontmatter for journal files
+- **env-paths** — XDG-compliant cross-platform path resolution
 
-The CLI is available under two command names:
-
-- `papyrus` - Full command name
-- `paper` - Short alias for convenience
-
-Both commands work identically. Use whichever you prefer!
-
-## Prerequisites
-
-Make sure you're in the monorepo root and have installed dependencies:
+## Dev workflow
 
 ```bash
-cd /path/to/papyrus
-pnpm install
-```
-
-## Development Workflow
-
-### 1. Run in Development Mode
-
-The fastest way to develop and see live changes:
-
-```bash
-cd packages/cli
-pnpm dev
-```
-
-This runs `tsx watch src/cli.tsx` which:
-
-- Watches for file changes
-- Auto-reloads on save
-- No build step required
-- Instant feedback
-
-### 2. Build the CLI
-
-To compile TypeScript to JavaScript:
-
-```bash
-cd packages/cli
-pnpm build
-```
-
-This creates the `dist/` folder with compiled JavaScript files.
-
-### 3. Test the Built CLI
-
-After building, test the production version:
-
-```bash
-cd packages/cli
-pnpm start
-
-# Or run it directly
-node dist/cli.js
-
-# Test specific commands
-node dist/cli.js add
-node dist/cli.js list
-node dist/cli.js show --date yesterday
-```
-
-### 4. Run Tests
-
-Run the test suite with Vitest:
-
-```bash
-cd packages/cli
-pnpm test
-```
-
-Or from the monorepo root:
-
-```bash
-pnpm test --filter=@rewrlution/papyrus-cli
-```
-
-## Project Structure
-
-```
-packages/cli/
-├── src/
-│   ├── cli.tsx                        # Entry point with Commander setup
-│   ├── commands/
-│   │   ├── index.ts                  # Command registration exports
-│   │   ├── types.ts                  # Command option types
-│   │   ├── auth/
-│   │   │   ├── index.ts              # Auth command registration
-│   │   │   ├── login.ts              # Login command (Ink form)
-│   │   │   ├── logout.ts             # Logout command
-│   │   │   └── register.ts           # Register command (Ink form)
-│   │   └── journal/
-│   │       ├── index.ts              # Journal command registration
-│   │       ├── add.ts                # Create new entry (editor)
-│   │       ├── amend.ts              # Modify existing entry (editor)
-│   │       ├── edit.ts               # Edit utilities
-│   │       ├── show.ts               # Display entry
-│   │       ├── app.ts                # Launch TUI browser
-│   │       ├── sync.ts               # Sync with server
-│   │       └── standup.ts            # Generate AI standup notes
-│   ├── components/
-│   │   ├── JournalBrowser.tsx        # Interactive journal browser (main app)
-│   │   ├── AppLayout.tsx             # Reusable layout with header/footer
-│   │   ├── JournalList.tsx           # Journal list with viewport rendering
-│   │   ├── JournalViewer.tsx         # Full journal reader with scrolling
-│   │   ├── LogoCompact.tsx           # Compact logo for app header
-│   │   ├── Divider.tsx               # Horizontal divider line
-│   │   ├── ColdStart.tsx             # Cold start aware spinner
-│   │   ├── FormInput.tsx             # Reusable form input component
-│   │   ├── LoginForm.tsx             # Login form (email/password)
-│   │   ├── RegisterForm.tsx          # Registration form (multi-step)
-│   │   ├── StatusMessage.tsx         # Status message display
-│   │   ├── SyncProgress.tsx          # Sync progress with real-time updates
-│   │   ├── StandupStream.tsx         # AI standup streaming with real-time output
-│   │   └── Logo.tsx                  # ASCII art logo with gradient
-│   ├── lib/
-│   │   ├── api/
-│   │   │   ├── api-client.ts         # Axios-based API client
-│   │   │   └── index.ts              # API client exports
-│   │   ├── auth/
-│   │   │   ├── require-auth.ts       # Reusable auth middleware
-│   │   │   └── index.ts              # Auth utilities exports
-│   │   ├── storage/
-│   │   │   ├── base-storage.ts       # Base storage class (XDG)
-│   │   │   ├── config-store.ts       # Config storage
-│   │   │   ├── journal-storage.ts    # Journal storage (Markdown)
-│   │   │   ├── sync-meta-store.ts    # Sync metadata storage
-│   │   │   ├── token-store.ts        # JWT token storage
-│   │   │   └── index.ts              # Storage exports
-│   │   └── sync/
-│   │       └── sync-engine.ts        # Hash-based sync logic
-│   └── utils/
-│       ├── date.ts                   # Date parsing utilities
-│       ├── editor.ts                 # External editor integration
-│       ├── template.ts               # Journal template utilities
-│       ├── token.ts                  # JWT token utilities
-│       ├── messages.ts               # Console message utilities
-│       ├── journal-preview.ts        # Extract preview from journal content
-│       ├── text.ts                   # Text width utilities (truncate, pad)
-│       └── alternate-screen.ts       # Alternate screen buffer management
-├── docs/                             # Tutorial documentation
-│   ├── README.md                     # Documentation index
-│   ├── tutorials/
-│   │   └── adding-standup-command.md # AI standup command tutorial
-│   ├── 01-STORAGE-LAYER.md          # Storage layer tutorial
-│   ├── 02-API-CLIENT-SETUP.md       # API client tutorial
-│   ├── 03-REACT-CLI-COMPONENTS.md   # Ink components tutorial
-│   ├── 04-LOGIN-IMPLEMENTATION.md   # Login feature tutorial
-│   ├── 05-REGISTER-IMPLEMENTATION.md # Register feature tutorial
-│   ├── 06-JOURNAL-ADD-IMPLEMENTATION.md # Journal commands tutorial
-│   ├── 07-SYNC-IMPLEMENTATION.md    # Sync feature tutorial
-│   ├── 08-TOKEN-MANAGEMENT.md       # Token management tutorial
-│   ├── 09-LIST-BROWSE-MIGRATION.md # List/browse feature migration
-│   ├── ARCHITECTURE-JOURNAL-STORAGE.md # ADR for journal format
-│   ├── sync.md                       # Sync algorithm explanation
-│   ├── cold-start-handling.md       # Cold start handling
-│   └── token-expiration-handling.md # Token expiration strategies
-├── tests/
-│   └── cli.test.ts                   # Test files
-├── dist/                             # Build output (generated)
-├── package.json
-├── tsconfig.json
-└── CLAUDE.md                         # This file
-```
-
-## Command Architecture
-
-### Command Registration Pattern
-
-The CLI uses a modular command registration pattern:
-
-```typescript
-// src/cli.tsx
-const program = new Command();
-
-program
-  .name('papyrus')
-  .description('AI-powered developer journaling')
-  .version('1.0.0');
-
-// Register command groups
-registerAuthCommands(program);
-registerJournalCommands(program);
-
-program.parse(process.argv);
-```
-
-### Available Commands
-
-#### Journal Commands
-
-- `papyrus add [-d <date>]` - Create a new journal entry
-- `papyrus amend [-d <date>]` - Modify an existing entry
-- `papyrus show [-d <date>]` - Display an entry in reader view
-- `papyrus app` - Launch TUI to browse and read entries interactively
-- `papyrus sync` - Sync journals with server
-- `papyrus standup [options]` - Generate AI standup notes from journal entries
-  - `--date <date>` - Use specific date (YYYY-MM-DD)
-  - `--from <date>` - Use journals from this date onwards (YYYY-MM-DD)
-  - `--to <date>` - Use journals up to this date (YYYY-MM-DD, requires --from)
-
-#### Auth Commands
-
-- `papyrus login` - Log in to your account
-- `papyrus logout` - Log out from your account
-- `papyrus register` - Create a new account
-
-### Command Types
-
-Command option types are defined in `src/commands/types.ts`:
-
-```typescript
-export interface DateOption {
-  date?: string; // e.g., "20260101", "yesterday", "today"
-}
-
-export interface AddOptions extends DateOption {}
-export interface AmendOptions extends DateOption {}
-export interface ShowOptions extends DateOption {}
-```
-
-This pattern allows commands to share common options (like `--date`) while maintaining type safety.
-
-### Adding New Commands
-
-To add a new command:
-
-1. **Create command handler** in appropriate directory:
-
-   ```typescript
-   // src/commands/journal/delete.ts
-   export async function deleteEntry(options: DeleteOptions): Promise<void> {
-     // Implementation
-   }
-   ```
-
-2. **Add types** if needed in `src/commands/types.ts`:
-
-   ```typescript
-   export interface DeleteOptions extends DateOption {
-     force?: boolean;
-   }
-   ```
-
-3. **Register the command** in the appropriate index file:
-   ```typescript
-   // src/commands/journal/index.ts
-   program
-     .command('delete')
-     .description('Delete a journal entry')
-     .option('-d, --date <date>', 'Date of entry to delete')
-     .option('-f, --force', 'Skip confirmation')
-     .action(async (options) => await deleteEntry(options));
-   ```
-
-## User Feedback & Messaging Patterns
-
-The CLI uses a **dual messaging strategy** for consistent, compact user feedback:
-
-### When to Use Console (msg utility)
-
-Use `src/utils/messages.ts` functions for **simple, non-interactive commands**:
-
-- ✅ Quick confirmations (logout, delete)
-- ✅ Simple errors (file not found, invalid input)
-- ✅ One-off informational messages
-- ✅ Progress messages in transactional commands
-
-**Available functions:**
-
-```typescript
-import * as msg from '../utils/messages.js';
-
-// Success messages
-msg.success('Logged out successfully');
-msg.sparkles('Created your first journal entry!'); // Special occasions
-
-// Error messages (exits with code 1)
-msg.error('Journal not found', "Run 'papyrus app' to see all entries");
-
-// Informational messages
-msg.info('Opening in vim...');
-msg.warn('Token expires in 5 minutes'); // Non-fatal warnings
-msg.hint('Press Ctrl+C to cancel');
-msg.stats('Uploaded: 3, Downloaded: 1, Conflicts: 0');
-```
-
-**Key characteristics:**
-
-- Instant output (no React rendering overhead)
-- Always compact spacing (`\n` before and after)
-- Consistent icons (✅, ❌, 📖, ⚠️, 💡, 📊, ✨)
-- `msg.error()` automatically exits with error code
-
-### When to Use Ink Components
-
-Use Ink components for **interactive, stateful, or rich UI**:
-
-- ✅ Multi-step forms (login, register)
-- ✅ Interactive browsers (list/read journals)
-- ✅ Real-time progress (sync with live updates)
-- ✅ Components with user input (keyboard navigation)
-
-**Available components:**
-
-```typescript
-import { StatusMessage } from '../components/StatusMessage.js';
-import { SyncProgress } from '../components/SyncProgress.js';
-import { JournalBrowser } from '../components/JournalBrowser.js';
-
-// Status messages with optional hints
-<StatusMessage
-  type="error"
-  message="Invalid email address"
-  hint="Use format: user@example.com"
-/>
-
-// Real-time progress updates
-<SyncProgress
-  currentFile={filename}
-  totalFiles={10}
-  processed={5}
-/>
-```
-
-**Key characteristics:**
-
-- Always compact (no marginTop/marginBottom)
-- Consistent icons matching msg utility (✅, ❌, ℹ️, 🔄️)
-- Supports hints with 💡 prefix
-- Manages own state and lifecycle
-
-### Messaging Guidelines
-
-1. **Keep it compact** - Single `\n` before/after messages, no extra spacing
-2. **Use consistent icons** - Same icons across console and Ink (✅, ❌, 💡, etc.)
-3. **Provide helpful hints** - Add contextual help when users might be stuck
-4. **Exit on fatal errors** - Use `msg.error()` to exit immediately with error code
-5. **Non-blocking warnings** - Use `msg.warn()` for non-fatal issues
-
-### Example: Migrating to New Pattern
-
-**Before:**
-
-```typescript
-console.log(`\n✨ Created new entry for ${date}\n`);
-console.error(`\n❌ Error: Journal not found`);
-console.error(`💡 Run 'papyrus app' to see all entries\n`);
-process.exit(1);
-```
-
-**After:**
-
-```typescript
-import * as msg from '../utils/messages.js';
-
-msg.sparkles(`Created new entry for ${date}`);
-msg.error('Journal not found', "Run 'papyrus app' to see all entries");
-```
-
-**Benefits:**
-
-- Consistent spacing and icons
-- Less boilerplate code
-- Automatic process.exit() on errors
-- Easier to maintain
-
-## Architecture Overview
-
-The CLI is organized into clear layers following separation of concerns:
-
-### Layer 1: Commands (`src/commands/`)
-
-- **Entry points** for user actions
-- **Thin layer** that delegates to lib/ and utils/
-- **Type-safe** with shared option types
-- **Authenticated commands** use `ensureAuthenticated()` from auth middleware
-
-### Layer 2: Business Logic (`src/lib/`)
-
-- **API Client** - HTTP client for backend communication (Axios)
-- **Auth Middleware** - Reusable authentication checking (`requireAuth`, `ensureAuthenticated`)
-- **Storage** - Cross-platform file storage following XDG Base Directory spec
-- **Sync Engine** - Hash-based three-way sync with conflict resolution
-
-### Layer 3: Utilities (`src/utils/`)
-
-- **Pure functions** with no side effects
-- **Date parsing** - Parse "today", "yesterday", "YYYYMMDD"
-- **Token utilities** - JWT decoding and expiration checking
-- **Editor integration** - Launch external editors ($EDITOR)
-- **Template handling** - Journal entry templates
-- **Message utilities** - Consistent console messaging with icons
-- **Text utilities** - Width-aware text truncation and padding (CJK/emoji support)
-- **Journal preview** - Extract content previews from journal files
-- **Alternate screen** - Terminal alternate screen buffer management
-
-### Layer 4: UI (`src/components/`)
-
-- **React components** rendered in terminal via Ink
-- **Journal Browser** - Full-screen TUI with list/viewer modes
-- **Layout components** - AppLayout, Divider, LogoCompact for consistent UI structure
-- **Interactive forms** - Login, register (multi-step)
-- **Progress displays** - Sync progress with real-time updates
-- **Reusable components** - Input, status messages, spinners
-
-## Key Architecture Decisions
-
-### Storage Layer (XDG Base Directory)
-
-- **Platform-agnostic** paths (`~/.local/share/papyrus/`, `~/.config/papyrus/`)
-- **Markdown with YAML frontmatter** for journals (human-editable)
-- **Separate stores** for journals, tokens, config, sync metadata
-- See: `docs/ARCHITECTURE-JOURNAL-STORAGE.md`
-
-### Token Management (Decoupled)
-
-- **JWT utilities** (`src/utils/token.ts`) - Pure functions for token operations
-- **Auth middleware** (`src/lib/auth/`) - Reusable across all authenticated commands
-- **Proactive validation** - Check expiration before operations
-- **Consistent error messages** - All commands use same auth checking
-- See: `docs/08-TOKEN-MANAGEMENT.md`
-
-### Sync Strategy (Hash-Based)
-
-- **Three-way comparison** using content hashes (SHA-256)
-- **Per-device sync state** - No server coordination needed
-- **Conflict resolution** - Automatic merging when both sides changed
-- **Progress callbacks** - Real-time UI updates during sync
-- See: `docs/07-SYNC-IMPLEMENTATION.md` and `docs/sync.md`
-
-### API Client (Axios + Interceptors)
-
-- **Automatic token injection** - Request interceptor adds auth header
-- **Error handling** - Response interceptor handles 401s
-- **Type-safe** - Uses shared types from `@rewrlution/papyrus-shared`
-- **Timeout handling** - 90s timeout for cold starts
-- See: `docs/02-API-CLIENT-SETUP.md`
-
-### Journal Browser (Component Architecture)
-
-- **Alternate screen buffer** - Clean full-screen experience (like vim/less/htop)
-- **Modular layout** - AppLayout component provides consistent header/footer structure
-- **Viewport rendering** - JournalList only renders visible items for performance
-- **Dual modes** - Seamlessly switch between list view and full reader view
-- **Content previews** - List view shows first line of each journal
-- **Keyboard navigation** - j/k (or arrows) for navigation, Enter to open, Esc/q to quit
-- **Responsive** - Adapts to terminal size dynamically
-- **Zero visual artifacts** - Alternate screen ensures clean terminal state on exit
-- See: `docs/09-LIST-BROWSE-MIGRATION.md`
-
-## Key Files and Modules
-
-### `src/cli.tsx`
-
-Entry point that:
-
-- Sets up Commander.js program
-- Registers all command groups (auth, journal)
-- Parses command-line arguments
-
-### `src/commands/types.ts`
-
-TypeScript interfaces for command options. Uses inheritance to share common options (like `--date`) across commands.
-
-### `src/commands/journal/` & `src/commands/auth/`
-
-Command handlers that:
-
-- Parse options and validate input
-- Call business logic from `lib/`
-- Render Ink components for interactive UIs
-- Handle errors and provide user feedback
-
-### `src/lib/api/api-client.ts`
-
-HTTP client for backend communication:
-
-- Axios instance with base URL and timeout
-- Request interceptor for automatic token injection
-- Handles all API operations (auth, journals)
-- Type-safe responses using shared types
-
-### `src/lib/auth/require-auth.ts`
-
-Reusable authentication middleware:
-
-- `requireAuth()` - Returns detailed auth status
-- `ensureAuthenticated()` - Validates or exits (convenience function)
-- Checks token existence, expiration, and warns when expiring soon
-- Consistent error messages across all commands
-
-### `src/lib/storage/`
-
-Cross-platform storage implementations:
-
-- `BaseStorage` - Abstract base class with XDG path resolution
-- `JournalStore` - Markdown file storage for journal entries
-- `TokenStore` - Secure JWT token storage
-- `SyncMetaStore` - Tracks last synced hashes per journal
-- `ConfigStore` - App configuration storage
-
-### `src/lib/sync/sync-engine.ts`
-
-Hash-based synchronization logic:
-
-- Three-way comparison (local, remote, last synced)
-- Conflict detection and automatic merging
-- Progress callbacks for UI updates
-- Returns statistics (uploaded, downloaded, conflicts)
-
-### `src/utils/token.ts`
-
-Pure functions for JWT operations:
-
-- `getTokenExpiration()` - Extract exp claim
-- `isTokenExpired()` - Check if token is expired
-- `isTokenExpiringSoon()` - Check if expiring within threshold
-- `getTimeUntilExpiration()` - Human-readable time string
-
-### `src/utils/date.ts`
-
-Date parsing utilities:
-
-- Parse "today", "yesterday", "tomorrow"
-- Parse "YYYYMMDD" format
-- Validate date strings
-
-### `src/utils/editor.ts`
-
-External editor integration:
-
-- Detect $EDITOR, $VISUAL environment variables
-- Fallback to common editors (vim, vi, nano, code)
-- Launch editor and wait for completion
-- Handle temp file creation and cleanup
-
-### `src/utils/messages.ts`
-
-Console message utilities for consistent user feedback:
-
-- `msg.success()` - Success messages with ✅
-- `msg.sparkles()` - Special occasion messages with ✨
-- `msg.error()` - Error messages with ❌ (exits process)
-- `msg.info()` - Informational messages with ℹ️
-- `msg.warn()` - Warning messages with ⚠️
-- `msg.hint()` - Hint messages with 💡
-- `msg.stats()` - Statistics messages with 📊
-
-### `src/utils/journal-preview.ts`
-
-Extract content preview from journals:
-
-- `extractPreview()` - Extract first non-empty line from journal content
-- Skips YAML frontmatter automatically
-- Returns "(empty)" for empty journals
-- Used by JournalList to show content previews
-
-### `src/utils/text.ts`
-
-Terminal text width utilities:
-
-- `truncateToWidth()` - Truncate text to fit width (handles CJK/emoji)
-- `padToWidth()` - Pad text to exact width
-- Uses `string-width` library for accurate width measurement
-- Essential for proper terminal alignment
-
-### `src/utils/alternate-screen.ts`
-
-Alternate screen buffer management:
-
-- `enterAlternateScreen()` - Switch to alternate screen buffer
-- `exitAlternateScreen()` - Restore original screen
-- `withAlternateScreen()` - Execute function in alternate screen (auto-cleanup)
-- Provides clean full-screen TUI experience like vim/less/htop
-
-### `src/components/`
-
-React/Ink UI components:
-
-- `JournalBrowser` - Main interactive journal browser with list/viewer modes
-- `AppLayout` - Reusable layout component with sticky header/footer
-- `JournalList` - Viewport-based journal list with content previews
-- `JournalViewer` - Full journal reader with line numbers and scrolling
-- `LogoCompact` - Compact logo for app header (single line)
-- `Divider` - Horizontal divider line component
-- `LoginForm` - Email/password form with validation
-- `RegisterForm` - Multi-step registration (email → password → confirm)
-- `SyncProgress` - Real-time sync progress with spinner
-- `StandupStream` - AI standup streaming with real-time text updates
-- `FormInput` - Reusable input component
-- `ColdStart` - Spinner with cold start warning
-- `StatusMessage` - Status message display component
-- `Logo` - ASCII art logo with gradient colors
-
-## Package Scripts
-
-| Script           | Command                                           | Description                                |
-| ---------------- | ------------------------------------------------- | ------------------------------------------ |
-| `build`          | `rimraf dist tsconfig.tsbuildinfo && tsc --build` | Clean and compile TypeScript to JavaScript |
-| `dev`            | `tsx watch src/cli.tsx`                           | Run with hot reload for development        |
-| `start`          | `node dist/cli.js`                                | Run the built CLI                          |
-| `test`           | `vitest run`                                      | Run tests once                             |
-| `prepublishOnly` | `npm run build && npm run test`                   | Build and test before publishing to npm    |
-
-## How Commander.js Works
-
-Commander.js provides a git-like CLI interface:
-
-```typescript
-program
-  .command('add') // Command name
-  .description('Create a new journal entry') // Help text
-  .option('-d, --date <date>', 'Entry date', 'today') // Option with default
-  .alias('a') // Short alias
-  .action(async (options) => {
-    // Handler
-    await addEntry(options);
-  });
-```
-
-**Key features:**
-
-- Automatic help generation (`--help`)
-- Subcommands and aliases
-- Options with defaults and validation
-- Version management (`--version`)
-- Error handling
-
-## How Ink Works
-
-Ink lets you build CLI apps using React components:
-
-```tsx
-import { Box, Text } from 'ink';
-
-export function App() {
-  return (
-    <Box flexDirection="column">
-      <Text color="green">Hello from terminal!</Text>
-    </Box>
-  );
-}
-```
-
-- Uses flexbox for layout
-- Renders to terminal instead of browser
-- Components re-render on state changes
-- Supports hooks, context, and all React features
-
-## Testing Strategy
-
-Current tests cover utility functions (`journal-preview.test.ts`, `text.test.ts`). To add more tests:
-
-1. **Command tests**: Test command handlers directly
-
-   ```typescript
-   import { addEntry } from '../src/commands/journal/add.js';
-
-   it('should create entry for today', async () => {
-     await addEntry({ date: 'today' });
-     // Assert entry was created
-   });
-   ```
-
-2. **CLI integration tests**: Test full command execution
-
-   ```typescript
-   import { execSync } from 'child_process';
-
-   it('should show help', () => {
-     const output = execSync('node dist/cli.js --help').toString();
-     expect(output).toContain('papyrus');
-   });
-   ```
-
-3. **Component tests**: Test Ink components
-
-   ```typescript
-   import { render } from 'ink-testing-library';
-   import { App } from '../src/components/App.js';
-
-   it('should render logo', () => {
-     const { lastFrame } = render(<App />);
-     expect(lastFrame()).toContain('PAPYRUS');
-   });
-   ```
-
-## Local Testing with Global Install
-
-To test the CLI as if it were globally installed:
-
-```bash
-# From packages/cli
-pnpm build
-pnpm link --global
-
-# Now you can run it anywhere
+# Watch mode (no build, instant reload)
+pnpm dev --filter=@rewrlution/papyrus-cli
+
+# Build + test
+pnpm build --filter=@rewrlution/papyrus-cli
+pnpm test  --filter=@rewrlution/papyrus-cli
+
+# Try as if globally installed
+cd packages/cli && pnpm build && pnpm link --global
 papyrus add
 papyrus app
-papyrus show --date yesterday
-
-# When done testing, unlink
 pnpm unlink --global
 ```
 
-## Debugging
+For ad-hoc invocations during dev: `tsx src/cli.tsx <command>`.
 
-### Using tsx directly
+## Layout
 
-```bash
-cd packages/cli
-tsx src/cli.tsx add --date today
-tsx src/cli.tsx list
+```
+src/
+├── cli.tsx                 # entry: Commander setup + command registration
+├── commands/
+│   ├── types.ts            # shared option types (DateOption, etc.)
+│   ├── auth/               # login, logout, register
+│   └── journal/            # add, amend, show, app (TUI), sync, standup
+├── components/             # Ink/React components (forms, browser, viewer)
+├── lib/
+│   ├── api/                # axios client + interceptors
+│   ├── auth/               # require-auth middleware (ensureAuthenticated)
+│   ├── storage/            # XDG-based BaseStorage + Journal/Token/Config/SyncMeta stores
+│   └── sync/               # hash-based three-way sync engine
+└── utils/                  # date, editor, messages, text, token, alternate-screen
 ```
 
-### Adding console.log
+## Commands
 
-Use `console.log()` or `console.error()` for debugging. They won't interfere with Ink's rendering.
+| Group   | Command                           | Purpose                                      |
+| ------- | --------------------------------- | -------------------------------------------- |
+| Journal | `papyrus add [-d <date>]`         | Create entry (opens `$EDITOR`)               |
+|         | `papyrus amend [-d <date>]`       | Edit existing entry                          |
+|         | `papyrus show [-d <date>]`        | Pager view                                   |
+|         | `papyrus app`                     | TUI browser (alternate screen, vim keys)     |
+|         | `papyrus sync`                    | Hash-based three-way sync with API           |
+|         | `papyrus standup [--date/--from]` | AI standup (redundant post-pivot; see below) |
+| Auth    | `papyrus login`                   | JWT login (Ink form)                         |
+|         | `papyrus logout`                  | Clear token                                  |
+|         | `papyrus register`                | Multi-step signup form                       |
 
-### VS Code Debugging
+`-d` / `--date` accepts `today`, `yesterday`, or `YYYYMMDD` — parsed by `utils/date.ts`.
 
-Add this to `.vscode/launch.json`:
+> `papyrus standup` predates the pivot. The supported standup flow is now `/papyrus:standup` in Claude Code. Don't extend the CLI version; it stays for backward compat until removal.
 
-```json
-{
-  "type": "node",
-  "request": "launch",
-  "name": "Debug CLI",
-  "runtimeExecutable": "tsx",
-  "args": [
-    "${workspaceFolder}/packages/cli/src/cli.tsx",
-    "add",
-    "--date",
-    "today"
-  ],
-  "skipFiles": ["<node_internals>/**"],
-  "console": "integratedTerminal"
-}
-```
+## Conventions
 
-Change the `args` array to test different commands.
+### Messaging — `msg` vs Ink
 
-## Common Issues
+Two strategies, picked by command shape:
 
-### "Cannot find module"
+- **`utils/messages.ts`** (`msg.success`, `msg.error`, `msg.info`, …) — for transactional commands. Instant output, consistent icons, `msg.error()` exits with code 1.
+- **Ink components** — for stateful / multi-step / streaming flows (login form, sync progress, journal browser, standup stream).
 
-- Run `pnpm install` in the monorepo root
-- Check that `@rewrlution/papyrus-shared` is built if it's a dependency
+Same icon vocabulary across both (`✅` `❌` `ℹ️` `⚠️` `💡` `📊` `✨`). Always single `\n` padding, no `marginTop`/`marginBottom`.
 
-### Build errors
+### Auth
 
-- Ensure TypeScript is installed: `pnpm add -D typescript`
-- Check `tsconfig.json` is correctly configured
-- Clean build: `rm -rf dist && pnpm build`
+Authenticated commands call `ensureAuthenticated()` from `lib/auth/require-auth.ts`. This validates token existence + expiration; on failure it prints a consistent error via `msg.error()` and exits. Don't roll your own auth check.
 
-### Terminal rendering issues
+### Storage
 
-- Ensure terminal supports colors (most modern terminals do)
-- Try running in a different terminal emulator
-- Check if terminal width is sufficient
+All persistent state goes through `lib/storage/` — never raw `fs`. Storage classes follow XDG via `env-paths`:
 
-### Commander not parsing arguments
+| Linux                     | macOS                                    | Windows                        |
+| ------------------------- | ---------------------------------------- | ------------------------------ |
+| `~/.local/share/papyrus/` | `~/Library/Application Support/papyrus/` | `%LOCALAPPDATA%\papyrus\Data\` |
+| `~/.config/papyrus/`      | `~/Library/Preferences/papyrus/`         | `%APPDATA%\papyrus\Config\`    |
 
-- Make sure `program.parse()` is called at the end
-- Check that command names don't conflict
-- Verify options use correct syntax (`-d, --date <value>`)
+Journal format (markdown + YAML frontmatter) is the stable interface across CLI / plugin / future agents. The format is documented in [`docs/ARCHITECTURE-JOURNAL-STORAGE.md`](./docs/ARCHITECTURE-JOURNAL-STORAGE.md). When the CLI and plugin disagree on file shape, the plugin (via `@rewrlution/papyrus-core`) is canonical.
 
-## Dependencies
+### Sync
 
-Key dependencies and their purposes:
+Hash-based three-way comparison (local hash, remote hash, last-synced hash). Detects upload, download, conflict per file. See [`docs/sync.md`](./docs/sync.md) for the algorithm.
 
-- **commander** (^14.0.2): CLI framework for git-like commands
-- **ink** (^6.6.0): React renderer for CLI apps
-- **react** (^19.2.3): UI component framework
-- **chalk** (^5.6.2): Terminal string styling and colors
-- **axios** (^1.13.2): HTTP client for API communication
-- **jwt-decode** (^4.0.0): JWT token decoding (for expiration checking)
-- **env-paths** (^3.0.0): Cross-platform path resolution (XDG)
-- **ansi-escapes** (^7.2.0): ANSI escape codes for alternate screen
-- **string-width** (^8.1.0): Accurate text width measurement (CJK/emoji support)
-- **date-fns** (^4.1.0): Date formatting utilities
-- **gray-matter** (^4.0.3): YAML frontmatter parsing
-- **ink-spinner** (^5.0.0): Spinner component for Ink
-- **ink-text-input** (^6.0.0): Text input component for Ink
-- **@rewrlution/papyrus-shared**: Shared types and utilities
+### API client
 
-Dev dependencies:
+`lib/api/api-client.ts` is an Axios instance with:
 
-- **tsx** (^4.21.0): TypeScript executor for development
-- **vitest**: Test runner (configured in root)
-- **typescript**: Type checking and compilation
-- **@types/node** (^25.0.3): Node.js type definitions
-- **@types/react** (^19.2.7): React type definitions
+- Request interceptor that injects the JWT
+- 90s timeout to cover Render free-tier cold starts (`docs/cold-start-handling.md`)
+- Response interceptor for 401 handling
 
-## Documentation
+Use shared Zod types from `@rewrlution/papyrus-shared` — don't redeclare request/response shapes.
 
-Comprehensive tutorials are available in the `docs/` directory:
+## Releasing
 
-### Getting Started
+Bump `package.json` version, push a tag, CI publishes to npm. See [`docs/RELEASE-WORKFLOW.md`](./docs/RELEASE-WORKFLOW.md).
 
-- **[Tutor Principles](../../../docs/TUTOR-PRINCIPLES.md)** - Guidelines for writing documentation (read first!)
-- **[README](./docs/README.md)** - Documentation index and learning path
+**If you touched `packages/shared/src/`**, bump shared's version too before tagging — CLI consumers install shared from npm and a missed bump produces `SyntaxError: Named export 'X' not found` after publish. Root [`CLAUDE.md`](../../CLAUDE.md) covers this in detail.
 
-### Foundation Tutorials
+## Reference docs
 
-1. **[Storage Layer](./docs/01-STORAGE-LAYER.md)** - XDG-based cross-platform storage
-2. **[API Client Setup](./docs/02-API-CLIENT-SETUP.md)** - HTTP client with authentication
-3. **[React CLI Components](./docs/03-REACT-CLI-COMPONENTS.md)** - Building UIs with Ink
+Kept short and factual; deleted the old tutorial walkthroughs that duplicated this file.
 
-### Feature Implementation
-
-4. **[Login Implementation](./docs/04-LOGIN-IMPLEMENTATION.md)** - Interactive login form
-5. **[Register Implementation](./docs/05-REGISTER-IMPLEMENTATION.md)** - Multi-step registration
-6. **[Journal Commands](./docs/06-JOURNAL-ADD-IMPLEMENTATION.md)** - Add, amend, show commands
-7. **[Sync Implementation](./docs/07-SYNC-IMPLEMENTATION.md)** - Hash-based synchronization
-8. **[Token Management](./docs/08-TOKEN-MANAGEMENT.md)** - Decoupled auth middleware
-9. **[List & Browse](./docs/09-LIST-BROWSE-MIGRATION.md)** - Interactive journal browser
-10. **[Standup Command](./docs/tutorials/adding-standup-command.md)** - AI standup with streaming
-
-### Architecture Decisions
-
-- **[Journal Storage Format](./docs/ARCHITECTURE-JOURNAL-STORAGE.md)** - Why Markdown with YAML frontmatter
-- **[Sync Strategy](./docs/sync.md)** - Hash-based three-way comparison algorithm
-- **[Cold Start Handling](./docs/cold-start-handling.md)** - Managing serverless cold starts
-- **[Token Expiration](./docs/token-expiration-handling.md)** - Handling JWT expiration
-
-## Completed Features
-
-The following features are fully implemented:
-
-- ✅ **Authentication** - Login, logout, register with JWT tokens
-- ✅ **Token management** - Decoupled, reusable auth checking with expiration warnings
-- ✅ **Journal storage** - Markdown files with YAML frontmatter (XDG paths)
-- ✅ **Date parsing** - Support for "today", "yesterday", "YYYYMMDD"
-- ✅ **External editor** - Integration with $EDITOR, $VISUAL (vim, nano, code)
-- ✅ **Journal commands** - Add, amend, show commands
-- ✅ **Interactive browser** - Full-screen TUI with list/viewer modes, content previews, vim-style navigation
-- ✅ **Alternate screen buffer** - Clean terminal experience (no visual artifacts on exit)
-- ✅ **Viewport rendering** - Efficient list rendering for large journal collections
-- ✅ **Sync engine** - Hash-based three-way sync with conflict resolution
-- ✅ **API client** - Axios with interceptors for auth and error handling
-- ✅ **Interactive forms** - Login and registration using Ink
-- ✅ **Cold start handling** - Spinner with warning for serverless cold starts
-- ✅ **Real-time progress** - Sync progress with live updates
-- ✅ **Message utilities** - Consistent console messaging with icons
-- ✅ **Text utilities** - Width-aware text handling (CJK/emoji support)
-- ✅ **AI standup generation** - Generate standup notes from journals with streaming output
-
-## Future Enhancements
-
-Potential improvements and new features:
-
-1. **Enhanced conflict resolution**
-   - Interactive conflict resolution (choose local/remote/merge)
-   - Diff view for conflicts
-   - Custom merge strategies
-
-2. **Search and filtering**
-   - Full-text search across journals
-   - Filter by date range
-   - Tag support
-
-3. **Rich formatting**
-   - Syntax highlighting for Markdown display
-   - Better table rendering
-   - Image preview (if terminal supports it)
-
-4. **Configuration**
-   - User preferences (`.papyrusrc`)
-   - Custom editor per file type
-   - Sync frequency settings
-
-5. **Offline mode**
-   - Queue operations when offline
-   - Auto-sync when connection restored
-   - Offline indicator in commands
-
-6. **Export/Import**
-   - Export to PDF, HTML
-   - Import from other formats
-   - Backup and restore
-
-7. **Advanced journal features**
-   - Templates for different journal types
-   - Attachments support
-   - Encryption for sensitive entries
-
-## Resources
-
-- [Commander.js Documentation](https://github.com/tj/commander.js)
-- [Ink Documentation](https://github.com/vadimdemedes/ink)
-- [Chalk Documentation](https://github.com/chalk/chalk)
-- [React Documentation](https://react.dev)
-- [Vitest Documentation](https://vitest.dev)
+- [`docs/ARCHITECTURE-JOURNAL-STORAGE.md`](./docs/ARCHITECTURE-JOURNAL-STORAGE.md) — why markdown + YAML frontmatter
+- [`docs/sync.md`](./docs/sync.md) — three-way sync algorithm
+- [`docs/cold-start-handling.md`](./docs/cold-start-handling.md) — `ColdStartAwareSpinner` pattern for Render cold starts
+- [`docs/token-expiration-handling.md`](./docs/token-expiration-handling.md) — JWT expiry strategies
+- [`docs/path_resolution.md`](./docs/path_resolution.md) — how `papyrus` vs `paper` bin names resolve via `PATH`
+- [`docs/RELEASE-WORKFLOW.md`](./docs/RELEASE-WORKFLOW.md) — tag + npm publish flow

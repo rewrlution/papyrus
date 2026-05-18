@@ -72,11 +72,7 @@ Install and configure:
 
 ## Project Structure
 
-This is a monorepo managed with Turborepo and pnpm. Key packages:
-
-- `packages/cli` - Command-line interface for Papyrus
-- `packages/api` - API server
-- Other packages as the project grows
+See the root [`README.md`](../../README.md) for the current package list and roles.
 
 ## Code Style
 
