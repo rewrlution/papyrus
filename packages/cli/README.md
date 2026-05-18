@@ -1,13 +1,13 @@
 # Papyrus CLI
 
-> AI-powered journaling for developers, right in your terminal.
+> Terminal-first journaling for developers. Pairs with the Papyrus Claude Code plugin.
 
 [![npm version](https://img.shields.io/npm/v/@rewrlution/papyrus-cli.svg)](https://www.npmjs.com/package/@rewrlution/papyrus-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is Papyrus?
 
-Papyrus is a command-line journaling tool designed for developers who want to capture their thoughts, progress, and insights without leaving the terminal. It combines the simplicity of markdown files with the power of cloud sync and AI assistance.
+Papyrus is a markdown-based journaling system for developers. The CLI handles writing, browsing, and cloud sync — the journaling habit itself. AI-powered career skills (resume bullets, promotion docs, standup notes, interview stories) live in the [Papyrus Claude Code plugin](https://github.com/rewrlution/papyrus/tree/main/packages/plugin) and read the same journal files this CLI writes.
 
 **Key Features:**
 
@@ -17,7 +17,7 @@ Papyrus is a command-line journaling tool designed for developers who want to ca
 - ☁️ **Cloud Sync** - Sync journals across devices
 - 🔐 **Secure** - JWT authentication with local token storage
 - 💾 **Local-First** - All journals stored locally in markdown format
-- 🎨 **Terminal UI** - Beautiful React-based interface rendered in your terminal
+- 🎨 **Terminal UI** - React-based interface rendered in your terminal
 
 ## Installation
 
