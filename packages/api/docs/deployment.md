@@ -41,12 +41,14 @@ Configure the following settings:
 - **Build Command**:
 
   ```bash
-  corepack enable && rm -rf node_modules && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api build
+  corepack enable && rm -rf node_modules && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api db:migrate && pnpm --filter @rewrlution/papyrus-api build
   ```
+
+  > **Note (2026-05):** This command used to be one step shorter — `pnpm build` itself ran `prisma migrate deploy`. That was split out so local commits don't need a live database. If you're updating an existing Render service, replace the old build command with the one above; the migrate step is now explicit.
 
   **Understanding the Build Command:**
 
-  This command consists of five parts chained together with `&&`:
+  This command chains six steps with `&&`:
   1. **`corepack enable`**
      - Enables Corepack, Node.js's built-in package manager manager
      - Allows Render to use pnpm (specified in `package.json` as `"packageManager": "pnpm@10.0.0"`)
@@ -59,20 +61,20 @@ Configure the following settings:
      - Installs all dependencies for the entire monorepo based on `pnpm-lock.yaml`
      - `--frozen-lockfile` ensures dependencies match exactly what's in the lockfile (no updates)
      - This is critical for reproducible builds and prevents unexpected version changes in production
-     - Installs dependencies for all workspace packages (`@rewrlution/papyrus-shared` and `@rewrlution/papyrus-api`)
+     - `postinstall` runs `prisma generate`, so the Prisma client is ready after this step
   4. **`pnpm --filter @rewrlution/papyrus-shared build`**
      - Builds the shared package first
      - Runs `tsc` to compile TypeScript and generate type declarations in `packages/shared/dist/`
      - **This must run before building the API** because the API imports types from this package
      - Creates `index.d.ts` and other type definition files that the API needs
-  5. **`pnpm --filter @rewrlution/papyrus-api build`**
-     - Runs the `build` script specifically for the API package
-     - `--filter` tells pnpm to run the command only for the specified package
-     - The API's build script does:
-       - `prisma migrate deploy`: Runs database migrations
-       - `rimraf dist`: Cleans the previous build output
-       - `tsc`: Compiles TypeScript to JavaScript (now can find `@rewrlution/papyrus-shared` types)
-       - `copyfiles -u 1 src/email/templates/**/* dist/`: Copies email templates to the build folder
+  5. **`pnpm --filter @rewrlution/papyrus-api db:migrate`**
+     - Runs `prisma migrate deploy` against `DATABASE_URL` to apply any pending migrations
+     - Migrations are idempotent — already-applied migrations are skipped
+     - Kept as its own script (not part of `build`) so local builds and CI don't require a live database
+  6. **`pnpm --filter @rewrlution/papyrus-api build`**
+     - Pure compile step for the API package
+     - Does: `rimraf dist` → `tsc` → `copyfiles -u 1 src/email/templates/**/* dist/`
+     - No DB access — safe to run anywhere
 
   **Why this structure?** In a monorepo, you can't just run `npm install && npm run build` from the root because:
   - The API package is in `packages/api/`, not the repository root
@@ -157,11 +159,10 @@ By default, Render auto-deploys on push to the main branch. To verify:
 2. Monitor the deployment logs for any errors
 3. The build process will:
    - Install pnpm using corepack
-   - Install all monorepo dependencies
+   - Install all monorepo dependencies (`postinstall` runs `prisma generate`)
    - Build the shared package (`@rewrlution/papyrus-shared`)
-   - Build the API package (including TypeScript compilation and Prisma client generation)
-   - Run Prisma migrations (`prisma migrate deploy`)
-   - Copy email templates to the dist folder
+   - Run Prisma migrations (`pnpm db:migrate`)
+   - Build the API package (TypeScript compile + copy email templates)
 4. Once deployed, your API will be available at: `https://your-service-name.onrender.com`
 
 ### Step 7: Verify Deployment
@@ -181,7 +182,7 @@ By default, Render auto-deploys on push to the main branch. To verify:
 **Solution**: Ensure `corepack enable` is included at the start of your build command:
 
 ```bash
-corepack enable && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-api build
+corepack enable && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-api db:migrate && pnpm --filter @rewrlution/papyrus-api build
 ```
 
 #### Build Fails with "Cannot find module @rewrlution/papyrus-shared"
@@ -191,7 +192,7 @@ corepack enable && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/p
 **Solution**: Ensure the build command explicitly builds the shared package first (this should already be in your build command):
 
 ```bash
-corepack enable && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api build
+corepack enable && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api db:migrate && pnpm --filter @rewrlution/papyrus-api build
 ```
 
 If you see this error, verify:
@@ -209,7 +210,7 @@ If you see this error, verify:
 - This prevents cache corruption while still using `--frozen-lockfile` for reproducible builds
 - If you're still seeing this error, verify your build command matches:
   ```bash
-  corepack enable && rm -rf node_modules && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api build
+  corepack enable && rm -rf node_modules && pnpm install --frozen-lockfile && pnpm --filter @rewrlution/papyrus-shared build && pnpm --filter @rewrlution/papyrus-api db:migrate && pnpm --filter @rewrlution/papyrus-api build
   ```
 
 **Alternative (if issue persists)**: Manually clear build cache
@@ -279,7 +280,7 @@ When you add new migrations locally:
 1. Create migration: `pnpm --filter @rewrlution/papyrus-api prisma:migrate`
 2. Commit the migration files in `packages/api/prisma/migrations/`
 3. Push to main
-4. Render will automatically run `prisma migrate deploy` during build
+4. Render runs `pnpm db:migrate` (which calls `prisma migrate deploy`) as part of the build command before compiling
 
 ### Viewing Logs
 
