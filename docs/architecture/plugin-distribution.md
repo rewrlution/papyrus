@@ -44,7 +44,7 @@ Each module doubles as a CLI script — skills call them with `node dist/journal
 
 ### CI/CD for publishing core
 
-Core is published from the `papyrus` monorepo on every release tag (`v*`). The workflow:
+Core is published from the `papyrus` monorepo on a package-scoped release tag (e.g. `core@0.0.1`). The workflow:
 
 1. Run tests for `packages/core`
 2. Build core: `pnpm build --filter=@rewrlution/papyrus-core` → produces `dist/`

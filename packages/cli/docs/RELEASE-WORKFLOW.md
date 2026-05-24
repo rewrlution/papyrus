@@ -1,297 +1,125 @@
-# Quick Release Workflow
+# CLI Release Workflow
 
-This document explains the simplified release process for the Papyrus CLI.
+How to cut a release of `@rewrlution/papyrus-cli`. For the full monorepo pipeline (all packages, triggers, secrets), see [`docs/development/cicd.md`](../../../docs/development/cicd.md).
 
-## TL;DR - Release in 4 Commands
+Releases are triggered by **package-scoped tags** — `cli@<version>` — not by a global version tag.
+
+## TL;DR — Release in 5 commands
 
 ```bash
 cd packages/cli
-pnpm test && pnpm build          # 1. Test and build
-npm version patch                 # 2. Bump version (patch/minor/major)
-git push --follow-tags            # 3. Push with tags
-# 4. GitHub Actions publishes automatically
+pnpm test && pnpm build                    # 1. verify it works
+npm version patch --no-git-tag-version     # 2. bump package.json only (no auto-tag)
+git commit -am "chore(cli): release 0.0.11"  # 3. commit the bump
+git tag cli@0.0.11                         # 4. package-scoped tag
+git push --follow-tags                     # 5. push commit + tag → CI publishes
 ```
 
-What happens:
+> **Why `--no-git-tag-version`?** Plain `npm version patch` would create a `v0.0.11` tag, which no longer matches the workflow trigger. We bump the version separately and create the `cli@<version>` tag by hand.
 
-1. ✅ Tests and build ensure quality
-2. ✅ `npm version` bumps version in package.json
-3. ✅ `npm version` creates git commit and tag (v0.0.2)
-4. ✅ `git push --follow-tags` pushes commit and tag
-5. ✅ GitHub Actions publishes to npm automatically
+## Step-by-step
 
-## Step-by-Step Release Process
-
-### Step 1: Test and Build
+### 1. Test and build
 
 ```bash
 cd packages/cli
 pnpm test && pnpm build
 ```
 
-This ensures your code works before releasing.
-
-### Step 2: Bump Version
-
-Choose the appropriate version bump:
+### 2. Bump the version
 
 ```bash
-# Patch release (0.0.1 -> 0.0.2) - bug fixes
-npm version patch
+# patch (0.0.10 → 0.0.11) — bug fixes
+npm version patch --no-git-tag-version
 
-# Minor release (0.0.2 -> 0.1.0) - new features
-npm version minor
+# minor (0.0.11 → 0.1.0) — new features
+npm version minor --no-git-tag-version
 
-# Major release (0.1.0 -> 1.0.0) - breaking changes
-npm version major
+# major (0.1.0 → 1.0.0) — breaking changes
+npm version major --no-git-tag-version
 ```
 
-This automatically:
+This updates `version` in `package.json` only — no commit, no tag.
 
-- Updates `version` in `package.json`
-- Creates git commit: `"0.0.2"` or custom with `-m` flag
-- Creates git tag: `v0.0.2`
+> **If you touched `packages/shared/src/`**, bump shared's version too (in `packages/shared/package.json`) and tag it separately (`shared@<version>`). CLI consumers install shared from npm; a missed bump produces `SyntaxError: Named export 'X' not found` after publish.
 
-### Step 3: Push to GitHub
+### 3. Commit and tag
+
+```bash
+git commit -am "chore(cli): release 0.0.11"
+git tag cli@0.0.11
+```
+
+The tag version **must** match the `package.json` version — npm publishes whatever `package.json` says, and the tag is only the trigger.
+
+### 4. Push
 
 ```bash
 git push --follow-tags
 ```
 
-This pushes both the commit AND the tag, triggering the publish workflow.
+`--follow-tags` pushes the branch commits plus the annotated/lightweight tags pointing at them — safer than `--tags`, which pushes every local tag.
 
-### When Tag Reaches GitHub
+### What happens in CI
 
-GitHub Actions workflow (`.github/workflows/publish.yml`) triggers on `v*` tags:
+The tag fires `.github/workflows/publish.yml`:
 
-1. **Test Job**: Runs tests to ensure quality
-2. **Publish Job**: Publishes to npm with `--access public`
+1. **Test job** — builds and tests `core` + `shared` + `cli`
+2. **Publish job** — publishes `core`, `shared`, `cli` to npm (pnpm skips any version already on the registry, so only `cli@0.0.11` actually goes out)
 
-You can watch progress at: `https://github.com/YOUR_USERNAME/papyrus/actions`
+Watch progress in the repo's **Actions** tab.
 
-## Semantic Versioning Guide
+## Semantic versioning guide
 
-Choose the right release type based on changes:
+| Bump      | Example           | Use for                                                                   |
+| --------- | ----------------- | ------------------------------------------------------------------------- |
+| **patch** | `0.0.10 → 0.0.11` | bug fixes, docs, internal refactors, dependency bumps                     |
+| **minor** | `0.0.11 → 0.1.0`  | new features / commands / options (backwards compatible), deprecations    |
+| **major** | `0.1.0 → 1.0.0`   | breaking changes — removed/renamed commands, changed defaults or behavior |
 
-### Patch Release (`pnpm release`)
+## Pre-release checklist
 
-**Format**: `0.0.1` → `0.0.2`
-
-**Use for:**
-
-- Bug fixes
-- Documentation updates
-- Internal refactoring (no API changes)
-- Dependency updates
-
-**Example:**
-
-```bash
-# Fixed date parsing bug
-pnpm release
-# Creates v0.0.2
-```
-
-### Minor Release (`pnpm release:minor`)
-
-**Format**: `0.0.2` → `0.1.0`
-
-**Use for:**
-
-- New features (backwards compatible)
-- New commands added
-- New options to existing commands
-- Deprecations (but not removals)
-
-**Example:**
-
-```bash
-# Added new 'search' command
-pnpm release:minor
-# Creates v0.1.0
-```
-
-### Major Release (`pnpm release:major`)
-
-**Format**: `0.1.0` → `1.0.0`
-
-**Use for:**
-
-- Breaking changes
-- Removed commands or options
-- Changed command behavior
-- Renamed commands
-- Changed default behavior
-
-**Example:**
-
-```bash
-# Changed sync algorithm (breaking change)
-pnpm release:major
-# Creates v1.0.0
-```
-
-## Pre-Release Checklist
-
-Before releasing:
-
-- [ ] All changes committed to git
-- [ ] On correct branch (usually `main`)
-- [ ] No uncommitted changes (`git status` is clean)
-- [ ] Pulled latest changes (`git pull`)
-- [ ] Tests pass locally
-- [ ] Build succeeds locally
-
-## Complete Release Example
-
-```bash
-# Start from clean state
-cd packages/cli
-git status  # Should be clean
-
-# Run tests and build
-pnpm test && pnpm build
-
-# Bump version (choose one based on changes)
-npm version patch    # For bug fixes
-npm version minor    # For new features
-npm version major    # For breaking changes
-
-# Push to GitHub (triggers publish)
-git push --follow-tags
-
-# Watch the deployment
-# Visit: https://github.com/YOUR_USERNAME/papyrus/actions
-```
+- [ ] On `main`, branch is clean (`git status`)
+- [ ] Latest changes pulled (`git pull`)
+- [ ] Tests pass locally (`pnpm test`)
+- [ ] Build succeeds locally (`pnpm build`)
+- [ ] `package.json` version bumped and committed
 
 ## Troubleshooting
 
-### "nothing to commit, working tree clean"
-
-This is normal if you ran the release script multiple times. The version was already bumped.
-
-**Fix:** Check `git log` to see if version was already bumped, then just push:
-
-```bash
-git push --follow-tags
-```
-
 ### "tag already exists"
 
-You tried to release the same version twice.
-
-**Fix:** Delete local tag and try again:
+You're reusing a version. Delete the local tag, bump to a new version, and re-tag:
 
 ```bash
-git tag -d v0.0.2
-pnpm release
+git tag -d cli@0.0.11
+# bump package.json to 0.0.12, commit, then:
+git tag cli@0.0.12
 ```
 
-### Tests fail
+### Published the wrong version
 
-**Fix:** Fix the failing tests before releasing:
+**Not published yet** — delete the tag locally and remotely, fix the version, re-tag:
 
 ```bash
-pnpm test
-# Fix issues
-git add .
-git commit -m "fix: resolve test failures"
-pnpm release
+git tag -d cli@0.0.11
+git push origin --delete cli@0.0.11
 ```
 
-### Build fails
+**Already published** — npm versions are immutable. Don't try to replace it; bump to the next patch and release again.
 
-**Fix:** Fix build errors before releasing:
+### GitHub Actions failed
 
-```bash
-pnpm build
-# Fix issues
-git add .
-git commit -m "fix: resolve build errors"
-pnpm release
-```
+Common causes: `NPM_TOKEN` not configured, or tests/build failing in CI. Open the failed run in the Actions tab, read the logs, fix, then cut a new version (never re-push the same tag).
 
-### GitHub Actions fails
+## Best practices
 
-**Causes:**
+1. **Bump the version or nothing publishes** — pnpm skips versions already on npm.
+2. **Tag version must match `package.json`** — the registry uses `package.json`, the tag is just the trigger.
+3. **Release from `main`**, one version at a time.
+4. **Use semver honestly** — users depend on the numbers.
 
-- NPM_TOKEN not configured
-- Tests fail in CI (different environment)
-- Build fails in CI
+## Related
 
-**Fix:** Check GitHub Actions logs:
-
-1. Go to `https://github.com/YOUR_USERNAME/papyrus/actions`
-2. Click on the failed workflow run
-3. Read error messages
-4. Fix issue and create new release
-
-### Published wrong version
-
-**If not published yet:** Delete the tag and retry:
-
-```bash
-# Delete local tag
-git tag -d v0.0.2
-
-# Delete remote tag
-git push origin :refs/tags/v0.0.2
-
-# Fix version in package.json and try again
-```
-
-**If already published:** You can't unpublish after 72 hours. Publish a new patch version instead:
-
-```bash
-pnpm release  # Publishes next version
-```
-
-## Configuration Details
-
-### npm version Options
-
-The `npm version` command:
-
-- Updates `version` field in `package.json`
-- Creates a git commit with message format: `chore(cli): release v%s`
-- Creates a git tag matching the version: `v0.0.2`
-- Runs `prepublishOnly` script (tests + build) before version bump
-
-### git push --follow-tags
-
-The `--follow-tags` flag:
-
-- Pushes current branch commits
-- Also pushes annotated tags pointing to pushed commits
-- Safer than `--tags` (doesn't push ALL local tags)
-
-### GitHub Actions Trigger
-
-`.github/workflows/publish.yml` triggers on:
-
-```yaml
-on:
-  push:
-    tags:
-      - 'v*' # Matches v0.0.1, v1.0.0, v2.3.4, etc.
-```
-
-## Best Practices
-
-1. **Always run tests first** - The release scripts do this automatically
-2. **Use semantic versioning correctly** - Users rely on version numbers
-3. **Keep CHANGELOG.md updated** - Document what changed
-4. **Test locally before releasing** - CI failures waste time
-5. **Release from main branch** - Avoid confusion
-6. **One release at a time** - Don't batch multiple versions
-
-## Related Documentation
-
-- [Full Deployment Guide](./10-DEPLOYMENT-GUIDE.md) - Detailed CI/CD setup
-- [README](../README.md) - User-facing documentation
-- [CLAUDE.md](../CLAUDE.md) - Development guide
-
-## Questions?
-
-- GitHub Issues: https://github.com/YOUR_USERNAME/papyrus/issues
-- Check workflow status: https://github.com/YOUR_USERNAME/papyrus/actions
+- [`docs/development/cicd.md`](../../../docs/development/cicd.md) — full monorepo CI/CD pipeline
+- [CLI `CLAUDE.md`](../CLAUDE.md) — development guide

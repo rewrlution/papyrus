@@ -91,7 +91,7 @@ The two worlds coexist without interfering. Migration is incremental.
 
 ### CI/CD pipeline (planned)
 
-On release tag (`v*`):
+On a package-scoped release tag (e.g. `core@0.0.1`):
 
 1. Test all packages
 2. Typecheck all packages

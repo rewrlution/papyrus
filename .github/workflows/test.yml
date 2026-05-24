@@ -4,12 +4,14 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "packages/core/**"
       - "packages/cli/**"
       - "packages/shared/**"
       - ".github/workflows/test.yml"
   push:
     branches: [main]
     paths:
+      - "packages/core/**"
       - "packages/cli/**"
       - "packages/shared/**"
 
@@ -37,8 +39,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build core packages
+        run: pnpm build --filter=@rewrlution/papyrus-core...
+
       - name: Build packages
         run: pnpm build --filter=@rewrlution/papyrus-cli...
 
       - name: Run tests
-        run: pnpm test --filter=@rewrlution/papyrus-cli
+        run: pnpm test --filter=@rewrlution/papyrus-core --filter=@rewrlution/papyrus-shared --filter=@rewrlution/papyrus-cli
