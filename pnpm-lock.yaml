@@ -216,7 +216,7 @@ importers:
   packages/plugin:
     dependencies:
       '@rewrlution/papyrus-core':
-        specifier: workspace:*
+        specifier: '>=0.0.1'
         version: link:../core
 
   packages/shared:

@@ -70,9 +70,13 @@ node ${CLAUDE_PLUGIN_ROOT}/node_modules/@rewrlution/papyrus-core/dist/profile.js
 ## Local development
 
 ```bash
-pnpm build --filter=@rewrlution/papyrus-core   # build core (workspace dependency)
+pnpm build --filter=@rewrlution/papyrus-core   # build core first
 claude --plugin-dir packages/plugin            # launch Claude Code with this plugin loaded
 ```
+
+**Why local dev still uses your local core build:** `package.json` declares core as `>=0.0.1` (not `workspace:*`). The root `.npmrc` sets `link-workspace-packages=true`, which tells pnpm to symlink the local `packages/core` into `packages/plugin/node_modules/` rather than fetch from npm. Without that setting, pnpm would pull the published version and your local changes to core wouldn't be picked up.
+
+`workspace:*` cannot be used here because the plugin ships via `git-subdir` — Claude Code clones this folder and runs plain `npm install`, which has no knowledge of the pnpm workspace. See [`docs/architecture/plugin-distribution.md`](../../docs/architecture/plugin-distribution.md) for the full explanation.
 
 Then in the session: `/papyrus:hello` to verify, `/papyrus:setup` to create a profile, etc.
 
