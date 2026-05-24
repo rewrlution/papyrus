@@ -163,3 +163,66 @@ shared@0.0.3
 | api deploy                 | Deployed to Render; no GitHub Actions workflow yet                                   |
 | web deploy                 | No GitHub Actions workflow yet                                                       |
 | Typecheck step             | Tests run but `tsc --noEmit` is not a separate CI gate                               |
+
+---
+
+## Managing tags
+
+**Delete a tag locally:**
+
+```bash
+git tag -d core@0.0.1
+```
+
+**Delete a tag remotely:**
+
+```bash
+git push origin --delete core@0.0.1
+```
+
+**Delete multiple tags at once:**
+
+```bash
+# locally
+git tag -l "core@*" | xargs git tag -d
+
+# remotely
+git tag -l "core@*" | xargs git push origin --delete
+```
+
+---
+
+## Q&A — when things go wrong
+
+### The publish pipeline failed (e.g. bad token). Can I just re-push the same tag?
+
+No. Git rejects pushing a tag that already exists on the remote:
+
+```
+error: failed to push some refs
+hint: Updates were rejected because the tag already exists in the remote.
+```
+
+You must delete the tag locally and remotely, then push it again to re-trigger the workflow:
+
+```bash
+git tag -d core@0.0.1
+git push origin --delete core@0.0.1
+
+# fix whatever caused the failure (e.g. update NPM_TOKEN in GitHub secrets), then:
+git tag core@0.0.1
+git push origin core@0.0.1
+```
+
+The publish is safe to re-run — pnpm skips any version already on npm, so if part of the job succeeded before the failure, those packages won't be double-published.
+
+### Why did publish fail with a 404 "not in this registry" error?
+
+This usually means the `NPM_TOKEN` is a **Granular Access Token** scoped only to specific packages. When you add a new package (e.g. `papyrus-core`), the token doesn't have permission for it yet.
+
+Two fixes:
+
+- **Option A (simplest):** Regenerate as a **Classic Automation Token** on npmjs.com — it has access to all packages under your account. Update the `NPM_TOKEN` secret in GitHub → Settings → Secrets.
+- **Option B:** Edit the existing Granular Token on npmjs.com to add the new package to its allowed list.
+
+After fixing the token, delete and re-push the tag as shown above.
