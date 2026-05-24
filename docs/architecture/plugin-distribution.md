@@ -105,12 +105,30 @@ packages/plugin/
   "name": "@rewrlution/papyrus-plugin",
   "version": "0.1.0",
   "dependencies": {
-    "@rewrlution/papyrus-core": "^0.1.0"
+    "@rewrlution/papyrus-core": ">=0.0.1"
   }
 }
 ```
 
 No `devDependencies`. No `postinstall`. No `tsup`. No `src/`.
+
+### Why `>=0.0.1` and not `workspace:*`
+
+In the monorepo, internal dependencies are normally declared as `workspace:*`. When pnpm publishes a package to npm, it automatically rewrites `workspace:*` to the real version in the published artifact. This works correctly for `core`, `shared`, and `cli`.
+
+The plugin is different. It ships as **raw source files** via `git-subdir` — Claude Code clones `packages/plugin/` directly and runs `npm install`. No `pnpm publish` step runs, so `workspace:*` is never rewritten. Outside the pnpm workspace, `workspace:*` is invalid — npm cannot resolve it, and the install fails.
+
+**The fix:** use a plain semver range (`>=0.0.1`) that npm can resolve from the registry.
+
+**Keeping local dev working:** by default, pnpm would also fetch from npm inside the workspace when a plain semver range is used, ignoring the local build. The root `.npmrc` sets:
+
+```
+link-workspace-packages=true
+```
+
+This tells pnpm to prefer local workspace packages when they satisfy the declared range. So locally, `packages/plugin/node_modules/@rewrlution/papyrus-core` is still a symlink to your local `packages/core`. Outside the workspace, plain `npm install` ignores `.npmrc` and resolves from the registry normally.
+
+This is the intentional trade-off: `workspace:*` cannot be used here because the plugin's distribution model bypasses pnpm's rewriting step. The `.npmrc` setting preserves the monorepo experience for local development.
 
 **Note:** The root `.claude-plugin/marketplace.json` (not shown above) lives at the repo root and uses `git-subdir` to point Claude Code at this directory.
 
@@ -221,19 +239,15 @@ When ready, submit to the official marketplace via the Anthropic submission form
 
 ---
 
-## Current state vs target state
+## Current state
 
-|                                   | Current                         | Target                                  |
-| --------------------------------- | ------------------------------- | --------------------------------------- |
-| `@rewrlution/papyrus-core` on npm | ✗ Not published                 | ✓ Published with dist/                  |
-| `packages/plugin` structure       | Correct (skills + package.json) | ✓ Ready to install                      |
-| Plugin marketplace                | Configured with `git-subdir`    | ✓ Ready for user install                |
-| Plugin install flow               | Broken (core not on npm)        | Works end-to-end once core is published |
-
-### What needs to happen before plugin works end-to-end
-
-1. Publish `@rewrlution/papyrus-core` to npm (set up npm account + NPM_TOKEN, cut a release tag)
-2. That's it — `packages/plugin` is already correct, marketplace.json is configured, and users can install.
+|                                   | Status                                                 |
+| --------------------------------- | ------------------------------------------------------ |
+| `@rewrlution/papyrus-core` on npm | ✓ Published (`0.0.1`)                                  |
+| `packages/plugin` dep on core     | ✓ `>=0.0.1` (resolves from npm on marketplace install) |
+| Local dev symlink                 | ✓ `link-workspace-packages=true` in root `.npmrc`      |
+| Plugin marketplace                | ✓ Configured with `git-subdir`                         |
+| Plugin install flow               | ✓ Works end-to-end                                     |
 
 ---
 
@@ -242,7 +256,8 @@ When ready, submit to the official marketplace via the Anthropic submission form
 During development, use the local path — no install needed:
 
 ```bash
-claude --plugin-dir /path/to/papyrus/packages/plugin
+pnpm build --filter=@rewrlution/papyrus-core   # build core first
+claude --plugin-dir packages/plugin            # launch with this plugin loaded
 ```
 
-Turborepo links `@rewrlution/papyrus-core` via workspace, so `node_modules/@rewrlution/papyrus-core/dist/` is built locally by `pnpm build`.
+`link-workspace-packages=true` in root `.npmrc` makes pnpm symlink the local `packages/core` into `packages/plugin/node_modules/`, so your local core build is what the skills use. See [Why `>=0.0.1` and not `workspace:*`](#why-001-and-not-workspace) for the full explanation.
