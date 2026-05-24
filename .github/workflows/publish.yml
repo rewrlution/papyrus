@@ -1,9 +1,9 @@
-name: Publish CLI to npm
+name: Publish packages to npm
 
 on:
   push:
     tags:
-      - "v*" # Triggers on v0.0.2, v1.0.0, etc.
+      - "*@*"     # package-scoped format (core@0.0.1, cli@0.0.11, etc.)
 
 jobs:
   test:
@@ -24,11 +24,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build core
+        run: pnpm build --filter=@rewrlution/papyrus-core...
+
       - name: Build packages
         run: pnpm build --filter=@rewrlution/papyrus-cli...
 
       - name: Run tests
-        run: pnpm test --filter=@rewrlution/papyrus-cli
+        run: pnpm test --filter=@rewrlution/papyrus-core --filter=@rewrlution/papyrus-shared --filter=@rewrlution/papyrus-cli
 
   publish:
     needs: test
@@ -50,8 +53,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build core
+        run: pnpm build --filter=@rewrlution/papyrus-core...
+
       - name: Build packages
         run: pnpm build --filter=@rewrlution/papyrus-cli...
+
+      - name: Publish core package to npm
+        run: pnpm publish --filter=@rewrlution/papyrus-core --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish shared package to npm
         run: pnpm publish --filter=@rewrlution/papyrus-shared --access public --no-git-checks

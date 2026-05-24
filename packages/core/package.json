@@ -1,6 +1,6 @@
 {
   "name": "@rewrlution/papyrus-core",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Core filesystem logic for the Papyrus plugin ecosystem",
   "license": "MIT",
   "type": "module",
@@ -39,9 +39,9 @@
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.0.3",
     "typescript": "^5.9.3",
-    "vitest": "^2.0.0"
+    "vitest": "^4.0.16"
   },
   "engines": {
     "node": ">=18"

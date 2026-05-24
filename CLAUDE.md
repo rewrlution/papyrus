@@ -209,8 +209,8 @@ Each package extends `tsconfig.base.json` and declares `references` for cross-pa
 
 ### Current state
 
-- `.github/workflows/test.yml` — CLI tests on PR/push, **only triggers on changes to `packages/cli` or `packages/shared`**. Doesn't see `core`, `plugin`, `api`, or `web`.
-- `.github/workflows/publish.yml` — on `v*` tag: publishes `papyrus-shared` and `papyrus-cli` to npm. Does **not** publish `core` yet.
+- `.github/workflows/test.yml` — runs on PR/push to `main` for changes to `packages/core`, `cli`, or `shared`; builds and tests `core` + `shared` + `cli` on a Node 18/20 matrix. Doesn't yet cover `plugin`, `api`, or `web`.
+- `.github/workflows/publish.yml` — on a `<package>@<version>` tag (e.g. `core@0.0.1`): builds and publishes `core`, `shared`, and `cli` to npm, in that order. pnpm skips any version already on the registry.
 
 ### Target state (planned, not yet built)
 
