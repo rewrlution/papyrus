@@ -1,6 +1,6 @@
 {
   "name": "@rewrlution/papyrus-cli",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "AI-powered developer journaling CLI",
   "keywords": [
     "journal",
@@ -13,7 +13,6 @@
   },
   "type": "module",
   "bin": {
-    "paper": "./dist/cli.js",
     "papyrus": "./dist/cli.js"
   },
   "main": "./dist/index.js",
